@@ -1,0 +1,20 @@
+pyton:
+  request_timeout: 20
+  parallel_requests_per_liteserver: 50
+  get_methods: true
+  json_rpc: true
+  liteserver_config: config/testnet.json
+  keystore: ./ton_keystore/
+  cdll: null
+logs:
+  successful_requests: true
+mongodb:
+  host: mongodb
+  port: 27017
+  database: pyton
+  username: user1
+  password_file: /run/secrets/mongodb_password
+redis:
+  endpoint: redis
+  port: 6379
+  timeout: 1

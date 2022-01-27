@@ -1,0 +1,15 @@
+tvm_valuetypes
+aioprocessing
+aiocache
+aioredis<2.0.0
+hiredis
+loguru
+pyyaml
+fastapi
+pydantic
+uvicorn
+pymongo
+crc16
+pytimeparse
+ujson
+msgpack
