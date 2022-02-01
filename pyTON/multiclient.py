@@ -61,6 +61,7 @@ class TonlibMultiClient:
         self.keystore = keystore
         self.cdll_path = cdll_path
         self.current_consensus_block = 0
+        self.current_consensus_block_timestamp = 0
 
     def init_tonlib(self):
         '''
@@ -135,8 +136,9 @@ class TonlibMultiClient:
                 if sm >= total_suitable * 0.6:
                     consensus_block = best_block - i
                     break
-            if consensus_block >= self.current_consensus_block:
+            if consensus_block > self.current_consensus_block:
                 self.current_consensus_block = consensus_block
+                self.current_consensus_block_timestamp = datetime.utcnow().timestamp()
             for i in range(len(self.all_clients)):
                 self.all_clients[i].is_working = last_blocks[i] >= self.current_consensus_block
 
@@ -343,6 +345,12 @@ class TonlibMultiClient:
     @cached(ttl=1, cache=Cache.REDIS, **settings.redis, serializer=PickleSerializer())
     async def getMasterchainInfo(self):
         return await self.dispatch_request(current_function_name())
+
+    async def getConsensusBlock(self):
+        return {
+            "consensus_block": self.current_consensus_block,
+            "timestamp": self.current_consensus_block_timestamp
+        }
 
     @cached(ttl=600, cache=Cache.REDIS, **settings.redis, serializer=PickleSerializer())
     async def lookupBlock(self, workchain, shard, seqno=None, lt=None, unixtime=None):
