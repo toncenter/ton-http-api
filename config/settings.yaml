@@ -3,11 +3,11 @@ pyton:
   parallel_requests_per_liteserver: 50
   get_methods: true
   json_rpc: true
-  liteserver_config: config/testnet.json
+  liteserver_config: config/mainnet.json
   keystore: ./ton_keystore/
   cdll: null
 logs:
-  successful_requests: true
+  successful_requests: false
 mongodb:
   host: mongodb
   port: 27017

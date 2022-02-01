@@ -16,3 +16,4 @@ ujson
 msgpack
 redis
 coredis
+gunicorn
