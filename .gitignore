@@ -119,7 +119,7 @@ venv.bak/
 ## logs
 /logs
 
-.vscode
+.vscode/
 /private
 .DS_Store
 
