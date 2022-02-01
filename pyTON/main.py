@@ -359,6 +359,15 @@ async def get_masterchain_info():
     """
     return await tonlib.getMasterchainInfo()
 
+@app.get('/getConsensusBlock', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
+@json_rpc('getConsensusBlock')
+@wrap_result
+async def get_consensus_block():
+    """
+    Get consensus block and its update timestamp.
+    """
+    return await tonlib.getConsensusBlock()
+
 @app.get('/lookupBlock', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('lookupBlock')
 @wrap_result
