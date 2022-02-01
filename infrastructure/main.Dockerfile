@@ -13,4 +13,4 @@ COPY . /usr/src/pytonv3
 WORKDIR /usr/src/pytonv3
 
 # entrypoint
-ENTRYPOINT [ "uvicorn", "pyTON.main:app" ]
+ENTRYPOINT [ "gunicorn", "pyTON.main:app", "-w", "8", "-k", "uvicorn.workers.UvicornWorker"]

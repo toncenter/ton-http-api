@@ -100,7 +100,7 @@ mongo_database = None
 def startup():
     logger.remove(0)
     logger.add(sys.stdout, level='INFO', enqueue=True)
-    logger.add('/var/log/main.log', 
+    logger.add(f'/var/log/main_{os.getpid()}.log', 
                level='INFO', 
                enqueue=True,
                serialize=False,
