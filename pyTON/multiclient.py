@@ -281,7 +281,7 @@ class TonlibMultiClient:
                             o["message"] = ""
             except Exception as e:
                 print("getTransaction exception", e)
-        return all_transactions
+        return all_transactions[:limit]
 
     @cached(ttl=5, cache=Cache.REDIS, **settings.redis, serializer=PickleSerializer())
     async def raw_get_account_state(self, address: str):

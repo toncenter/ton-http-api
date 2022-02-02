@@ -194,6 +194,8 @@ class LoggerAndRateLimitMiddleware(BaseHTTPMiddleware):
         stat_record = {
             'timestamp': datetime.now(),
             'from_ip': request.headers.get('x-real-ip', '?'),
+            'referer': request.headers.get('referer', '?'),
+            'origin': request.headers.get('origin', '?'),
             'api_key': request.query_params.get(api_key_query.model.name) or request.headers.get(api_key_header.model.name),
             'url': url,
             'status_code': response.status_code,

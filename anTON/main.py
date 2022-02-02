@@ -64,15 +64,17 @@ def request_stats(period: str=Query(...,
                                     example='1h'),
                   by_method: bool=Query(False, description='Aggregate data by method'), 
                   by_status_code: bool=Query(False, description='Aggregate data by status code'),
-                  # by_ip: bool=Query(False, description='(TBD) Aggregate data by client ip'),
+                  by_referer: bool=Query(False, description='Aggregate data by request referer'),
+                  by_origin: bool=Query(False, description='Aggregate data by request origin'),
                   end_timestamp: Optional[float]=Query(None, description='Set end timestamp (use UTC)')):
     # perpare index
     index = []
     if by_method:
         index.append('url')
-    # if by_ip:
-    #     index.append('from_ip')
-    #     raise NotImplementedError("(WIP) Not allowed without authentification")
+    if by_referer:
+        index.append('referer')
+    if by_origin:
+        index.append('origin')
     if by_status_code:
         index.append('status_code')
     
