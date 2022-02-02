@@ -11,7 +11,7 @@ This project is loosely based on [formony ton_client](https://github.com/formony
 - Build services: `sudo docker-compose build`.
 - Run services: `sudo docker-compose up -d`.
 - Generate certs: 
-    - Connect to nginx container: `sudo docker exec -it pytonv3_nginx_1 /bin/bash`.
+    - Connect to nginx container: `sudo docker exec -it ton-http-api_nginx_1 /bin/bash`.
     - Setup certs: `certbot --nginx`.
     - Enter email, agree with EULA, choose DNS name.
     - Restart NGINX: `sudo docker-compose restart nginx`.

@@ -124,6 +124,8 @@ class MongoLoggerMiddleware(BaseHTTPMiddleware):
         stat_record = {
             'timestamp': datetime.now(),
             'from_ip': request.headers.get('x-real-ip', '?'),
+            'referer': request.headers.get('referer', '?'),
+            'origin': request.headers.get('origin', '?'),
             'url': url,
             'status_code': response.status_code,
             'elapsed': elapsed
