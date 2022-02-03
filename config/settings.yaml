@@ -18,3 +18,12 @@ redis:
   endpoint: redis
   port: 6379
   timeout: 1
+slowapi_redis:
+  endpoint: slowapi_redis
+  port: 6379
+  timeout: 1
+token_bot:
+  token_file: /run/secrets/token_file
+token_redis:
+  endpoint: token_redis
+  port: 6379
