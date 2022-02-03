@@ -13,3 +13,5 @@ crc16
 pytimeparse
 ujson
 msgpack
+git+https://github.com/dungeon-master-666/slowapi.git@master
+redis

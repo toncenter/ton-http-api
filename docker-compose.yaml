@@ -19,6 +19,30 @@ services:
     restart: unless-stopped
     networks:
       - internal
+  slowapi_redis:
+    image: redis:latest
+    restart: unless-stopped
+    networks:
+      - internal
+  token_bot:
+    build:
+      context: .
+      dockerfile: infrastructure/token_bot.Dockerfile
+    secrets:
+      - token_file
+    depends_on:
+      - token_redis
+    restart: unless-stopped
+    networks:
+      - internal
+  token_redis:
+    image: redis:latest
+    restart: unless-stopped
+    networks:
+      - internal
+    command: redis-server --dbfilename dump.rdb --save 60 1
+    volumes:
+      - ./botTON_data:/data
   main:
     build: 
       context: .
@@ -29,6 +53,7 @@ services:
       - mongodb_password
     depends_on: 
       - mongodb
+      - slowapi_redis
     restart: unless-stopped
     networks:
       - internal
@@ -63,6 +88,8 @@ services:
 secrets:
   mongodb_password:
     file: private/mongodb_password
+  token_file:
+    file: private/token_file
 volumes:
   mongodata:
     external: false
