@@ -28,19 +28,16 @@ from bson import ObjectId
 from pymongo import MongoClient
 from aiocache import AIOCACHE_CACHES
 
-from slowapi import Limiter
-from slowapi.errors import RateLimitExceeded
-
 from tvm_valuetypes.cell import deserialize_cell_from_object
 
 from pyTON.models import TonResponse, TonResponseJsonRPC, TonRequestJsonRPC
 from config import settings
-from pyTON.logging import MongoLoggerMiddleware, generic_exception_handler
+from pyTON.logging import LoggerAndRateLimitMiddleware, generic_exception_handler
 from pyTON.multiclient import TonlibMultiClient as TonlibClient
 from pyTON.address_utils import detect_address as __detect_address, prepare_address as _prepare_address
 from pyTON.wallet_utils import wallets as known_wallets, sha256
 from pyTON.utils import TonLibWrongResult
-from pyTON.api_key_manager import api_key_manager, check_api_key, dynamic_limit, api_key_from_request
+from pyTON.api_key_manager import api_key_manager, check_api_key
 
 from loguru import logger
 
@@ -51,6 +48,8 @@ This API enables HTTP access to TON blockchain - getting accounts and wallets in
 In addition to REST API, all methods are available through [JSON-RPC endpoint](#json%20rpc)  with `method` equal to method name and `params` passed as a dictionary.
 
 The response contains a JSON object, which always has a boolean field `ok` and either `error` or `result`. If `ok` equals true, the request was successful and the result of the query can be found in the `result` field. In case of an unsuccessful request, `ok` equals false and the error is explained in the `error`.
+
+API Key should be sent either as `api_key` query parameter or `X-API-Key` header.
 """
 
 tags_metadata = [
@@ -139,15 +138,6 @@ def startup():
                           cdll_path=settings.pyton.cdll)
     tonlib.init_tonlib()
 
-
-app.add_middleware(
-    MongoLoggerMiddleware,
-    **settings.mongodb,
-)
-
-limiter = Limiter(key_func=api_key_from_request, storage_uri=f"redis://{settings.slowapi_redis.endpoint}:{settings.slowapi_redis.port}")
-app.state.limiter = limiter
-
 # Exception handlers
 
 @app.exception_handler(StarletteHTTPException)
@@ -169,11 +159,6 @@ async def timeout_exception_handler(request, exc):
 async def tonlib_wront_result_exception_handler(request, exc):
     res = TonResponse(ok=False, error=str(exc), code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     return JSONResponse(res.dict(exclude_none=True), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-@app.exception_handler(RateLimitExceeded)
-async def rate_limit_exceeded_exception_handler(request, exc):
-    res = TonResponse(ok=False, error=f"Rate limit exceeded: {exc.detail}", status_code=429)
-    return JSONResponse(res.dict(exclude_none=True), status_code=status.HTTP_429_TOO_MANY_REQUESTS)
 
 @app.exception_handler(Exception)
 async def fastapi_generic_exception_handler(request, exc):
@@ -246,10 +231,8 @@ def json_rpc(method):
 
 @app.get('/getAddressInformation', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
 @json_rpc('getAddressInformation')
-@limiter.limit(partial(dynamic_limit, 'getAddressInformation'))
 @wrap_result
 async def get_address_information(
-    request: Request,
     address: str = Query(..., description="Identifier of target TON account in any form.")
     ):
     """
@@ -264,10 +247,8 @@ async def get_address_information(
 
 @app.get('/getExtendedAddressInformation', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
 @json_rpc('getExtendedAddressInformation')
-@limiter.limit(partial(dynamic_limit, 'getExtendedAddressInformation'))
 @wrap_result
 async def get_extended_address_information(
-    request: Request,
     address: str = Query(..., description="Identifier of target TON account in any form.")
     ):
     """
@@ -279,10 +260,8 @@ async def get_extended_address_information(
 
 @app.get('/getWalletInformation', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
 @json_rpc('getWalletInformation')
-@limiter.limit(partial(dynamic_limit, 'getWalletInformation'))
 @wrap_result
 async def get_wallet_information(
-    request: Request,
     address: str = Query(..., description="Identifier of target TON account in any form.")
     ):
     """
@@ -305,10 +284,8 @@ async def get_wallet_information(
 
 @app.get('/getTransactions', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts', 'transactions'])
 @json_rpc('getTransactions')
-@limiter.limit(partial(dynamic_limit, 'getTransactions'))
 @wrap_result
 async def get_transactions(
-    request: Request,
     address: str = Query(..., description="Identifier of target TON account in any form."), 
     limit: Optional[int] = Query(default=10, description="Maximum number of transactions in response."), 
     lt: Optional[int] = Query(default=None, description="Logical time of transaction to start with, must be sent with *hash*."), 
@@ -324,10 +301,8 @@ async def get_transactions(
 
 @app.get('/getAddressBalance', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
 @json_rpc('getAddressBalance')
-@limiter.limit(partial(dynamic_limit, 'getAddressBalance'))
 @wrap_result
 async def get_address_balance(
-    request: Request,
     address: str = Query(..., description="Identifier of target TON account in any form.")
     ):
     """
@@ -341,10 +316,8 @@ async def get_address_balance(
 
 @app.get('/getAddressState', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
 @json_rpc('getAddressState')
-@limiter.limit(partial(dynamic_limit, 'getAddressState'))
 @wrap_result
 async def get_address(
-    request: Request,
     address: str = Query(..., description="Identifier of target TON account in any form.")
     ):
     """
@@ -356,10 +329,8 @@ async def get_address(
 
 @app.get('/packAddress', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
 @json_rpc('packAddress')
-@limiter.limit(partial(dynamic_limit, 'packAddress'))
 @wrap_result
 async def pack_address(
-    request: Request,
     address: str = Query(..., description="Identifier of target TON account in raw form.", example="0:83DFD552E63729B472FCBCC8C45EBCC6691702558B68EC7527E1BA403A0F31A8")
     ):
     """
@@ -369,10 +340,8 @@ async def pack_address(
 
 @app.get('/unpackAddress', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
 @json_rpc('unpackAddress')
-@limiter.limit(partial(dynamic_limit, 'unpackAddress'))
 @wrap_result
 async def unpack_address(
-    request: Request,
     address: str = Query(..., description="Identifier of target TON account in user-friendly form", example="EQCD39VS5jcptHL8vMjEXrzGaRcCVYto7HUn4bpAOg8xqB2N")
     ):
     """
@@ -382,11 +351,8 @@ async def unpack_address(
 
 @app.get('/getMasterchainInfo', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('getMasterchainInfo')
-@limiter.limit(partial(dynamic_limit, 'getMasterchainInfo'))
 @wrap_result
-async def get_masterchain_info(
-    request: Request
-    ):
+async def get_masterchain_info():
     """
     Get up-to-date masterchain state.
     """
@@ -394,7 +360,6 @@ async def get_masterchain_info(
 
 @app.get('/getConsensusBlock', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('getConsensusBlock')
-@limiter.limit(partial(dynamic_limit, 'getConsensusBlock'))
 @wrap_result
 async def get_consensus_block():
     """
@@ -404,10 +369,8 @@ async def get_consensus_block():
 
 @app.get('/lookupBlock', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('lookupBlock')
-@limiter.limit(partial(dynamic_limit, 'lookupBlock'))
 @wrap_result
 async def lookup_block(
-    request: Request,
     workchain: int = Query(..., description="Workchain id to look up block in"), 
     shard: int = Query(..., description="Shard id to look up block in"),
     seqno: Optional[int] = Query(None, description="Block's height"),
@@ -421,10 +384,8 @@ async def lookup_block(
 
 @app.get('/shards', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('shards')
-@limiter.limit(partial(dynamic_limit, 'shards'))
 @wrap_result
 async def shards(
-    request: Request,
     seqno: int = Query(..., description="Masterchain seqno to fetch shards of.")
     ):
     """
@@ -434,10 +395,8 @@ async def shards(
 
 @app.get('/getBlockTransactions', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks','transactions'])
 @json_rpc('getBlockTransactions')
-@limiter.limit(partial(dynamic_limit, 'getBlockTransactions'))
 @wrap_result
 async def get_block_transactions(
-    request: Request,
     workchain: int, 
     shard: int, 
     seqno: int, 
@@ -454,10 +413,8 @@ async def get_block_transactions(
 
 @app.get('/getBlockHeader', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('getBlockHeader')
-@limiter.limit(partial(dynamic_limit, 'getBlockHeader'))
 @wrap_result
 async def get_block_header(
-    request: Request,
     workchain: int, 
     shard: int, 
     seqno: int, 
@@ -471,10 +428,8 @@ async def get_block_header(
 
 @app.get('/tryLocateTx', response_model=TonResponse, response_model_exclude_none=True, tags=['transactions'])
 @json_rpc('tryLocateTx')
-@limiter.limit(partial(dynamic_limit, 'tryLocateTx'))
 @wrap_result
 async def get_try_locate_tx(
-    request: Request,
     source: str, 
     destination: str, 
     created_lt: int
@@ -486,10 +441,8 @@ async def get_try_locate_tx(
 
 @app.get('/tryLocateResultTx', response_model=TonResponse, response_model_exclude_none=True, tags=['transactions'])
 @json_rpc('tryLocateResultTx')
-@limiter.limit(partial(dynamic_limit, 'tryLocateResultTx'))
 @wrap_result
 async def get_try_locate_result_tx(
-    request: Request,
     source: str, 
     destination: str, 
     created_lt: int
@@ -501,10 +454,8 @@ async def get_try_locate_result_tx(
 
 @app.get('/tryLocateSourceTx', response_model=TonResponse, response_model_exclude_none=True, tags=['transactions'])
 @json_rpc('tryLocateSourceTx')
-@limiter.limit(partial(dynamic_limit, 'tryLocateSourceTx'))
 @wrap_result
 async def get_try_locate_source_tx(
-    request: Request,
     source: str, 
     destination: str, 
     created_lt: int
@@ -516,10 +467,8 @@ async def get_try_locate_source_tx(
 
 @app.get('/detectAddress', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
 @json_rpc('detectAddress')
-@limiter.limit(partial(dynamic_limit, 'detectAddress'))
 @wrap_result
 async def detect_address(
-    request: Request,
     address: str = Query(..., description="Identifier of target TON account in any form.")
     ):
     """
@@ -529,10 +478,8 @@ async def detect_address(
 
 @app.post('/sendBoc', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
 @json_rpc('sendBoc')
-@limiter.limit(partial(dynamic_limit, 'sendBoc'))
 @wrap_result
 async def send_boc(
-    request: Request,
     boc: str = Body(..., embed=True, description="b64 encoded bag of cells")
     ):
     """
@@ -543,10 +490,8 @@ async def send_boc(
 
 @app.post('/sendCellSimple', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
 @json_rpc('sendCellSimple')
-@limiter.limit(partial(dynamic_limit, 'sendCellSimple'))
 @wrap_result
 async def send_cell(
-    request: Request,
     cell: Dict[str, Any] = Body(..., embed=True, description="Cell serialized as object")
     ):
     """
@@ -561,10 +506,8 @@ async def send_cell(
 
 @app.post('/sendQuery', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
 @json_rpc('sendQuery')
-@limiter.limit(partial(dynamic_limit, 'sendQuery'))
 @wrap_result
 async def send_query(
-    request: Request,
     address: str = Body(..., description="Address in any format"), 
     body: str = Body(..., description="b64-encoded boc-serialized cell with message body"), 
     init_code: str = Body(default='', description="b64-encoded boc-serialized cell with init-code"), 
@@ -581,10 +524,8 @@ async def send_query(
 
 @app.post('/sendQuerySimple', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
 @json_rpc('sendQuerySimple')
-@limiter.limit(partial(dynamic_limit, 'sendQuerySimple'))
 @wrap_result
 async def send_query_cell(
-    request: Request,
     address: str = Body(..., description="Address in any format"), 
     body: str = Body(..., description='Body cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'), 
     init_code: Optional[Dict[str, Any]] = Body(default=None, description='init-code cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'), 
@@ -607,10 +548,8 @@ async def send_query_cell(
 
 @app.post('/estimateFee', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
 @json_rpc('estimateFee')
-@limiter.limit(partial(dynamic_limit, 'estimateFee'))
 @wrap_result
 async def estimate_fee(
-    request: Request,
     address: str = Body(..., description='Address in any format'), 
     body: str = Body(..., description='b64-encoded cell with message body'), 
     init_code: str = Body(default='', description='b64-encoded cell with init-code'), 
@@ -628,10 +567,8 @@ async def estimate_fee(
 
 @app.post('/estimateFeeSimple', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
 @json_rpc('estimateFeeSimple')
-@limiter.limit(partial(dynamic_limit, 'estimateFeeSimple'))
 @wrap_result
 async def estimate_fee_cell(
-    request: Request,
     address: str = Body(..., description='Address in any format'), 
     body: Dict[str, Any] = Body(..., description='Body cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'), 
     init_code: Optional[Dict[str, Any]] = Body(default=None, description='init-code cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'), 
@@ -657,10 +594,8 @@ async def estimate_fee_cell(
 if settings.pyton.get_methods:
     @app.post('/runGetMethod', response_model=TonResponse, response_model_exclude_none=True, tags=["run method"])
     @json_rpc('runGetMethod')
-    @limiter.limit(partial(dynamic_limit, 'runGetMethod'))
     @wrap_result
     async def run_get_method(
-        request: Request,
         address: str = Body(..., description='Contract address'), 
         method: Union[str, int] = Body(..., description='Method name or method id'), 
         stack: List[List[Any]] = Body(..., description="Array of stack elements: `[['num',3], ['cell', cell_object], ['slice', slice_object]]`")
@@ -698,3 +633,16 @@ if settings.pyton.json_rpc:
             return TonResponseJsonRPC(ok=False, error=f'TypeError: {e}', id=_id)
         
         return TonResponseJsonRPC(ok=result.ok, result=result.result, error=result.error, code=result.code, id=_id)
+
+
+app.add_middleware(
+    LoggerAndRateLimitMiddleware,
+    mongo_host=settings.mongodb.host,
+    mongo_port=settings.mongodb.port,
+    mongo_username=settings.mongodb.username,
+    mongo_password_file=settings.mongodb.password_file,
+    mongo_database=settings.mongodb.database,
+    rate_limit_redis_uri=f"redis://{settings.slowapi_redis.endpoint}:{settings.slowapi_redis.port}",
+    endpoints=json_rpc_methods.keys(),
+    rate_limit_enabled=False
+)

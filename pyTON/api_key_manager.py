@@ -8,9 +8,20 @@ from typing import Dict
 from pymongo import MongoClient
 from config import settings
 from fastapi.exceptions import HTTPException
-from slowapi.util import get_remote_address
+from fastapi.responses import JSONResponse
 from urllib.parse import urlparse
 
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import Message
+
+from limits import RateLimitItem, parse_many
+from limits.errors import ConfigurationError
+from limits.aio.storage import RedisStorage
+from limits.aio.strategies import FixedWindowRateLimiter
+
+from pyTON.models import TonResponse
+
+from loguru import logger
 
 class APIKeyManager:
     def __init__(self, endpoint, port):
@@ -37,10 +48,24 @@ class APIKeyManager:
         result = json.loads(result)
         return result['limits'].get(method)
 
+    def get_total_limits(self, api_key: str) -> str:
+        """
+        Fetch limits for all calls for api key from db.
+
+        :param api_key: User's API key
+        """
+        result = self.r.get(api_key)
+        if not result:
+            return None
+        result = json.loads(result)
+        return result['limits'].get('total')
+
 api_key_query = APIKeyQuery(name="api_key", description="API key sent as query parameter", auto_error=False)
 api_key_header = APIKeyHeader(name="X-API-Key", description="API key sent as request header", auto_error=False)
-default_limits_no_key = "50/minute"
-default_limits_with_key = "100/minute"
+default_total_limits_no_key = "1/second"
+default_total_limits_with_key = "unlimited"
+default_per_method_limits_no_key = "unlimited"
+default_per_method_limits_with_key = "unlimited"
 api_key_manager = APIKeyManager(**settings.token_redis)
 
 def check_api_key(
@@ -54,12 +79,20 @@ def check_api_key(
         return api_key
     raise HTTPException(status_code=401, detail="API key does not exist.")
 
-def dynamic_limit(method: str, key: str):
+def per_method_limits(method: str, key: str):
     if not api_key_manager.exists(key):
-        return default_limits_no_key
+        return default_per_method_limits_no_key
     limits = api_key_manager.get_limits(method, key)
     if limits is None:
-        return default_limits_with_key
+        return default_per_method_limits_with_key
+    return limits
+
+def total_limits(key: str):
+    if not api_key_manager.exists(key):
+        return default_total_limits_no_key
+    limits = api_key_manager.get_total_limits(key)
+    if limits is None:
+        return default_total_limits_with_key
     return limits
 
 def get_referer(request: Request):
@@ -75,8 +108,11 @@ def get_referer(request: Request):
 
     return url_parsed.hostname
 
+def get_remote_address(request: Request):
+    return request.headers.get('x-real-ip', "127.0.0.1")
+
 def api_key_from_request(request: Request):
-    api_key = check_api_key(request.headers.get(api_key_header.model.name))
+    api_key = check_api_key(request.query_params.get(api_key_query.model.name), request.headers.get(api_key_header.model.name))
     if api_key:
         return api_key
     referer = get_referer(request)
