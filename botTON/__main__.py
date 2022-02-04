@@ -175,9 +175,9 @@ def create_api_token(update: Update, context: CallbackContext) -> int:
 
 def project_description(update: Update, context: CallbackContext) -> int:
     description = update.message.text
-    if len(description) < 20:
+    if len(description.strip()) == 0:
         logger.info(f"User {update.message.from_user.id} sent short description.")
-        update.message.reply_text("Description is too short, please, elaborate.")
+        update.message.reply_text("Please enter non-empty description.")
         return PROJECT_DESCRIPTION
 
     context.user_data['description'] = description
