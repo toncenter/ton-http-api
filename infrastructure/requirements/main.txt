@@ -10,8 +10,9 @@ pydantic
 uvicorn
 pymongo
 crc16
+limits
 pytimeparse
 ujson
 msgpack
-git+https://github.com/dungeon-master-666/slowapi.git@master
 redis
+coredis
