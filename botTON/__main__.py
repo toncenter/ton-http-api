@@ -107,7 +107,7 @@ def start(update: Update, context: CallbackContext) -> int:
     else:
         reply_keyboard = [['Create API Token']]
     update.message.reply_text(
-        'TonCenter.com API token management bot. How can I help?',
+        'testnet.toncenter.com API token management bot. How can I help?',
         reply_markup=ReplyKeyboardMarkup(
             reply_keyboard, one_time_keyboard=True
         ),
