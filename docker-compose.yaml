@@ -42,7 +42,7 @@ services:
       - internal
     command: redis-server --dbfilename dump.rdb --save 60 1
     volumes:
-      - ./botTON_data:/data
+      - ./private/botTON_data:/data
   main:
     build: 
       context: .
