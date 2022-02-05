@@ -3,7 +3,7 @@ services:
   mongodb:
     image: mongo:5.0.5
     volumes:
-      - mongodata:/data/db
+      - mongo_data:/data/db
     restart: unless-stopped
     environment:
       MONGO_INITDB_ROOT_USERNAME: user1
@@ -14,6 +14,22 @@ services:
       - 27017:27017
     networks: 
       - internal
+  postgres:
+    image: postgres:latest
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: user1
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_DB: pyton
+    ports:
+      - 5432:5432
+    secrets:
+      - postgres_password
+    networks:
+      - internal
+    shm_size: 2Gb
   redis:
     image: redis:latest
     restart: unless-stopped
@@ -21,17 +37,6 @@ services:
       - internal
   slowapi_redis:
     image: redis:latest
-    restart: unless-stopped
-    networks:
-      - internal
-  token_bot:
-    build:
-      context: .
-      dockerfile: infrastructure/token_bot.Dockerfile
-    secrets:
-      - token_file
-    depends_on:
-      - token_redis
     restart: unless-stopped
     networks:
       - internal
@@ -43,57 +48,76 @@ services:
     command: redis-server --dbfilename dump.rdb --save 60 1
     volumes:
       - ./private/botTON_data:/data
+  # core services
   main:
     build: 
       context: .
-      dockerfile: infrastructure/main.Dockerfile
-    environment:
-      GETMETHODS: "false"
+      dockerfile: deployment/main.Dockerfile
     secrets:
       - mongodb_password
-    depends_on: 
+      - postgres_password
+    depends_on:
       - mongodb
+      - postgres
       - slowapi_redis
     restart: unless-stopped
     networks:
       - internal
-    command: --host 0.0.0.0 --port 8081
+    command: --bind=0.0.0.0:8081 -w=8
   analytics:
     build: 
       context: .
-      dockerfile: infrastructure/analytics.Dockerfile
+      dockerfile: deployment/analytics.Dockerfile
     secrets:
       - mongodb_password
     depends_on: 
       - mongodb
+      - postgres
     restart: unless-stopped
     networks:
       - internal
-    command: --host 0.0.0.0 --port 8081
+    command: --bind=0.0.0.0:8081 -w=4
+#  token_bot:
+#    build:
+#      context: .
+#      dockerfile: deployment/token_bot.Dockerfile
+#    secrets:
+#      - token_file
+#    depends_on:
+#      - token_redis
+#    restart: unless-stopped
+#    networks:
+#      - internal
+  ## nginx
   nginx:
     build:
       context: .
-      dockerfile: infrastructure/nginx.Dockerfile
+      dockerfile: deployment/nginx.Dockerfile
     ports:
       - 80:80
       - 443:443
     links:
       - main
+      - analytics
     volumes:
       - ./private/ssl-data/:/etc/letsencrypt
-      - nginxdata:/etc/nginx
+      - nginx_data:/etc/nginx
     networks:
       - internal
     restart: unless-stopped
 secrets:
   mongodb_password:
     file: private/mongodb_password
+  postgres_password:
+    file: private/postgres_password
   token_file:
     file: private/token_file
 volumes:
-  mongodata:
+  mongo_data:
     external: false
-  nginxdata:
+  postgres_data:
+    external: false
+  nginx_data:
     external: false
 networks:
   internal:

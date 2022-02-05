@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from starlette.responses import Response, StreamingResponse
 from starlette.types import Message
 
+from typing import Dict, Any
 from pymongo import MongoClient
 from datetime import datetime
 from functools import wraps
@@ -15,10 +16,9 @@ from limits.aio.strategies import FixedWindowRateLimiter
 
 from pyTON.api_key_manager import per_method_limits, total_limits, api_key_from_request, api_key_header, api_key_query
 from pyTON.models import TonResponse
-from config import settings
+from pyTON.postgres import postgres_insert_record
 
 from loguru import logger
-
 
 
 def to_mongodb(collection, creds):
@@ -27,7 +27,7 @@ def to_mongodb(collection, creds):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            client = MongoClient(host=creds["host"], 
+            client = MongoClient(host=creds["host"],
                                  port=creds["port"],
                                  username=creds["username"],
                                  password=password)
@@ -39,6 +39,7 @@ def to_mongodb(collection, creds):
     return decorator
 
 
+
 # For unknown reason FastAPI can't handle generic Exception with exception_handler(...)
 # https://github.com/tiangolo/fastapi/issues/2750
 # As workaround - catch and handle this exception in MongoLoggerMiddleware.
@@ -48,17 +49,23 @@ def generic_exception_handler(exc):
     
 
 class LoggerAndRateLimitMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, mongo_host, mongo_port, mongo_username, mongo_password_file, mongo_database,
-        rate_limit_redis_uri, endpoints, rate_limit_enabled=True):
+    def __init__(self,
+                 app,
+                 mongo_settings: Dict[str, Any],
+                 postgres_settings: Dict[str, Any],
+                 rate_limit_redis_uri,
+                 endpoints,
+                 rate_limit_enabled=True):
         super().__init__(app)
-        with open(mongo_password_file, 'r') as f:
-            password = f.read()
-        self.client = MongoClient(host=mongo_host, 
-                                  port=mongo_port,
-                                  username=mongo_username,
-                                  password=password)
-        self.database = mongo_database
+        # mongodb
+        mongo_settings = mongo_settings.copy()
+        self.database = mongo_settings.pop('database')
+        self.client = MongoClient(**mongo_settings)
 
+        # postgres
+        self.postgres_settings = postgres_settings
+
+        # limiter settings
         self.endpoints = endpoints
         self.rate_limit_storage = RedisStorage(rate_limit_redis_uri)
         self.fixed_window = FixedWindowRateLimiter(self.rate_limit_storage)
@@ -130,18 +137,25 @@ class LoggerAndRateLimitMiddleware(BaseHTTPMiddleware):
         result = await call_next(request)
         return result
 
+    def log_request_record(self, record):
+        if record['response']['status_code'] != status.HTTP_200_OK:
+            # FIXME: can this slow down response time?
+            self.client[self.database].requests.insert_one(record)
+
+    def log_request_statistics_record(self, stat_record):
+        postgres_insert_record(stat_record, postgres_settings=self.postgres_settings)
+
     async def dispatch(self, request: Request, call_next):
         start = datetime.utcnow()
 
+        # set request body
         await self.set_body(request)
         body = await request.body()
 
+        # start getting response
         response = None
         try:
             response = await self.rate_limit_and_call(request, call_next)
-        except Exception as ex:
-            response = generic_exception_handler(ex)
-        else:
             if isinstance(response, StreamingResponse):
                 response_headers = dict(response.headers.items())
                 response_body = b''
@@ -153,7 +167,8 @@ class LoggerAndRateLimitMiddleware(BaseHTTPMiddleware):
                     headers=dict(response.headers),
                     media_type=response.media_type
                 )
-
+        except Exception as ex:
+            response = generic_exception_handler(ex)
         end = datetime.utcnow()
         elapsed = (end - start).total_seconds()
 
@@ -161,27 +176,24 @@ class LoggerAndRateLimitMiddleware(BaseHTTPMiddleware):
         response_body = response.body if response.status_code != 200 else None
 
         # full record in case of error
-        if settings.logs.successful_requests or response.status_code != status.HTTP_200_OK:
-            record = {
-                'timestamp': start,
-                'elapsed': elapsed,
-                'request': {
-                    'method': request.method,
-                    'headers': request.headers,
-                    'url': request.url.path,
-                    'query_params': request.query_params.__dict__,
-                    'path_params': request.path_params,
-                    'body': body
-                },
-                'response': {
-                    'status_code': response.status_code,
-                    'headers': response.headers,
-                    'body': response_body
-                }
+        record = {
+            'timestamp': start,
+            'elapsed': elapsed,
+            'request': {
+                'method': request.method,
+                'headers': request.headers,
+                'url': request.url.path,
+                'query_params': request.query_params.__dict__,
+                'path_params': request.path_params,
+                'body': body
+            },
+            'response': {
+                'status_code': response.status_code,
+                'headers': response.headers,
+                'body': response_body
             }
-        
-            # FIXME: can this slow down response time?
-            self.client[self.database].requests.insert_one(record)
+        }
+        self.log_request_record(record)
 
         # statistics record
         url = request.url.path
@@ -192,15 +204,14 @@ class LoggerAndRateLimitMiddleware(BaseHTTPMiddleware):
             except Exception as ee:
                 logger.critical(ee)
         stat_record = {
-            'timestamp': datetime.now(),
+            'timestamp': datetime.utcnow().timestamp(),
             'from_ip': request.headers.get('x-real-ip', '?'),
-            'api_key': request.query_params.get(api_key_query.model.name) or request.headers.get(api_key_header.model.name),
+            'api_key': request.query_params.get(api_key_query.model.name)
+                       or request.headers.get(api_key_header.model.name),
             'url': url,
             'status_code': response.status_code,
             'elapsed': elapsed
         }
-
-        # FIXME: can this slow down response time?
-        self.client[self.database].request_stats.insert_one(stat_record)
+        self.log_request_statistics_record(stat_record)
 
         return response

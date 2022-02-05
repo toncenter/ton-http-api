@@ -2,7 +2,7 @@
 set -e
 
 echo "Building image"
-docker build -t tonlib-builder -f infrastructure/tonlib.Dockerfile . $@
+docker build -t tonlib-builder -f deployment/tonlib.Dockerfile . $@
 
 echo "Running container"
 CONTAINER_ID=$(docker run -d tonlib-builder)

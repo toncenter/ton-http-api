@@ -2,8 +2,10 @@ loguru
 pyyaml
 fastapi
 pydantic
-uvicorn
 pymongo
 pytimeparse
 pandas
 Inject
+uvicorn
+gunicorn
+psycopg2-binary

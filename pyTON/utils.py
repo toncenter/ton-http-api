@@ -14,7 +14,7 @@ class TonLibWrongResult(Exception):
         self.result = result
 
     def __str__(self):
-        return f"{self.description} - unexpected lite server response:\n\t{json.dumps(self.result)}"
+        return f"{self.description} - unexpected lite server response: {json.dumps(self.result)}"
 
 
 def pubkey_b64_to_hex(b64_key):

@@ -7,7 +7,6 @@ loguru
 pyyaml
 fastapi
 pydantic
-uvicorn
 pymongo
 crc16
 limits
@@ -16,3 +15,6 @@ ujson
 msgpack
 redis
 coredis
+uvicorn
+gunicorn
+psycopg2-binary

@@ -93,7 +93,6 @@ app = FastAPI(
 )
 
 tonlib = None
-mongo_database = None
 
 
 @app.on_event("startup")
@@ -119,16 +118,6 @@ def startup():
     keystore = settings.pyton.keystore
     if not os.path.exists(keystore):
         os.makedirs(keystore)
-
-    # setup mongo_database
-    global mongo_database
-    with open(settings.mongodb['password_file'], 'r') as f:
-        password = f.read()
-    client = MongoClient(host=settings.mongodb['host'], 
-                         port=settings.mongodb['port'],
-                         username=settings.mongodb['username'],
-                         password=password)
-    mongo_database = client[settings.mongodb['database']]
 
     # setup tonlib multiclient
     global tonlib

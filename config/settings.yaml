@@ -8,22 +8,30 @@ pyton:
   cdll: null
 logs:
   successful_requests: true
+cache:
+  use_redis: true
 mongodb:
   host: mongodb
   port: 27017
   database: pyton
   username: user1
   password_file: /run/secrets/mongodb_password
-redis:
-  endpoint: redis
+postgres:
+  host: postgres
+  port: 5432
+  user: user1
+  password_file: /run/secrets/postgres_password
+  dbname: pyton
+cache_redis:
+  endpoint: cache_redis
   port: 6379
   timeout: 1
 slowapi_redis:
   endpoint: slowapi_redis
   port: 6379
   timeout: 1
-token_bot:
-  token_file: /run/secrets/token_file
 token_redis:
   endpoint: token_redis
   port: 6379
+token_bot:
+  token_file: /run/secrets/token_file

@@ -116,10 +116,6 @@ venv.bak/
 ## tonlib chaotically created temp blkstate files
 *.blkstate
 
-## logs
-/logs
-
-.vscode
 /private
 .DS_Store
 
@@ -127,9 +123,9 @@ venv.bak/
 
 ## custom
 /.vscode
+/.idea
 /docs
 /logs
 /private
 /sandbox
-/venv
 /notebooks
