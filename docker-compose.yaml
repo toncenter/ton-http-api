@@ -30,7 +30,7 @@ services:
     networks:
       - internal
     shm_size: 2Gb
-  redis:
+  cache_redis:
     image: redis:latest
     restart: unless-stopped
     networks:
@@ -56,27 +56,29 @@ services:
     secrets:
       - mongodb_password
       - postgres_password
-    depends_on:
+    links:
       - mongodb
       - postgres
+      - cache_redis
       - slowapi_redis
     restart: unless-stopped
     networks:
       - internal
-    command: --bind=0.0.0.0:8081 -w=8
+    command: --bind=0.0.0.0:8081 -w=1
   analytics:
     build: 
       context: .
       dockerfile: deployment/analytics.Dockerfile
     secrets:
       - mongodb_password
-    depends_on: 
+      - postgres_password
+    links:
       - mongodb
       - postgres
     restart: unless-stopped
     networks:
       - internal
-    command: --bind=0.0.0.0:8081 -w=4
+    command: --bind=0.0.0.0:8081 -w=1
 #  token_bot:
 #    build:
 #      context: .

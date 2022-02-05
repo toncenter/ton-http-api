@@ -18,11 +18,13 @@ with importlib.resources.open_text(__package__, "settings.yaml") as f:
 
     # reading passwords once
     def read_password(data: Dict[str, Any]):
-        password_file = data.pop('password_file')
-        if password_file:
-            with open(password_file, 'r') as f:
-                data['password'] = f.read()
+        if 'password_file' in data:
+            password_file = data.pop('password_file')
+            if password_file:
+                with open(password_file, 'r') as f:
+                    data['password'] = f.read()
         return data
+
     for k, v in settings.items():
         read_password(v)
 

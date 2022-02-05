@@ -143,7 +143,7 @@ class LoggerAndRateLimitMiddleware(BaseHTTPMiddleware):
             self.client[self.database].requests.insert_one(record)
 
     def log_request_statistics_record(self, stat_record):
-        postgres_insert_record(stat_record, postgres_settings=self.postgres_settings)
+        postgres_insert_record(stat_record, 'requests', postgres_settings=self.postgres_settings)
 
     async def dispatch(self, request: Request, call_next):
         start = datetime.utcnow()

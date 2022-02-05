@@ -1,9 +1,7 @@
 import inject
 import sys
-import pandas as pd
 
 from typing import Optional
-from pymongo import MongoClient
 
 from fastapi import FastAPI
 from fastapi.params import Query
@@ -16,9 +14,6 @@ from loguru import logger
 
 # inject configure
 def inject_config(binder):
-    client = MongoClient(**settings.mongodb)
-
-    binder.bind(MongoClient, client)
     logger.info(f"Injector configuration complete")
 
 
@@ -51,7 +46,6 @@ def startup():
 
 
 # request statistics
-
 @app.get('/requests', response_model_exclude_none=False)
 def request_stats(period: str=Query(..., 
                                     description='Get requests statistics for period, '

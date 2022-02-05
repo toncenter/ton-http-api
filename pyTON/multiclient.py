@@ -4,27 +4,21 @@ import asyncio
 import copy
 import time
 import codecs
-import struct
-import socket
-import threading
 import aioprocessing
 import traceback
 import json
-import aiocache
 
 from pathlib import Path
-from aiocache import cached, Cache, AIOCACHE_CACHES
+from aiocache import cached, Cache
 from aiocache.serializers import PickleSerializer
-from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import datetime
+from typing import Dict, Any
 
 from config import settings
-from pyTON.tonlibjson import TonLib
-from pyTON.address_utils import prepare_address, detect_address
 from pyTON.utils import TonLibWrongResult
-from pyTON.logging import to_mongodb
+from pyTON.postgres import postgres_insert_record
 from pyTON.client import TonlibClient, TonlibClientResult, MsgType, b64str_bytes, b64str_str, b64str_hex, h2b64
-from tvm_valuetypes import serialize_tvm_stack, render_tvm_stack, deserialize_boc
+from tvm_valuetypes import deserialize_boc
 
 from loguru import logger
 
@@ -33,7 +27,7 @@ def current_function_name():
     return inspect.stack()[1].function
 
 
-def log_liteserver_task(task_result: TonlibClientResult, postgres: ):
+def log_liteserver_task(task_result: TonlibClientResult, postgres_settings: Dict[str, Any]):
     res_type = task_result.result.get('@type', 'unknown') if task_result.result else 'error'
     details = {}
     if res_type == 'error' or res_type == 'unknown':
@@ -42,15 +36,15 @@ def log_liteserver_task(task_result: TonlibClientResult, postgres: ):
         details['exception'] = str(task_result.exception)
     
     record = {
-        'timestamp': datetime.utcnow(),
+        'timestamp': datetime.utcnow().timestamp(),
         'elapsed': task_result.elapsed_time,
-        'task_id': task_result.task_id,
         'method': task_result.method,
-        'liteserver_info': task_result.liteserver_info,
+        'liteserver': '{number}:{ip}:{port}'.format(**task_result.liteserver_info),
         'result_type': res_type,
+        'is_success': task_result.exception is None,
         'details': json.dumps(details),
     }
-
+    postgres_insert_record(record, 'liteserver_tasks', postgres_settings=postgres_settings)
 
 
 class TonlibMultiClient:
@@ -106,7 +100,7 @@ class TonlibMultiClient:
                         logger.debug(f"Client #{client.number:03d}, task '{task_id}' result: {result}, exception: {exception}")
                         
                         # log liteserver task
-                        log_liteserver_task(msg_content)
+                        log_liteserver_task(msg_content, postgres_settings=settings.postgres)
                     else:
                         logger.warning(f"Client #{client.number:03d}, task '{task_id}' doesn't exist or is done.")
 
