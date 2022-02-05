@@ -7,7 +7,7 @@ pyton:
   keystore: ./ton_keystore/
   cdll: null
 logs:
-  successful_requests: true
+  successful_requests: false
 cache:
   use_redis: true
 mongodb:
