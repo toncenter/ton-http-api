@@ -20,29 +20,9 @@ from tvm_valuetypes import serialize_tvm_stack, render_tvm_stack, deserialize_bo
 from config import settings
 from pyTON.tonlibjson import TonLib
 from pyTON.address_utils import prepare_address, detect_address
-from pyTON.utils import TonLibWrongResult
+from pyTON.utils import TonLibWrongResult, b64str_to_hex, hex_to_b64str
 
 from loguru import logger
-
-
-def b64str_bytes(b64str):
-    b64bytes = codecs.encode(b64str, "utf8")
-    return codecs.decode(b64bytes, "base64")
-
-
-def b64str_str(b64str):
-    _bytes = b64str_bytes(b64str)
-    return codecs.decode(_bytes, "utf8")
-
-
-def b64str_hex(b64str):
-    _bytes = b64str_bytes(b64str)
-    _hex = codecs.encode(_bytes, "hex")
-    return codecs.decode(_hex, "utf8")
-
-
-def h2b64(x):
-    return codecs.encode(codecs.decode(x, 'hex'), 'base64').decode().replace("\n", "")
 
 
 class MsgType(Enum):
@@ -254,7 +234,7 @@ class TonlibClient(multiprocessing.Process):
             }
         """
         account_address = prepare_address(account_address)
-        from_transaction_hash = h2b64(from_transaction_hash)
+        from_transaction_hash = hex_to_b64str(from_transaction_hash)
 
         request = {
             '@type': 'raw.getTransactions',
@@ -282,7 +262,7 @@ class TonlibClient(multiprocessing.Process):
             if '@type' in addr and addr['@type'] == "error":
                 raise TonLibWrongResult("raw.getAccountState failed", addr)
             try:
-                from_transaction_lt, from_transaction_hash = int(addr["last_transaction_id"]["lt"]), b64str_hex(addr["last_transaction_id"]["hash"])
+                from_transaction_lt, from_transaction_hash = int(addr["last_transaction_id"]["lt"]), b64str_to_hex(addr["last_transaction_id"]["hash"])
             except KeyError:
                 raise TonLibWrongResult("Can't get last_transaction_id data", addr)
         reach_lt = False
@@ -305,7 +285,7 @@ class TonlibClient(multiprocessing.Process):
                     break
                 all_transactions.append(t)
             if next:
-                current_lt, curret_hash = int(next["lt"]), b64str_hex(next["hash"])
+                current_lt, curret_hash = int(next["lt"]), b64str_to_hex(next["hash"])
             else:
                 break
             if current_lt == 0:
@@ -605,7 +585,7 @@ class TonlibClient(multiprocessing.Process):
         # TODO automatically check incompleteness and download all txes
         for tx in total_result["transactions"]:
             try:
-                tx["account"] = "%d:%s" % (result["id"]["workchain"], b64str_hex(tx["account"]))
+                tx["account"] = "%d:%s" % (result["id"]["workchain"], b64str_to_hex(tx["account"]))
             except:
                 pass
         return total_result
@@ -649,7 +629,7 @@ class TonlibClient(multiprocessing.Process):
                         if not candidate or candidate[1] < int(tx["lt"]):
                             candidate = tx["hash"], int(tx["lt"])
                 if candidate:
-                    txses = await self.get_transactions(destination, from_transaction_lt=candidate[1], from_transaction_hash=b64str_hex(candidate[0]), limit=max(count, 10))
+                    txses = await self.get_transactions(destination, from_transaction_lt=candidate[1], from_transaction_hash=b64str_to_hex(candidate[0]), limit=max(count, 10))
                     for tx in txses:
                         try:
                             in_msg = tx["in_msg"]
@@ -679,7 +659,7 @@ class TonlibClient(multiprocessing.Process):
                     if not candidate or candidate[1] < int(tx["lt"]):
                         candidate = tx["hash"], int(tx["lt"])
             if candidate:
-                txses = await self.get_transactions(source, from_transaction_lt=candidate[1], from_transaction_hash=b64str_hex(candidate[0]), limit=max(count, 10))
+                txses = await self.get_transactions(source, from_transaction_lt=candidate[1], from_transaction_hash=b64str_to_hex(candidate[0]), limit=max(count, 10))
                 for tx in txses:
                     try:
                         for msg in tx["out_msgs"]:

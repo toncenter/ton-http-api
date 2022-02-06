@@ -21,9 +21,9 @@ from datetime import datetime, timezone
 from config import settings
 from pyTON.tonlibjson import TonLib
 from pyTON.address_utils import prepare_address, detect_address
-from pyTON.utils import TonLibWrongResult
+from pyTON.utils import TonLibWrongResult, b64str_to_hex, hash_to_hex
 from pyTON.logging import to_mongodb
-from pyTON.client import TonlibClient, TonlibClientResult, MsgType, b64str_bytes, b64str_str, b64str_hex, h2b64
+from pyTON.client import TonlibClient, TonlibClientResult, MsgType
 from tvm_valuetypes import serialize_tvm_stack, render_tvm_stack, deserialize_boc
 
 from loguru import logger
@@ -206,12 +206,14 @@ class TonlibMultiClient:
         """
          Return all transactions between from_transaction_lt and to_transaction_lt
          if to_transaction_lt and to_transaction_hash are not defined returns all transactions
-         if from_transaction_lt and from_transaction_hash are not defined checks last
+         if from_transaction_lt and from_transaction_hash are not defined latest transactions are returned
         """
+        if from_transaction_hash:
+            from_transaction_hash = hash_to_hex(from_transaction_hash)
         if (from_transaction_lt == None) or (from_transaction_hash == None):
             addr = await self.raw_get_account_state(account_address)
             try:
-                from_transaction_lt, from_transaction_hash = int(addr["last_transaction_id"]["lt"]), b64str_hex(addr["last_transaction_id"]["hash"])
+                from_transaction_lt, from_transaction_hash = int(addr["last_transaction_id"]["lt"]), b64str_to_hex(addr["last_transaction_id"]["hash"])
             except KeyError:
                 raise TonLibWrongResult("Can't get last_transaction_id data", addr)
         reach_lt = False
@@ -234,7 +236,7 @@ class TonlibMultiClient:
                     break
                 all_transactions.append(copy.deepcopy(t))
             if next:
-                current_lt, curret_hash = int(next["lt"]), b64str_hex(next["hash"])
+                current_lt, curret_hash = int(next["lt"]), b64str_to_hex(next["hash"])
             else:
                 break
             if current_lt == 0:
@@ -411,7 +413,7 @@ class TonlibMultiClient:
         # TODO automatically check incompleteness and download all txes
         for tx in total_result["transactions"]:
             try:
-                tx["account"] = "%d:%s" % (result["id"]["workchain"], b64str_hex(tx["account"]))
+                tx["account"] = "%d:%s" % (result["id"]["workchain"], b64str_to_hex(tx["account"]))
             except:
                 pass
         return total_result

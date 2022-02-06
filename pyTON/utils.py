@@ -6,6 +6,7 @@ import asyncio
 import struct
 import json
 import crc16
+import codecs
 
 
 class TonLibWrongResult(Exception):
@@ -16,6 +17,29 @@ class TonLibWrongResult(Exception):
     def __str__(self):
         return f"{self.description} - unexpected lite server response:\n\t{json.dumps(self.result)}"
 
+def b64str_to_bytes(b64str):
+    b64bytes = codecs.encode(b64str, "utf8")
+    return codecs.decode(b64bytes, "base64")
+
+def b64str_to_hex(b64str):
+    _bytes = b64str_to_bytes(b64str)
+    _hex = codecs.encode(_bytes, "hex")
+    return codecs.decode(_hex, "utf8")
+
+def hex_to_b64str(x):
+    return codecs.encode(codecs.decode(x, 'hex'), 'base64').decode().replace("\n", "")
+
+def hash_to_hex(b64_or_hex_hash):
+    """
+    Detect encoding of transactions hash and if necessary convert it to hex.
+    """
+    if len(b64_or_hex_hash) == 44:
+        # Hash is base64
+        return b64str_to_hex(b64_or_hex_hash)
+    if len(b64_or_hex_hash) == 64:
+        # Hash is hex
+        return b64_or_hex_hash
+    raise ValueError("Invalid hash")
 
 def pubkey_b64_to_hex(b64_key):
     """
