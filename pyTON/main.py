@@ -290,7 +290,7 @@ async def get_transactions(
     address: str = Query(..., description="Identifier of target TON account in any form."), 
     limit: Optional[int] = Query(default=10, description="Maximum number of transactions in response."), 
     lt: Optional[int] = Query(default=None, description="Logical time of transaction to start with, must be sent with *hash*."), 
-    hash: Optional[str] = Query(default=None, description="Hash of transaction to start with, in **base64 encoding** , must be sent with *lt*."), 
+    hash: Optional[str] = Query(default=None, description="Hash of transaction to start with, in *base64* or *hex* encoding , must be sent with *lt*."), 
     to_lt: Optional[int] = Query(default=0, description="Logical time of transaction to finish with (to get tx from *lt* to *to_lt*)."), 
     archival: bool = Query(default=False, description="By default getTransaction request is processed by any available liteserver. If *archival=true* only liteservers with full history are used.")
     ):
