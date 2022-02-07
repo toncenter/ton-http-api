@@ -533,7 +533,7 @@ class TonlibClient(multiprocessing.Process):
         if lt:
             mode += 2
         if unixtime:
-            mode += 3
+            mode += 4
         request = {
             '@type': 'blocks.lookupBlock',
             'mode': mode,
