@@ -66,7 +66,7 @@ default_total_limits_no_key = "1/second"
 default_total_limits_with_key = "unlimited"
 default_per_method_limits_no_key = "unlimited"
 default_per_method_limits_with_key = "unlimited"
-api_key_manager = APIKeyManager(**settings.token_redis)
+api_key_manager = APIKeyManager(settings.ratelimit.redis.endpoint, settings.ratelimit.redis.port)
 
 def check_api_key(
     api_key_query: str = Security(api_key_query),

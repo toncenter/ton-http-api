@@ -5,6 +5,7 @@ import redis
 import logging
 import traceback
 import secrets
+import os
 from urllib.parse import urlparse
 
 
@@ -28,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 # Redis
 
-r = redis.Redis(host=settings.token_redis.endpoint, port=settings.token_redis.port, decode_responses=True)
+r = redis.Redis(host=settings.ratelimit.token_redis.endpoint, port=settings.ratelimit.token_redis.port, decode_responses=True)
 
 # Token management
 
@@ -107,7 +108,7 @@ def start(update: Update, context: CallbackContext) -> int:
     else:
         reply_keyboard = [['Create API Token']]
     update.message.reply_text(
-        'toncenter.com API token management bot. How can I help?',
+        f"{os.getenv('MAIN_DOMAIN')} API token management bot. How can I help?",
         reply_markup=ReplyKeyboardMarkup(
             reply_keyboard, one_time_keyboard=True
         ),
@@ -183,7 +184,7 @@ def project_description(update: Update, context: CallbackContext) -> int:
     context.user_data['description'] = description
 
     reply_keyboard = [['Do not restrict by IP']]
-    update.message.reply_text("Do you want to restrict usage of your API key to specific IPs? If yes, send a list of IPs separated by space.\nToncenter.com will reject requests from any other IP with your token.",
+    update.message.reply_text(f"Do you want to restrict usage of your API key to specific IPs? If yes, send a list of IPs separated by space.\n{os.getenv('MAIN_DOMAIN')} will reject requests from any other IP with your token.",
         reply_markup=ReplyKeyboardMarkup(
             reply_keyboard, one_time_keyboard=True
         )
@@ -257,7 +258,7 @@ def cancel(update: Update, context: CallbackContext) -> int:
     return ConversationHandler.END
 
 def main() -> None:
-    password_file = settings.token_bot.token_file
+    password_file = settings.ratelimit.token_bot.token_file
     with open(password_file, 'r') as f:
         token = f.read()
     updater = Updater(token)

@@ -92,8 +92,6 @@ app = FastAPI(
 )
 
 tonlib = None
-mongo_database = None
-
 
 @app.on_event("startup")
 def startup():
@@ -119,16 +117,6 @@ def startup():
     if not os.path.exists(keystore):
         os.makedirs(keystore)
 
-    # setup mongo_database
-    global mongo_database
-    with open(settings.mongodb['password_file'], 'r') as f:
-        password = f.read()
-    client = MongoClient(host=settings.mongodb['host'], 
-                         port=settings.mongodb['port'],
-                         username=settings.mongodb['username'],
-                         password=password)
-    mongo_database = client[settings.mongodb['database']]
-
     # setup tonlib multiclient
     global tonlib
     tonlib = TonlibClient(loop, 
@@ -136,6 +124,15 @@ def startup():
                           keystore=keystore, 
                           cdll_path=settings.pyton.cdll)
     tonlib.init_tonlib()
+
+    # setup mongo_database
+    if settings.logs.enabled == True:
+        with open(settings.logs.mongodb['password_file'], 'r') as f:
+            password = f.read()
+        client = MongoClient(host=settings.logs.mongodb['host'], 
+                             port=settings.logs.mongodb['port'],
+                             username=settings.logs.mongodb['username'],
+                             password=password)
 
 # Exception handlers
 
@@ -636,12 +633,5 @@ if settings.pyton.json_rpc:
 
 app.add_middleware(
     LoggerAndRateLimitMiddleware,
-    mongo_host=settings.mongodb.host,
-    mongo_port=settings.mongodb.port,
-    mongo_username=settings.mongodb.username,
-    mongo_password_file=settings.mongodb.password_file,
-    mongo_database=settings.mongodb.database,
-    rate_limit_redis_uri=f"redis://{settings.slowapi_redis.endpoint}:{settings.slowapi_redis.port}",
-    endpoints=json_rpc_methods.keys(),
-    rate_limit_enabled=False
+    endpoints=json_rpc_methods.keys()
 )

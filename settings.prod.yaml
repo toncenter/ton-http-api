@@ -1,0 +1,47 @@
+nginx:
+  domains:
+    - host: toncenter.com
+      analytics_enabled: true
+      index_page_enabled: true
+    - host: wallet.toncenter.com
+      analytics_enabled: false
+      index_page_enabled: false
+    - host: tonchain.co
+      analytics_enabled: false
+      index_page_enabled: true
+  index_folder: index_page/prod
+pyton:
+  request_timeout: 20
+  webserver_workers: 8
+  parallel_requests_per_liteserver: 50
+  get_methods: true
+  json_rpc: true
+  liteserver_config: config/mainnet.json
+  keystore: ./ton_keystore/
+  cdll: null
+logs:
+  enabled: true
+  log_successful_requests: false
+  mongodb:
+    host: mongodb
+    port: 27017
+    database: pyton
+    username: user1
+    password_file: /run/secrets/mongodb_password
+cache:
+  enabled: true
+  redis:
+    endpoint: cache_redis
+    port: 6379
+    timeout: 1
+ratelimit:
+  enabled: true
+  redis:
+    endpoint: ratelimit_redis
+    port: 6379
+    timeout: 1
+  token_bot:
+    token_file: /run/secrets/token_file
+  token_redis:
+    endpoint: token_redis
+    port: 6379

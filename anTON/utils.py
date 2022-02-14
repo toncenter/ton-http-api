@@ -8,8 +8,6 @@ from pymongo import MongoClient
 from datetime import datetime, timedelta
 from bson import ObjectId
 
-from config import settings
-
 from loguru import logger
 
 

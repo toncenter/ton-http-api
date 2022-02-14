@@ -16,11 +16,11 @@ from loguru import logger
 
 # inject configure
 def inject_config(binder):
-    with open(settings.mongodb['password_file'], 'r') as f:
+    with open(settings.logs.mongodb['password_file'], 'r') as f:
         password = f.read()
-    client = MongoClient(host=settings.mongodb["host"], 
-                         port=settings.mongodb["port"],
-                         username=settings.mongodb["username"],
+    client = MongoClient(host=settings.logs.mongodb["host"], 
+                         port=settings.logs.mongodb["port"],
+                         username=settings.logs.mongodb["username"],
                          password=password)
     
     binder.bind(MongoClient, client)

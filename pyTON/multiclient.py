@@ -4,14 +4,14 @@ import asyncio
 import copy
 import time
 import codecs
-import aioprocessing
 import traceback
-import ring
-import aioredis
 
-from functools import partial
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
+import aioprocessing
+import aioredis
+import ring
 
 from config import settings
 from pyTON.utils import TonLibWrongResult, b64str_to_hex, hash_to_hex
@@ -25,10 +25,17 @@ from loguru import logger
 def current_function_name():
     return inspect.stack()[1].function
 
-cache_redis = aioredis.from_url(f"redis://{settings.redis.endpoint}:{settings.redis.port}")
-redis_cached = partial(ring.aioredis, cache_redis, coder='pickle')
+def redis_cached(expire):
+    if settings.cache.enabled:
+        cache_redis = aioredis.from_url(f"redis://{settings.cache.redis.endpoint}:{settings.cache.redis.port}")
+        def g(func):
+            return ring.aioredis(cache_redis, coder='pickle', expire=expire)(func)
+    else:
+        def g(func):            
+            return func
+    return g
 
-@to_mongodb('liteserver_tasks', creds=settings.mongodb)
+@to_mongodb('liteserver_tasks')
 def log_liteserver_task(task_result: TonlibClientResult):
     res_type = task_result.result.get('@type', 'unknown') if task_result.result else 'error'
     details = {}

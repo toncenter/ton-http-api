@@ -1,79 +1,19 @@
 version: '3.3'
 services:
-  mongodb:
-    image: mongo:5.0.5
-    volumes:
-      - mongodata:/data/db
-    restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: user1
-      MONGO_INITDB_ROOT_PASSWORD_FILE: /run/secrets/mongodb_password
-    secrets:
-      - mongodb_password
-    ports:
-      - 27017:27017
-    networks: 
-      - internal
-  redis:
-    image: redis:latest
-    restart: unless-stopped
-    networks:
-      - internal
-  slowapi_redis:
-    image: redis:latest
-    restart: unless-stopped
-    networks:
-      - internal
-  token_bot:
-    build:
-      context: .
-      dockerfile: infrastructure/token_bot.Dockerfile
-    secrets:
-      - token_file
-    depends_on:
-      - token_redis
-    restart: unless-stopped
-    networks:
-      - internal
-  token_redis:
-    image: redis:latest
-    restart: unless-stopped
-    networks:
-      - internal
-    command: redis-server --dbfilename dump.rdb --save 60 1
-    volumes:
-      - ./private/botTON_data:/data
   main:
     build: 
       context: .
       dockerfile: infrastructure/main.Dockerfile
-    environment:
-      GETMETHODS: "false"
-    secrets:
-      - mongodb_password
-    depends_on: 
-      - mongodb
-      - slowapi_redis
     restart: unless-stopped
     networks:
       - internal
-    command: --bind 0.0.0.0:8081
-  analytics:
-    build: 
-      context: .
-      dockerfile: infrastructure/analytics.Dockerfile
-    secrets:
-      - mongodb_password
-    depends_on: 
-      - mongodb
-    restart: unless-stopped
-    networks:
-      - internal
-    command: --host 0.0.0.0 --port 8081
+    command: -w ${WORKERS_NUM} --bind 0.0.0.0:8081
   nginx:
     build:
       context: .
       dockerfile: infrastructure/nginx.Dockerfile
+      args:
+        INDEX_FOLDER: ${INDEX_FOLDER}
     ports:
       - 80:80
       - 443:443
@@ -85,14 +25,7 @@ services:
     networks:
       - internal
     restart: unless-stopped
-secrets:
-  mongodb_password:
-    file: private/mongodb_password
-  token_file:
-    file: private/token_file
 volumes:
-  mongodata:
-    external: false
   nginxdata:
     external: false
 networks:
