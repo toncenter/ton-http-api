@@ -4,27 +4,20 @@ import asyncio
 import copy
 import time
 import codecs
-import struct
-import socket
-import threading
 import aioprocessing
 import traceback
-import json
-import aiocache
+import ring
+import aioredis
 
+from functools import partial
 from pathlib import Path
-from aiocache import cached, Cache, AIOCACHE_CACHES
-from aiocache.serializers import PickleSerializer
-from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import datetime
 
 from config import settings
-from pyTON.tonlibjson import TonLib
-from pyTON.address_utils import prepare_address, detect_address
 from pyTON.utils import TonLibWrongResult, b64str_to_hex, hash_to_hex
 from pyTON.logging import to_mongodb
 from pyTON.client import TonlibClient, TonlibClientResult, MsgType
-from tvm_valuetypes import serialize_tvm_stack, render_tvm_stack, deserialize_boc
+from tvm_valuetypes import deserialize_boc
 
 from loguru import logger
 
@@ -32,6 +25,8 @@ from loguru import logger
 def current_function_name():
     return inspect.stack()[1].function
 
+cache_redis = aioredis.from_url(f"redis://{settings.redis.endpoint}:{settings.redis.port}")
+redis_cached = partial(ring.aioredis, cache_redis, coder='pickle')
 
 @to_mongodb('liteserver_tasks', creds=settings.mongodb)
 def log_liteserver_task(task_result: TonlibClientResult):
@@ -89,6 +84,9 @@ class TonlibMultiClient:
 
         self.check_working_task = asyncio.ensure_future(self.check_working(), loop=self.loop)
         self.check_children_alive_task = asyncio.ensure_future(self.check_children_alive(), loop=self.loop)
+
+    def __ring_key__(self):
+        return "static"
 
     async def read_output(self, client):
         while True:
@@ -194,14 +192,14 @@ class TonlibMultiClient:
         result = await self._dispatch_request_to_liteserver(method, client, *args, **kwargs)
         return result
 
-    @cached(ttl=5, cache=Cache.REDIS, **settings.redis, serializer=PickleSerializer())
+    @redis_cached(expire=5)
     async def raw_get_transactions(self, account_address: str, from_transaction_lt: str, from_transaction_hash: str, archival: bool):
         if archival:
             return await self.dispatch_archive_request(current_function_name(), account_address, from_transaction_lt, from_transaction_hash)
         else:
             return await self.dispatch_request(current_function_name(), account_address, from_transaction_lt, from_transaction_hash)
 
-    @cached(ttl=15, cache=Cache.REDIS, **settings.redis, serializer=PickleSerializer())
+    @redis_cached(expire=15)
     async def get_transactions(self, account_address, from_transaction_lt=None, from_transaction_hash=None, to_transaction_lt=0, limit=10, archival=False):
         """
          Return all transactions between from_transaction_lt and to_transaction_lt
@@ -285,7 +283,7 @@ class TonlibMultiClient:
                 print("getTransaction exception", e)
         return all_transactions[:limit]
 
-    @cached(ttl=5, cache=Cache.REDIS, **settings.redis, serializer=PickleSerializer())
+    @redis_cached(expire=5)
     async def raw_get_account_state(self, address: str):
         addr = await self.dispatch_request(current_function_name(), address)
         # FIXME: refactor this code
@@ -295,11 +293,11 @@ class TonlibMultiClient:
             raise TonLibWrongResult("raw.getAccountState failed", addr)
         return addr
 
-    @cached(ttl=5, cache=Cache.REDIS, **settings.redis, serializer=PickleSerializer())
+    @redis_cached(expire=5)
     async def generic_get_account_state(self, address: str):
         return await self.dispatch_request(current_function_name(), address)
 
-    @cached(ttl=5, cache=Cache.REDIS, **settings.redis, serializer=PickleSerializer())
+    @redis_cached(expire=5)
     async def raw_run_method(self, address, method, stack_data, output_layout=None):
         return await self.dispatch_request(current_function_name(), address, method, stack_data, output_layout)
 
@@ -340,11 +338,11 @@ class TonlibMultiClient:
     async def raw_create_and_send_message(self, destination, body, initial_account_state=b''):
         return await self.dispatch_request(current_function_name(), destination, body, initial_account_state)
 
-    @cached(ttl=5, cache=Cache.REDIS, **settings.redis, serializer=PickleSerializer())
+    @redis_cached(expire=5)
     async def raw_estimate_fees(self, destination, body, init_code=b'', init_data=b'', ignore_chksig=True):
         return await self.dispatch_request(current_function_name(), destination, body, init_code, init_data, ignore_chksig)
 
-    @cached(ttl=1, cache=Cache.REDIS, **settings.redis, serializer=PickleSerializer())
+    @redis_cached(expire=1)
     async def getMasterchainInfo(self):
         return await self.dispatch_request(current_function_name())
 
@@ -354,25 +352,25 @@ class TonlibMultiClient:
             "timestamp": self.current_consensus_block_timestamp
         }
 
-    @cached(ttl=600, cache=Cache.REDIS, **settings.redis, serializer=PickleSerializer())
+    @redis_cached(expire=600)
     async def lookupBlock(self, workchain, shard, seqno=None, lt=None, unixtime=None):
         if workchain == -1 and seqno and self.current_consensus_block - seqno < 2000:
             return await self.dispatch_request(current_function_name(), workchain, shard, seqno, lt, unixtime)
         else:
             return await self.dispatch_archive_request(current_function_name(), workchain, shard, seqno, lt, unixtime)
 
-    @cached(ttl=600, cache=Cache.REDIS, **settings.redis, serializer=PickleSerializer())
+    @redis_cached(expire=600)
     async def getShards(self, master_seqno=None, lt=None, unixtime=None):
         if master_seqno and self.current_consensus_block - master_seqno < 2000:
             return await self.dispatch_request(current_function_name(), master_seqno)
         else:
             return await self.dispatch_archive_request(current_function_name(), master_seqno)
 
-    @cached(ttl=600, cache=Cache.REDIS, **settings.redis, serializer=PickleSerializer())
+    @redis_cached(expire=600)
     async def raw_getBlockTransactions(self, fullblock, count, after_tx):
         return await self.dispatch_archive_request(current_function_name(), fullblock, count, after_tx)
 
-    @cached(ttl=600, cache=Cache.REDIS, **settings.redis, serializer=PickleSerializer())
+    @redis_cached(expire=600)
     async def getBlockTransactions(self, workchain, shard, seqno, count, root_hash=None, file_hash=None, after_lt=None, after_hash=None):
         fullblock = {}
         if root_hash and file_hash:
@@ -418,17 +416,17 @@ class TonlibMultiClient:
                 pass
         return total_result
 
-    @cached(ttl=600, cache=Cache.REDIS, **settings.redis, serializer=PickleSerializer())
+    @redis_cached(expire=600)
     async def getBlockHeader(self, workchain, shard, seqno, root_hash=None, file_hash=None):
         if workchain == -1 and seqno and self.current_consensus_block - seqno < 2000:
             return await self.dispatch_request(current_function_name(), workchain, shard, seqno, root_hash, file_hash)
         else:
             return await self.dispatch_archive_request(current_function_name(), workchain, shard, seqno, root_hash, file_hash)
 
-    @cached(ttl=600, cache=Cache.REDIS, **settings.redis, serializer=PickleSerializer())
+    @redis_cached(expire=600)
     async def tryLocateTxByOutcomingMessage(self, source, destination, creation_lt):
         return await self.dispatch_archive_request(current_function_name(),  source, destination, creation_lt)
 
-    @cached(ttl=600, cache=Cache.REDIS, **settings.redis, serializer=PickleSerializer())
+    @redis_cached(expire=600)
     async def tryLocateTxByIncomingMessage(self, source, destination, creation_lt):
         return await self.dispatch_archive_request(current_function_name(),  source, destination, creation_lt)

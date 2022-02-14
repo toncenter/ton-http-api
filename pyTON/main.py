@@ -26,7 +26,6 @@ from fastapi import status
 from datetime import datetime, timedelta
 from bson import ObjectId
 from pymongo import MongoClient
-from aiocache import AIOCACHE_CACHES
 
 from tvm_valuetypes.cell import deserialize_cell_from_object
 
