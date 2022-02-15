@@ -35,70 +35,23 @@ def construct_compose_files_args():
         cmd += ['-f', 'docker-compose.ratelimit.yaml']
     return cmd
 
-def docker_compose_build(no_cache):
-    print("📦 Building docker-compose image")
-    cmd = construct_compose_files_args()
-    cmd += ['build']
-    if no_cache:
-        cmd += ['--no-cache']
-    print(f"Running command: {' '.join(cmd)}")
-    completed_proc = subprocess.run(cmd, env=get_env())
-    if completed_proc.returncode:
-        print("❌ Building failed")
-        exit(-1)
-    else:
-        print("✅ Building succeeded")
-
-def docker_compose_up():
-    print("🚀 Starting docker-compose services")
-    cmd = construct_compose_files_args()
-    cmd += ['up', '-d']
-    print(f"Running command: {' '.join(cmd)}")
-    completed_proc = subprocess.run(cmd, env=get_env())
-    if completed_proc.returncode:
-        print("❌ Starting failed")
-        exit(-1)
-    else:
-        print("✅ Starting succeeded")
-
-def docker_compose_down(clear_volumes):
-    print("🛑 Stopping docker-compose services")
-    cmd = construct_compose_files_args()
-    cmd += ['down']
-    cmd += ['--remove-orphans'] # removing orphans every time, since configuration could change
-    if clear_volumes:
-        cmd += ['-v']
-    print(f"Running command: {' '.join(cmd)}")
-    completed_proc = subprocess.run(cmd, env=get_env())
-    if completed_proc.returncode:
-        print("❌ Stopping failed")
-        exit(-1)
-    else:
-        print("✅ Stopping succeeded")
-
 def main():
-    parser = argparse.ArgumentParser(description='Manage TON HTTP API services')
+    parser = argparse.ArgumentParser(description='Proxy to docker-compose with correct -f flags and env variables (based on settings file)')
 
     parser.add_argument('-s', '--settings', metavar='SETTINGS_FILE', type=str, 
         default='settings.yaml', help='settings file in yaml format. Default: settings.yaml')
-    subparsers = parser.add_subparsers(dest="action", required=True)
-    build_parser = subparsers.add_parser('build')
-    build_parser.add_argument('--no-cache', action='store_true', help='build without cache')
-    up_parser = subparsers.add_parser('up')
-    down_parser = subparsers.add_parser('down')
-    down_parser.add_argument('-v', '--volumes', action='store_true', help='clear volumes')
-    
-    args = parser.parse_args()
+    parser.add_argument('action', help='action passed to docker-compose (additional arguments are accepted)')
+    args, unknown_args = parser.parse_known_args()
 
     set_settings_file(args.settings)
 
-    if args.action == 'build':
-        docker_compose_build(args.no_cache)
-    elif args.action == 'up':
-        docker_compose_up()
-    elif args.action == 'down':
-        docker_compose_down(args.volumes)
+    cmd = construct_compose_files_args()
+    cmd += [args.action]
+    cmd += unknown_args
 
+    print(' '.join(cmd))
+    completed = subprocess.run(cmd, env=get_env())
+    exit(completed.returncode)
 
 if __name__ == '__main__':
     main()

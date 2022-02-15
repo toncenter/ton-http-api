@@ -8,41 +8,32 @@ HTTP API for libtonlibjson (Telegram Open Network Light Client).
 #### Usage:
 
 ```
-./toncenter.py [-s SETTINGS_FILE] [COMMAND] [ARGS...]
+./toncenter.py [-s SETTINGS_FILE] action [ARGS]
 
 Options:
   -s, --settings  Path to yaml settings file. Default: settings.yaml
-Commands:
-  build [--no-cache]   Build docker-compose images, 
-                         --no-cache - Do not use cached images
-  up                   Start service
-  down [--volumes]     Stop service
-                         --volumes - Clear all volumes (e.g. nginx data, mongodb with logs)
-  ...                  Any command docker-compose supports.
+  action          Command passed to docker-compose
 ```
 
 - Quick start:
   - First time: run `./setup.sh` to install required building tools.
   - Configure `settings.yaml`. It controls such parameters as domain name, switch testnet/mainnet, enable db for logs, cache, rate limitting, etc (see [Configuration](#Configuration))
-  - Build services: `./toncenter.py -s settings.yaml build`.
-  - Run services: `./toncenter.py -s settings.yaml up`.
+  - Build services: `./toncenter.py build`.
+  - Run services: `./toncenter.py up -d`.
   - (Optional) Generate SSL certificates: 
     - Connect to nginx container and run CertBot: `./toncenter.py exec nginx certbot --nginx`.
     - Enter email, agree with EULA, choose DNS name and setup SSL certs.
-    - Restart NGINX: `sudo docker-compose restart nginx`.
+    - Restart NGINX: `./toncenter.py restart nginx`.
 
 ## Configuration
-Configuration is possible by creating your own `settings.yaml` file. The service consists of following sections:
+The service consists of following components:
 - **pyTON** - HTTP API to tonlibjson.
-- **nginx** - handles domains, ssl certificates and sets up reverse proxy to pyTON.
-- **logs** - logging requests to db for further analytics.
-- **cache** - caching requests for faster response.
+- **nginx** - handles domains, SSL certificates and sets up reverse proxy to pyTON.
+- **logs** - saving requests and responses to db for analytics.
+- **cache** - caching lite server responses.
 - **ratelimit** - handles rate limiting and issuing API keys.
-See `settings.yaml` for detailed description of each field.
 
-## Get container logs
-- Run script `infrastructure/scripts/get_container_logs.sh ton-http-api_<service-name-from-compose-file>_1`.
-- Logs will be copied to `./logs/ton-http-api_<service-name-from-compose-file>_1`
+Each component has its settings in corresponding section in `settings.yaml`. See `settings.yaml` for detailed description of each parameter.
 
 ## Update tonlibjson library
 - (Optional) Set commit hash in script `infrastructure/scripts/build_tonlib.sh` (line `RUN cd /ton && git checkout <...>`).
