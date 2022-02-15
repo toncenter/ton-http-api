@@ -14,7 +14,7 @@ pyton:
   keystore: ./ton_keystore/
   cdll: null
 logs:
-  enabled: false
+  enabled: true
   log_successful_requests: false
   mongodb:
     host: mongodb
@@ -23,7 +23,7 @@ logs:
     username: user1
     password_file: /run/secrets/mongodb_password
 cache:
-  enabled: false
+  enabled: true
   redis:
     endpoint: cache_redis
     port: 6379
