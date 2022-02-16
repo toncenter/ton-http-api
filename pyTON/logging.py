@@ -193,7 +193,10 @@ class LoggerAndRateLimitMiddleware(BaseHTTPMiddleware):
                 'body': response_body
             }
         }
-        self.log_request_record(record)
+        try:
+            self.log_request_record(record)
+        except Exception as ee:
+            logger.critical(f"Error in logger: {ee}")
 
         # statistics record
         url = request.url.path
@@ -214,6 +217,9 @@ class LoggerAndRateLimitMiddleware(BaseHTTPMiddleware):
             'status_code': response.status_code,
             'elapsed': elapsed
         }
-        self.log_request_statistics_record(stat_record)
+        try:
+            self.log_request_statistics_record(stat_record)
+        except Exception as ee:
+            logger.critical(f"Error in logger: {ee}")
 
         return response
