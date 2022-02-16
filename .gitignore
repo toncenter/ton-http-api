@@ -124,6 +124,3 @@ venv.bak/
 .DS_Store
 
 /sandbox
-
-# generated files
-/config/settings.yaml

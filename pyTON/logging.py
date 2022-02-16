@@ -50,8 +50,10 @@ def generic_exception_handler(exc):
     
 
 class LoggerAndRateLimitMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, endpoints):
+    def __init__(self, app, endpoints, temp_disable_ratelimit=False):
         super().__init__(app)
+
+        self.temp_disable_ratelimit = temp_disable_ratelimit
 
         if settings.ratelimit.enabled:
             self.endpoints = endpoints
@@ -68,7 +70,7 @@ class LoggerAndRateLimitMiddleware(BaseHTTPMiddleware):
         request._receive = receive
 
     async def rate_limit_and_call(self, request: Request, call_next):
-        if not settings.ratelimit.enabled:
+        if not settings.ratelimit.enabled or self.temp_disable_ratelimit:
             return await call_next(request)
 
         path_comps = list(filter(None, request.url.path.split('/')))

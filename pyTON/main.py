@@ -633,5 +633,6 @@ if settings.pyton.json_rpc:
 
 app.add_middleware(
     LoggerAndRateLimitMiddleware,
-    endpoints=json_rpc_methods.keys()
+    endpoints=json_rpc_methods.keys(),
+    temp_disable_ratelimit=True
 )

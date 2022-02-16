@@ -1,20 +1,17 @@
-nginx:
-  domains:
-    - host: testnet.toncenter.com
-      analytics_enabled: true
-      index_page_enabled: true
-  index_folder: index_page/testnet
+# pyTON settings
 pyton:
   request_timeout: 20
-  webserver_workers: 1
+  webserver_workers: $TON_API_WEBSERVERS_WORKERS
   parallel_requests_per_liteserver: 50
-  get_methods: true
-  json_rpc: true
-  liteserver_config: config/testnet.json
+  get_methods: $TON_API_GET_METHODS_ENABLED
+  json_rpc: $TON_API_JSON_RPC_ENABLED
+  liteserver_config: liteserver_config.json
   keystore: ./ton_keystore/
   cdll: null
+
+# Logs settings.
 logs:
-  enabled: true
+  enabled: $TON_API_LOGS_ENABLED
   log_successful_requests: false
   mongodb:
     host: mongodb
@@ -22,14 +19,18 @@ logs:
     database: pyton
     username: user1
     password_file: /run/secrets/mongodb_password
+
+# Cache settings.
 cache:
-  enabled: true
+  enabled: $TON_API_CACHE_ENABLED
   redis:
     endpoint: cache_redis
     port: 6379
     timeout: 1
+
+# Rate limitting settings.
 ratelimit:
-  enabled: true
+  enabled: $TON_API_RATE_LIMIT_ENABLED
   redis:
     endpoint: ratelimit_redis
     port: 6379

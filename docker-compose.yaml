@@ -4,16 +4,27 @@ services:
     build: 
       context: .
       dockerfile: infrastructure/main.Dockerfile
+      args:
+        TON_API_LITE_SERVER_CONFIG: ${TON_API_LITE_SERVER_CONFIG}
+    command: -w ${TON_API_WEBSERVERS_WORKERS} --bind 0.0.0.0:8081
+    environment:
+      - TON_API_CACHE_ENABLED
+      - TON_API_LOGS_ENABLED
+      - TON_API_RATE_LIMIT_ENABLED
+      - TON_API_LITE_SERVER_CONFIG
+      - TON_API_GET_METHODS_ENABLED
+      - TON_API_JSON_RPC_ENABLED
     restart: unless-stopped
     networks:
       - internal
-    command: -w ${WORKERS_NUM} --bind 0.0.0.0:8081
   nginx:
     build:
       context: .
       dockerfile: infrastructure/nginx.Dockerfile
       args:
-        INDEX_FOLDER: ${INDEX_FOLDER}
+        TON_API_INDEX_FOLDER: ${TON_API_INDEX_FOLDER}
+        TON_API_DOMAINS: ${TON_API_DOMAINS}
+        TON_API_ANALYTICS_ENABLED: ${TON_API_ANALYTICS_ENABLED}
     ports:
       - 80:80
       - 443:443

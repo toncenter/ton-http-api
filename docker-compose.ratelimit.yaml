@@ -13,7 +13,7 @@ services:
       context: .
       dockerfile: infrastructure/token_bot.Dockerfile
     environment:
-      - MAIN_DOMAIN
+      - TON_API_DOMAINS
     secrets:
       - token_file
     depends_on:

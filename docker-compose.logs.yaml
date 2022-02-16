@@ -3,6 +3,8 @@ services:
   main:
     depends_on:
       - mongodb
+    secrets:
+      - mongodb_password
   mongodb:
     image: mongo:5.0.5
     volumes:

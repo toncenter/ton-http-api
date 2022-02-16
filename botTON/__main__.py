@@ -107,8 +107,9 @@ def start(update: Update, context: CallbackContext) -> int:
         reply_keyboard = [['My API Token', 'Revoke My API Token']]
     else:
         reply_keyboard = [['Create API Token']]
+    toncenter_domain = (os.getenv('TON_API_DOMAINS') or 'Toncenter').split(':')[0]
     update.message.reply_text(
-        f"{os.getenv('MAIN_DOMAIN')} API token management bot. How can I help?",
+        f"{toncenter_domain} API token management bot. How can I help?",
         reply_markup=ReplyKeyboardMarkup(
             reply_keyboard, one_time_keyboard=True
         ),
@@ -184,7 +185,8 @@ def project_description(update: Update, context: CallbackContext) -> int:
     context.user_data['description'] = description
 
     reply_keyboard = [['Do not restrict by IP']]
-    update.message.reply_text(f"Do you want to restrict usage of your API key to specific IPs? If yes, send a list of IPs separated by space.\n{os.getenv('MAIN_DOMAIN')} will reject requests from any other IP with your token.",
+    toncenter_domain = (os.getenv('TON_API_DOMAINS') or 'Toncenter').split(':')[0]
+    update.message.reply_text(f"Do you want to restrict usage of your API key to specific IPs? If yes, send a list of IPs separated by space.\n{toncenter_domain} will reject requests from any other IP with your token.",
         reply_markup=ReplyKeyboardMarkup(
             reply_keyboard, one_time_keyboard=True
         )
