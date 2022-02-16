@@ -1,0 +1,34 @@
+version: '3.3'
+services:
+  main:
+    depends_on:
+      - ratelimit_redis
+  ratelimit_redis:
+    image: redis:latest
+    restart: unless-stopped
+    networks:
+      - internal
+  token_bot:
+    build:
+      context: .
+      dockerfile: infrastructure/token_bot.Dockerfile
+    environment:
+      - TON_API_DOMAINS
+    secrets:
+      - token_file
+    depends_on:
+      - token_redis
+    restart: unless-stopped
+    networks:
+      - internal
+  token_redis:
+    image: redis:latest
+    restart: unless-stopped
+    networks:
+      - internal
+    command: redis-server --dbfilename dump.rdb --save 60 1
+    volumes:
+      - ./private/botTON_data:/data
+secrets:
+  token_file:
+    file: private/token_file

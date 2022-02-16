@@ -1,0 +1,7 @@
+version: '3.3'
+services:
+  cache_redis:
+    image: redis:latest
+    restart: unless-stopped
+    networks:
+      - internal

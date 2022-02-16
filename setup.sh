@@ -3,7 +3,7 @@ set -e
 
 echo "Setup Actions"
 apt update --yes
-apt install --yes git wget curl
+apt install --yes curl
 
 # install docker and compose
 curl -fsSL https://get.docker.com -o /tmp/get-docker.sh && sh /tmp/get-docker.sh

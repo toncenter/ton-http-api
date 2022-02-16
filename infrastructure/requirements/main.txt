@@ -1,7 +1,6 @@
 tvm_valuetypes
 aioprocessing
-aiocache
-aioredis<2.0.0
+aioredis
 hiredis
 loguru
 pyyaml
@@ -10,6 +9,9 @@ pydantic
 uvicorn
 pymongo
 crc16
+limits
 pytimeparse
-ujson
-msgpack
+ring
+redis
+coredis
+gunicorn

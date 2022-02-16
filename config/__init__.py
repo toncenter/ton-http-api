@@ -1,3 +1,4 @@
+import os
 import yaml
 import importlib.resources
 
@@ -12,4 +13,4 @@ class SettingsDict(dict):
 
 
 with importlib.resources.open_text(__package__, "settings.yaml") as f:
-    settings = SettingsDict(yaml.safe_load(f))
+    settings = SettingsDict(yaml.safe_load(os.path.expandvars(f.read())))

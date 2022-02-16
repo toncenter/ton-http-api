@@ -12,12 +12,12 @@ import warnings
 import traceback
 import pytimeparse
 
-from functools import wraps
+from functools import partial, wraps
 from collections import defaultdict, Counter
 
 from typing import Optional, Union, Dict, Any, List
 from pydantic import BaseModel, ValidationError
-from fastapi import FastAPI, APIRouter, Depends, Response, Request
+from fastapi import FastAPI, APIRouter, Depends, Security, Response, Request
 from fastapi.params import Body, Query, Param
 from fastapi.exceptions import HTTPException, RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -26,17 +26,17 @@ from fastapi import status
 from datetime import datetime, timedelta
 from bson import ObjectId
 from pymongo import MongoClient
-from aiocache import AIOCACHE_CACHES
 
 from tvm_valuetypes.cell import deserialize_cell_from_object
 
 from pyTON.models import TonResponse, TonResponseJsonRPC, TonRequestJsonRPC
 from config import settings
-from pyTON.logging import MongoLoggerMiddleware, generic_exception_handler
+from pyTON.logging import LoggerAndRateLimitMiddleware, generic_exception_handler
 from pyTON.multiclient import TonlibMultiClient as TonlibClient
 from pyTON.address_utils import detect_address as __detect_address, prepare_address as _prepare_address
 from pyTON.wallet_utils import wallets as known_wallets, sha256
 from pyTON.utils import TonLibWrongResult
+from pyTON.api_key_manager import api_key_manager, check_api_key
 
 from loguru import logger
 
@@ -47,6 +47,8 @@ This API enables HTTP access to TON blockchain - getting accounts and wallets in
 In addition to REST API, all methods are available through [JSON-RPC endpoint](#json%20rpc)  with `method` equal to method name and `params` passed as a dictionary.
 
 The response contains a JSON object, which always has a boolean field `ok` and either `error` or `result`. If `ok` equals true, the request was successful and the result of the query can be found in the `result` field. In case of an unsuccessful request, `ok` equals false and the error is explained in the `error`.
+
+API Key should be sent either as `api_key` query parameter or `X-API-Key` header.
 """
 
 tags_metadata = [
@@ -85,18 +87,17 @@ app = FastAPI(
         504: {'description': 'Lite Server Timeout'}
     },
     root_path='/api/v2',
-    openapi_tags=tags_metadata
+    openapi_tags=tags_metadata,
+    dependencies=[Depends(check_api_key)]
 )
 
 tonlib = None
-mongo_database = None
-
 
 @app.on_event("startup")
 def startup():
     logger.remove(0)
     logger.add(sys.stdout, level='INFO', enqueue=True)
-    logger.add('/var/log/main.log', 
+    logger.add(f'/var/log/main_{os.getpid()}.log', 
                level='INFO', 
                enqueue=True,
                serialize=False,
@@ -116,16 +117,6 @@ def startup():
     if not os.path.exists(keystore):
         os.makedirs(keystore)
 
-    # setup mongo_database
-    global mongo_database
-    with open(settings.mongodb['password_file'], 'r') as f:
-        password = f.read()
-    client = MongoClient(host=settings.mongodb['host'], 
-                         port=settings.mongodb['port'],
-                         username=settings.mongodb['username'],
-                         password=password)
-    mongo_database = client[settings.mongodb['database']]
-
     # setup tonlib multiclient
     global tonlib
     tonlib = TonlibClient(loop, 
@@ -134,11 +125,14 @@ def startup():
                           cdll_path=settings.pyton.cdll)
     tonlib.init_tonlib()
 
-
-app.add_middleware(
-    MongoLoggerMiddleware,
-    **settings.mongodb,
-)
+    # setup mongo_database
+    if settings.logs.enabled == True:
+        with open(settings.logs.mongodb['password_file'], 'r') as f:
+            password = f.read()
+        client = MongoClient(host=settings.logs.mongodb['host'], 
+                             port=settings.logs.mongodb['port'],
+                             username=settings.logs.mongodb['username'],
+                             password=password)
 
 # Exception handlers
 
@@ -199,6 +193,7 @@ json_rpc_methods = {}
 
 def json_rpc(method):
     def g(func):
+        @wraps(func)
         def f(**kwargs):
             sig = inspect.signature(func)
             for k, v in sig.parameters.items():
@@ -624,9 +619,20 @@ if settings.pyton.json_rpc:
         handler = json_rpc_methods[method]
 
         try:
-            result = await handler(**params)
+            if 'request' in inspect.signature(handler).parameters.keys():
+                result = await handler(request=request, **params)
+            else:
+                result = await handler(**params)
+
         except TypeError as e:
             response.status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
             return TonResponseJsonRPC(ok=False, error=f'TypeError: {e}', id=_id)
         
         return TonResponseJsonRPC(ok=result.ok, result=result.result, error=result.error, code=result.code, id=_id)
+
+
+app.add_middleware(
+    LoggerAndRateLimitMiddleware,
+    endpoints=json_rpc_methods.keys(),
+    temp_disable_ratelimit=True
+)
