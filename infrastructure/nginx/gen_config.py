@@ -4,7 +4,6 @@ from distutils.util import strtobool
 import os
 import sys
 import jinja2
-import yaml
 
 
 def gen_nginx_conf(input_file, output_file):
