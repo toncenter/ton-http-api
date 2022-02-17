@@ -922,14 +922,6 @@
       }
     },
     {
-      "ip": 59451070,
-      "port": 32000,
-      "id": {
-        "@type": "pub.ed25519",
-        "key": "rmHwW6/StzuxXtmzpRioSfAgLMGRNcGGO1E/b3MQp7w="
-      }
-    },
-    {
       "ip": 221617016,
       "port": 32000,
       "id": {
@@ -943,14 +935,6 @@
       "id": {
         "@type": "pub.ed25519",
         "key": "n2gqMGSYeIIruNr75bHZ75KZCFjHSZ8T9HPWRDBiKFA="
-      }
-    },
-    {
-      "ip": 917702977,
-      "port": 32000,
-      "id": {
-        "@type": "pub.ed25519",
-        "key": "kkVr6xMDVgusHcU0c5duIHaxfam/gqXjdduzLJwfNyc="
       }
     },
     {
