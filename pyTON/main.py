@@ -88,7 +88,7 @@ app = FastAPI(
     },
     root_path='/api/v2',
     openapi_tags=tags_metadata,
-    dependencies=[Depends(check_api_key)]
+    dependencies=[Depends(check_api_key)] if settings.ratelimit.enabled else []
 )
 
 tonlib = None
