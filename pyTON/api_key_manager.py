@@ -79,6 +79,11 @@ def check_api_key(
         return api_key
     raise HTTPException(status_code=401, detail="API key does not exist.")
 
+def is_referer_whitelisted(referer: str):
+    if referer is None:
+        return False
+    return api_key_manager.exists(referer)
+
 def per_method_limits(method: str, key: str):
     if not api_key_manager.exists(key):
         return default_per_method_limits_no_key
@@ -115,7 +120,11 @@ def api_key_from_request(request: Request):
     api_key = check_api_key(request.query_params.get(api_key_query.model.name), request.headers.get(api_key_header.model.name))
     if api_key:
         return api_key
+
     referer = get_referer(request)
     if referer:
-        return [get_referer(request), get_remote_address(request)]
+        if is_referer_whitelisted(referer):
+            return referer
+        return [referer, get_remote_address(request)]
+
     return get_remote_address(request)
