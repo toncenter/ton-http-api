@@ -1,4 +1,5 @@
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from starlette.responses import Response, StreamingResponse
@@ -49,7 +50,10 @@ def to_mongodb(collection):
 def generic_exception_handler(exc):
     res = TonResponse(ok=False, error=str(exc), code=status.HTTP_503_SERVICE_UNAVAILABLE)
     return JSONResponse(res.dict(exclude_none=True), status_code=status.HTTP_503_SERVICE_UNAVAILABLE)
-    
+
+def generic_http_exception_handler(exc):
+    res = TonResponse(ok=False, error=str(exc.detail), code=exc.status_code)
+    return JSONResponse(res.dict(exclude_none=True), status_code=res.code)
 
 class LoggerAndRateLimitMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, endpoints, temp_disable_ratelimit=False):
@@ -215,6 +219,8 @@ class LoggerAndRateLimitMiddleware(BaseHTTPMiddleware):
 
         try:
             response = await call_submiddlewares(request)
+        except StarletteHTTPException as ex:
+            response = generic_http_exception_handler(ex)
         except Exception as ex:
             response = generic_exception_handler(ex)
 
