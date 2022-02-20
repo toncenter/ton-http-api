@@ -45,7 +45,7 @@ class APIKeyManager:
         result = json.loads(result)
         return result['limits'].get('total')
 
-    def get_allowed_ips_and_origins(self, api_key: str) -> Optional[tuple[list[str], list[str]]]:
+    def get_allowed_ips_and_origins(self, api_key: str):
         """
         Fetch allowed remote IPs and Origins for api key.
 
