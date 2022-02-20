@@ -10,12 +10,11 @@ from datetime import datetime
 from pathlib import Path
 
 import aioprocessing
-import aioredis
-import ring
 
 from config import settings
 from pyTON.utils import TonLibWrongResult, b64str_to_hex, hash_to_hex
 from pyTON.logging import to_mongodb
+from pyTON.cache import redis_cached
 from pyTON.client import TonlibClient, TonlibClientResult, MsgType
 from tvm_valuetypes import deserialize_boc
 
@@ -24,16 +23,6 @@ from loguru import logger
 
 def current_function_name():
     return inspect.stack()[1].function
-
-def redis_cached(expire):
-    if settings.cache.enabled:
-        cache_redis = aioredis.from_url(f"redis://{settings.cache.redis.endpoint}:{settings.cache.redis.port}")
-        def g(func):
-            return ring.aioredis(cache_redis, coder='pickle', expire=expire)(func)
-    else:
-        def g(func):            
-            return func
-    return g
 
 @to_mongodb('liteserver_tasks')
 def log_liteserver_task(task_result: TonlibClientResult):
@@ -92,6 +81,9 @@ class TonlibMultiClient:
         self.check_working_task = asyncio.ensure_future(self.check_working(), loop=self.loop)
         self.check_children_alive_task = asyncio.ensure_future(self.check_children_alive(), loop=self.loop)
 
+    # Used by ring library. Since we need shared cache across
+    # multiple TonlibMultiClient instances this function must
+    # return some static value.
     def __ring_key__(self):
         return "static"
 
@@ -206,7 +198,7 @@ class TonlibMultiClient:
         else:
             return await self.dispatch_request(current_function_name(), account_address, from_transaction_lt, from_transaction_hash)
 
-    @redis_cached(expire=15)
+    @redis_cached(expire=15, check_error=False)
     async def get_transactions(self, account_address, from_transaction_lt=None, from_transaction_hash=None, to_transaction_lt=0, limit=10, archival=False):
         """
          Return all transactions between from_transaction_lt and to_transaction_lt
@@ -430,10 +422,10 @@ class TonlibMultiClient:
         else:
             return await self.dispatch_archive_request(current_function_name(), workchain, shard, seqno, root_hash, file_hash)
 
-    @redis_cached(expire=600)
+    @redis_cached(expire=600, check_error=False)
     async def tryLocateTxByOutcomingMessage(self, source, destination, creation_lt):
         return await self.dispatch_archive_request(current_function_name(),  source, destination, creation_lt)
 
-    @redis_cached(expire=600)
+    @redis_cached(expire=600, check_error=False)
     async def tryLocateTxByIncomingMessage(self, source, destination, creation_lt):
         return await self.dispatch_archive_request(current_function_name(),  source, destination, creation_lt)
