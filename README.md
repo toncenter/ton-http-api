@@ -1,7 +1,12 @@
+![splash_http_api](https://user-images.githubusercontent.com/1449561/154847286-989a6c51-1615-45e1-b40f-aec7c13014fa.png)
 
-# TON HTTP API
+# HTTP API for [The Open Network](https://ton.org)
 
-HTTP API for libtonlibjson (The Open Network Light Client).
+Since TON nodes uses its own ADNL binary transport protocol, a intermediate service is needed for an HTTP connection.
+
+TON HTTP API is such a intermediate service, receiving requests via HTTP, it accesses the lite servers of the TON network using `tonlibjson`.
+
+You can use the ready-made [toncenter.com](https://toncenter.com) service or start your own instance.
 
 ## Building and running
   - First time: run `./setup.sh` to install required building tools: `docker`, `docker-compose`, `curl`.
