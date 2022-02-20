@@ -20,7 +20,7 @@ You can use the ready-made [toncenter.com](https://toncenter.com) service or sta
    - Stop services: `docker-compose down`. Run this command with`-v` flag to clear docker volumes (mongodb, nginx and ssl data).
 
 ## Configuration
-The service supports the following environment variables for configuration. After changing any variable run `.configure.py` and rebuild the project.
+The service supports the following environment variables for configuration. After changing any variable run `./configure.py` and rebuild the project.
 
 - `TON_API_LOGS_ENABLED` *(default: 0)*
 
