@@ -122,7 +122,7 @@ def get_referer_origin_key(request: Request):
     if url_parsed.hostname == self_url.hostname:
         return None
 
-    return url_parsed.hostname
+    return f'{url_parsed.scheme}://{url_parsed.hostname}'
 
 def get_remote_address(request: Request):
     return request.headers.get('x-real-ip', "127.0.0.1")
