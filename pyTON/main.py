@@ -79,8 +79,9 @@ tags_metadata = [
 ]
 
 app = FastAPI(
-    title="TON API",
+    title="TON HTTP API",
     description=description,
+    version='2.0.0',
     docs_url='/',
     responses={
         422: {'description': 'Validation Error'},
@@ -301,7 +302,7 @@ async def get_address_balance(
     address: str = Query(..., description="Identifier of target TON account in any form.")
     ):
     """
-    Get balance (in nanograms) of a given address.
+    Get balance (in nanotons) of a given address.
     """
     address = prepare_address(address)
     result = await tonlib.raw_get_account_state(address)
@@ -483,14 +484,14 @@ async def send_boc(
     boc = base64.b64decode(boc)
     return await tonlib.raw_send_message(boc)
 
-@app.post('/sendCellSimple', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
+@app.post('/sendCellSimple', response_model=TonResponse, response_model_exclude_none=True, include_in_schema=False, tags=['send'])
 @json_rpc('sendCellSimple')
 @wrap_result
 async def send_cell(
     cell: Dict[str, Any] = Body(..., embed=True, description="Cell serialized as object")
     ):
     """
-    Send cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`, that is fully packed but not serialized external message.
+    (Deprecated) Send cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`, that is fully packed but not serialized external message.
     """
     try:
         cell = deserialize_cell_from_object(cell)
@@ -517,7 +518,7 @@ async def send_query(
     data = codecs.decode(codecs.encode(init_data, "utf-8"), 'base64')
     return await tonlib.raw_create_and_send_query(address, body, init_code=code, init_data=data)
 
-@app.post('/sendQuerySimple', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
+@app.post('/sendQuerySimple', response_model=TonResponse, response_model_exclude_none=True, include_in_schema=False, tags=['send'])
 @json_rpc('sendQuerySimple')
 @wrap_result
 async def send_query_cell(
@@ -527,7 +528,7 @@ async def send_query_cell(
     init_data: Optional[Dict[str, Any]] = Body(default=None, description='init-data cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`')
     ):
     """
-    Send query - unpacked external message. This method gets address, body and init-params (if any), packs it to external message and sends to network. Body, init-code and init-data should be passed as objects.
+    (Deprecated) Send query - unpacked external message. This method gets address, body and init-params (if any), packs it to external message and sends to network. Body, init-code and init-data should be passed as objects.
     """
     address = prepare_address(address)
     try:
@@ -560,7 +561,7 @@ async def estimate_fee(
     data = codecs.decode(codecs.encode(init_data, "utf-8"), 'base64')
     return await tonlib.raw_estimate_fees(address, body, init_code=code, init_data=data, ignore_chksig=ignore_chksig)
 
-@app.post('/estimateFeeSimple', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
+@app.post('/estimateFeeSimple', response_model=TonResponse, response_model_exclude_none=True, include_in_schema=False, tags=['send'])
 @json_rpc('estimateFeeSimple')
 @wrap_result
 async def estimate_fee_cell(
@@ -571,7 +572,7 @@ async def estimate_fee_cell(
     ignore_chksig: bool = Body(default=True, description='If true during test query processing assume that all chksig operations return True')
     ):
     """
-    Estimate fees required for query processing. *body*, *init-code* and *init-data* accepted in unserialized format (as objects).
+    (Deprecated) Estimate fees required for query processing. *body*, *init-code* and *init-data* accepted in unserialized format (as objects).
     """
     address = prepare_address(address)
     try:
