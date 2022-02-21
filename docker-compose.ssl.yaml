@@ -1,0 +1,7 @@
+version: '3.3'
+services:
+  nginx:
+    ports:
+      - 443:443
+    volumes:
+      - ./private/ssl-data/:/etc/letsencrypt

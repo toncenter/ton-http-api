@@ -9,12 +9,15 @@ LOCAL_ENV = {
 	'TON_API_LOGS_ENABLED': '0',
 	'TON_API_RATE_LIMIT_ENABLED': '0',
 	'TON_API_DOMAINS': 'localhost',
+	'TON_API_SSL_ENABLED': '0',
 	'TON_API_INDEX_FOLDER': '',
 	'TON_API_ANALYTICS_ENABLED': '0',
 	'TON_API_LITE_SERVER_CONFIG': 'config/mainnet.json',
 	'TON_API_WEBSERVERS_WORKERS': '1',
 	'TON_API_GET_METHODS_ENABLED': '1',
-	'TON_API_JSON_RPC_ENABLED': '1'
+	'TON_API_JSON_RPC_ENABLED': '1',
+	'TON_API_HTTP_PORT': '80',
+	'TON_API_MONGODB_PORT': '27017'
 }
 
 TESTNET_ENV = {
@@ -22,12 +25,15 @@ TESTNET_ENV = {
 	'TON_API_LOGS_ENABLED': '1',
 	'TON_API_RATE_LIMIT_ENABLED': '1',
 	'TON_API_DOMAINS': 'testnet.toncenter.com',
+	'TON_API_SSL_ENABLED': '1',
 	'TON_API_INDEX_FOLDER': 'index_page/testnet',
 	'TON_API_ANALYTICS_ENABLED': '1',
 	'TON_API_LITE_SERVER_CONFIG': 'config/testnet.json',
 	'TON_API_WEBSERVERS_WORKERS': '1',
 	'TON_API_GET_METHODS_ENABLED': '1',
-	'TON_API_JSON_RPC_ENABLED': '1'
+	'TON_API_JSON_RPC_ENABLED': '1',
+	'TON_API_HTTP_PORT': '80',
+	'TON_API_MONGODB_PORT': '27017'
 }
 
 PROD_ENV = {
@@ -35,12 +41,15 @@ PROD_ENV = {
 	'TON_API_LOGS_ENABLED': '1',
 	'TON_API_RATE_LIMIT_ENABLED': '1',
 	'TON_API_DOMAINS': 'toncenter.com:wallet.toncenter.com:tonchain.co',
+	'TON_API_SSL_ENABLED': '1',
 	'TON_API_INDEX_FOLDER': 'index_page/prod',
 	'TON_API_ANALYTICS_ENABLED': '1',
 	'TON_API_LITE_SERVER_CONFIG': 'config/mainnet.json',
 	'TON_API_WEBSERVERS_WORKERS': '16',
 	'TON_API_GET_METHODS_ENABLED': '1',
-	'TON_API_JSON_RPC_ENABLED': '1'
+	'TON_API_JSON_RPC_ENABLED': '1',
+	'TON_API_HTTP_PORT': '80',
+	'TON_API_MONGODB_PORT': '27017'
 }
 
 def strtobool(val):
@@ -68,6 +77,8 @@ def main():
 			default_env[var] = os.getenv(var)
 
 	compose_file = 'docker-compose.yaml'
+	if strtobool(default_env['TON_API_SSL_ENABLED']):
+		compose_file += ':docker-compose.ssl.yaml'
 	if strtobool(default_env['TON_API_CACHE_ENABLED']):
 		compose_file += ':docker-compose.cache.yaml'
 	if strtobool(default_env['TON_API_LOGS_ENABLED']):

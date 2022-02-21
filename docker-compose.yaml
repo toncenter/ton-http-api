@@ -25,13 +25,12 @@ services:
         TON_API_INDEX_FOLDER: ${TON_API_INDEX_FOLDER}
         TON_API_DOMAINS: ${TON_API_DOMAINS}
         TON_API_ANALYTICS_ENABLED: ${TON_API_ANALYTICS_ENABLED}
+        TON_API_HTTP_PORT: ${TON_API_HTTP_PORT}
     ports:
-      - 80:80
-      - 443:443
+      - ${TON_API_HTTP_PORT}:${TON_API_HTTP_PORT}
     links:
       - main
     volumes:
-      - ./private/ssl-data/:/etc/letsencrypt
       - nginxdata:/etc/nginx
     networks:
       - internal
