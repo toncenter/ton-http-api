@@ -9,6 +9,13 @@ TON HTTP API is such a intermediate service, receiving requests via HTTP, it acc
 You can use the ready-made [toncenter.com](https://toncenter.com) service or start your own instance.
 
 ## Building and running
+
+Tested on Ubuntu 18.04 and Intel MacOS Catalina/Big Sur but it should work even on Windows.
+
+Does not work on the Apple M1 yet.
+
+Recommended hardware: 2 CPU, 8 GB RAM.
+
   - First time: run `./setup.sh` to install required building tools: `docker`, `docker-compose`, `curl`.
   - Run `./configure.py`, it creates `.env` file used by `docker-compose` (see [Configuration](#Configuration))
   - Build services: `docker-compose build`.
