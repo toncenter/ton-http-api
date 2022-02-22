@@ -16,6 +16,7 @@ def gen_nginx_conf(input_file, output_file):
     template_args = {
         'index_folder' : os.getenv('TON_API_INDEX_FOLDER'),
         'analytics_enabled' : strtobool(os.getenv('TON_API_ANALYTICS_ENABLED')),
+        'port' : os.getenv('TON_API_HTTP_PORT'),
         'domains' : domains
     }
     outputText = template.render(template_args)

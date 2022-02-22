@@ -21,6 +21,7 @@ Recommended hardware: 2 CPU, 8 GB RAM.
   - Build services: `docker-compose build`.
   - Run services: `docker-compose up -d`.
   - (Optional) Generate SSL certificates: 
+    - Make sure you set `TON_API_DOMAINS` and `TON_API_SSL_ENABLED` environment variables.
     - Connect to nginx container and run CertBot: `docker-compose exec nginx certbot --nginx`.
     - Enter email, agree with EULA, choose DNS name and setup SSL certs.
     - Restart NGINX: `docker-compose restart nginx`.
@@ -44,6 +45,18 @@ Enables API keys for your API and limits maximum request rate. API keys are issu
 - `TON_API_DOMAINS` *(default: localhost)*
 
 List of domains separated by `:` which the service will use. Based on this list `nginx.conf` will be generated. For each domain `server` section will be added with specified `server_name`.
+
+- `TON_API_SSL_ENABLED` *(default: 0)*
+
+Enables exposing port 443 for SSL connection. To setup SSL you have to set `TON_API_DOMAINS` and run the steps described in *Generate SSL certificates* section.
+
+- `TON_API_HTTP_PORT` *(default: 80)*
+
+Port for HTTP connections that will be listened by Nginx. Since Certbot assumes HTTP is run on 80 any value other can lead to issues with setting up SSL.
+
+- `TON_API_MONGODB_PORT` *(default: 27017)*
+
+Port for connecting to MongoDB with requests logs (see `TON_API_LOGS_ENABLED`).
 
 - `TON_API_INDEX_FOLDER` *(default: empty)*
 
@@ -73,6 +86,13 @@ Enables `jsonRPC` endpoint.
 ### How to point the service to my own lite server?
 
 Copy `config/mainnet.json` and overwrite section `liteservers` with your liteserver. Assign `TON_API_LITE_SERVER_CONFIG` to path to your config, run `./configure.py` and rebuild the project.
+
+### How to run multiple API instances on single machine?
+
+- Clone the repo as many times as many instances you need to the folders with different names (otherwise docker-compose containers will conflict). 
+- Configure each instance to have unique exposed ports (`TON_API_HTTP_PORT` and `TON_API_MONGODB_PORT`).
+- Build and run every instance. 
+- Note: only one instance is allowed to have SSL enabled.
 
 ### How to update tonlibjson library?
 

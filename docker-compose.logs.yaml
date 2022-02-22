@@ -16,7 +16,7 @@ services:
     secrets:
       - mongodb_password
     ports:
-      - 27017:27017
+      - ${TON_API_MONGODB_PORT}:27017
     networks: 
       - internal
   analytics:
