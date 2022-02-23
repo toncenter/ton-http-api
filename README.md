@@ -82,6 +82,10 @@ Enables `runGetMethod` endpoint.
 
 Enables `jsonRPC` endpoint.
 
+- `TON_API_CLOUDFLARE_ENABLED` *(default: 0)*
+
+Configures Nginx to support Cloudflare CDN.
+
 ## FAQ
 ### How to point the service to my own lite server?
 
