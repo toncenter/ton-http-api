@@ -32,64 +32,77 @@ The service supports the following environment variables for configuration. Afte
 
 - `TON_API_LOGS_ENABLED` *(default: 0)*
 
-Enables logging all requests and lite servers response statistics to MongoDB for further analysis. If you enable this component, you have to put MongoDB password in `./private/mongodb_password` file without `\n`.
+    Enables logging all requests and lite servers response statistics to MongoDB for further analysis. If you enable this component, you have to put MongoDB password in `./private/mongodb_password` file without `\n`.
 
 - `TON_API_CACHE_ENABLED` *(default: 0)*
 
-Enables caching lite server responses with Redis.
+    Enables caching lite server responses with Redis.
 
 - `TON_API_RATE_LIMIT_ENABLED` *(default: 0)*
 
-Enables API keys for your API and limits maximum request rate. API keys are issued by the Telegram bot and stored in Redis. If you enable this component, you have to put your Telegram bots token in `./private/token_file` file without `\n`.
+    Enables API keys for your API and limits maximum request rate. API keys are issued by the Telegram bot and stored in Redis. If you enable this component, you have to put your Telegram bots token in `./private/token_file` file without `\n`.
 
 - `TON_API_DOMAINS` *(default: localhost)*
 
-List of domains separated by `:` which the service will use. Based on this list `nginx.conf` will be generated. For each domain `server` section will be added with specified `server_name`.
+    List of domains separated by `:` which the service will use. Based on this list `nginx.conf` will be generated. For each domain `server` section will be added with specified `server_name`.
 
 - `TON_API_SSL_ENABLED` *(default: 0)*
 
-Enables exposing port 443 for SSL connection. To setup SSL you have to set `TON_API_DOMAINS` and run the steps described in *Generate SSL certificates* section.
+    Enables exposing port 443 for SSL connection. To setup SSL you have to set `TON_API_DOMAINS` and run the steps described in *Generate SSL certificates* section.
 
 - `TON_API_HTTP_PORT` *(default: 80)*
 
-Port for HTTP connections that will be listened by Nginx. Since Certbot assumes HTTP is run on 80 any value other can lead to issues with setting up SSL.
+    Port for HTTP connections that will be listened by Nginx. Since Certbot assumes HTTP is run on 80 any value other can lead to issues with setting up SSL.
 
 - `TON_API_MONGODB_PORT` *(default: 27017)*
 
-Port for connecting to MongoDB with requests logs (see `TON_API_LOGS_ENABLED`).
+    Port for connecting to MongoDB with requests logs (see `TON_API_LOGS_ENABLED`).
 
 - `TON_API_INDEX_FOLDER` *(default: empty)*
 
-Index page folder. All contents will be copied to the nginx html folder. If the variable is empty, index page is not used and redirects to `/api/v2`.
+    Index page folder. All contents will be copied to the nginx html folder. If the variable is empty, index page is not used and redirects to `/api/v2`.
 
 - `TON_API_ANALYTICS_ENABLED` *(default: 0)*
 
-Enables `/analytics/` route providing useful endpoints for analytics. This features requires logs enabled.
+    Enables `/analytics/` route providing useful endpoints for analytics. This features requires logs enabled.
 
 - `TON_API_LITE_SERVER_CONFIG` *(default: config/mainnet.json)*
 
-Path to config file with lite servers information.
+    Path to config file with lite servers information.
 
 - `TON_API_WEBSERVERS_WORKERS` *(default: 1)*
 
-Number of webserver processes. If your server is under high load try increase this value to increase RPS. We recommend setting it to number of CPU cores / 2.
+    Number of webserver processes. If your server is under high load try increase this value to increase RPS. We recommend setting it to number of CPU cores / 2.
 
 - `TON_API_GET_METHODS_ENABLED` *(default: 1)*
 
-Enables `runGetMethod` endpoint.
+    Enables `runGetMethod` endpoint.
 
 - `TON_API_JSON_RPC_ENABLED` *(default: 1)*
 
-Enables `jsonRPC` endpoint.
+    Enables `jsonRPC` endpoint.
 
 - `TON_API_CLOUDFLARE_ENABLED` *(default: 0)*
 
-Configures Nginx to support Cloudflare CDN.
+    Configures Nginx to support Cloudflare CDN.
 
 ## FAQ
 ### How to point the service to my own lite server?
 
-Copy `config/mainnet.json` and overwrite section `liteservers` with your liteserver. Assign `TON_API_LITE_SERVER_CONFIG` to path to your config, run `./configure.py` and rebuild the project.
+To point the HTTP API to your own lite server you should set `TON_API_LITE_SERVER_CONFIG` to config file with your only lite server.
+
+- If you use MyTonCtrl on your node you can generate config file with these commands: 
+    ```
+    $ mytonctrl
+    MyTonCtrl> installer
+    MyTonInstaller> clcf
+    ```
+    Config file will be saved at `/usr/bin/ton/local.config.json`.
+- If you don't use MyTonCtrl: copy `config/mainnet.json` and overwrite section `liteservers` with your liteservers ip, port and public key. To get public key from `liteserver.pub` file use the following script:
+    ```
+    python -c 'import codecs; f=open("liteserver.pub", "rb+"); pub=f.read()[4:]; print(str(codecs.encode(pub,"base64")).replace("\n",""))'
+    ```
+- Once config file is created assign variable `TON_API_LITE_SERVER_CONFIG` to its path, run `./configure.py` and rebuild the project.
 
 ### How to run multiple API instances on single machine?
 
