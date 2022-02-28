@@ -17,7 +17,7 @@ def gen_nginx_conf(input_file, output_file):
         'index_folder' : os.getenv('TON_API_INDEX_FOLDER'),
         'analytics_enabled' : strtobool(os.getenv('TON_API_ANALYTICS_ENABLED')),
         'port' : os.getenv('TON_API_HTTP_PORT'),
-        'cloudflare_enabled' : os.getenv('TON_API_CLOUDFLARE_ENABLED'),
+        'cloudflare_enabled' : strtobool(os.getenv('TON_API_CLOUDFLARE_ENABLED')),
         'domains' : domains
     }
     outputText = template.render(template_args)
