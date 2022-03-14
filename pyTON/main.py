@@ -29,7 +29,8 @@ from pymongo import MongoClient
 
 from tvm_valuetypes.cell import deserialize_cell_from_object
 
-from pyTON.models import TonResponse, TonResponseJsonRPC, TonRequestJsonRPC
+from pyTON.models import TonResponse, TonResponseJsonRPC, TonRequestJsonRPC, TonResponseGetAddressInformation, \
+    TonResponseGetExtendedAddressInformation
 from config import settings
 from pyTON.logging import LoggerAndRateLimitMiddleware, generic_exception_handler, generic_http_exception_handler
 from pyTON.multiclient import TonlibMultiClient as TonlibClient
@@ -225,7 +226,7 @@ def json_rpc(method):
 # Endpoints
 
 
-@app.get('/getAddressInformation', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
+@app.get('/getAddressInformation', response_model=TonResponseGetAddressInformation, response_model_exclude_none=True, tags=['accounts'])
 @json_rpc('getAddressInformation')
 @wrap_result
 async def get_address_information(
@@ -241,7 +242,7 @@ async def get_address_information(
         result["balance"] = 0
     return result
 
-@app.get('/getExtendedAddressInformation', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
+@app.get('/getExtendedAddressInformation', response_model=TonResponseGetExtendedAddressInformation, response_model_exclude_none=True, tags=['accounts'])
 @json_rpc('getExtendedAddressInformation')
 @wrap_result
 async def get_extended_address_information(
