@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+
 from pyTON.models.fields import Int64, Bytes, Int32, Int53
 
 """
@@ -15,10 +16,9 @@ class TonLibExecutionResult(BaseModel):
     extra: str = Field(alias="@extra")
 
 
+# TL Spec:
+# https://github.com/ton-blockchain/ton/blob/24dc184a2ea67f9c47042b4104bbb4d82289fac1/tl/generate/scheme/tonlib_api.tl#L50
 class TonBlockIdExt(TLObject):
-    """
-    TL Specification: https://github.com/ton-blockchain/ton/blob/24dc184a2ea67f9c47042b4104bbb4d82289fac1/tl/generate/scheme/tonlib_api.tl#L50
-    """
     workchain: int = Int32()
     shard: str = Int64()
     seqno: int = Int32()
@@ -26,18 +26,16 @@ class TonBlockIdExt(TLObject):
     file_hash: str = Bytes()
 
 
+# TL Spec:
+# https://github.com/ton-blockchain/ton/blob/24dc184a2ea67f9c47042b4104bbb4d82289fac1/tl/generate/scheme/tonlib_api.tl#L47
 class InternalTransactionId(TLObject):
-    """
-    TL Specification: https://github.com/ton-blockchain/ton/blob/24dc184a2ea67f9c47042b4104bbb4d82289fac1/tl/generate/scheme/tonlib_api.tl#L47
-    """
     lt: str = Int64()
     hash: str = Bytes()
 
 
+# TL Spec:
+# https://github.com/ton-blockchain/ton/blob/24dc184a2ea67f9c47042b4104bbb4d82289fac1/tl/generate/scheme/tonlib_api.tl#L52
 class RawFullAccountState(TLObject):
-    """
-    TL Specification: https://github.com/ton-blockchain/ton/blob/24dc184a2ea67f9c47042b4104bbb4d82289fac1/tl/generate/scheme/tonlib_api.tl#L52
-    """
     balance: str = Int64()
     code: str = Bytes()
     data: str = Bytes()
