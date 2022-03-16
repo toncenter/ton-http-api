@@ -8,7 +8,7 @@ https://github.com/ton-blockchain/ton/blob/24dc184a2ea67f9c47042b4104bbb4d82289f
 """
 
 
-class TLObject(BaseModel):
+class TLConstructor(BaseModel):
     type: str = Field(alias="@type", title="TypeLanguage constructor type name.")
 
 
@@ -18,7 +18,7 @@ class TonLibExecutionResult(BaseModel):
 
 # TL Spec:
 # https://github.com/ton-blockchain/ton/blob/24dc184a2ea67f9c47042b4104bbb4d82289fac1/tl/generate/scheme/tonlib_api.tl#L50
-class TonBlockIdExt(TLObject):
+class TonBlockIdExt(TLConstructor):
     workchain: int = Int32()
     shard: str = Int64()
     seqno: int = Int32()
@@ -28,14 +28,14 @@ class TonBlockIdExt(TLObject):
 
 # TL Spec:
 # https://github.com/ton-blockchain/ton/blob/24dc184a2ea67f9c47042b4104bbb4d82289fac1/tl/generate/scheme/tonlib_api.tl#L47
-class InternalTransactionId(TLObject):
+class InternalTransactionId(TLConstructor):
     lt: str = Int64()
     hash: str = Bytes()
 
 
 # TL Spec:
 # https://github.com/ton-blockchain/ton/blob/24dc184a2ea67f9c47042b4104bbb4d82289fac1/tl/generate/scheme/tonlib_api.tl#L52
-class RawFullAccountState(TLObject):
+class RawFullAccountState(TLConstructor):
     balance: str = Int64()
     code: str = Bytes()
     data: str = Bytes()
