@@ -29,8 +29,8 @@ from pymongo import MongoClient
 
 from tvm_valuetypes.cell import deserialize_cell_from_object
 
-from pyTON.models import TonResponse, TonResponseJsonRPC, TonRequestJsonRPC, TonResponseGetAddressInformation, \
-    TonResponseGetExtendedAddressInformation
+from pyTON.models.shared import TonResponseDefault, TonResponseJsonRPC, TonRequestJsonRPC, \
+    TonResponseGetAddressInformation
 from config import settings
 from pyTON.logging import LoggerAndRateLimitMiddleware, generic_exception_handler, generic_http_exception_handler
 from pyTON.multiclient import TonlibMultiClient as TonlibClient
@@ -99,8 +99,8 @@ tonlib = None
 def startup():
     logger.remove(0)
     logger.add(sys.stdout, level='INFO', enqueue=True)
-    logger.add(f'/var/log/main_{os.getpid()}.log', 
-               level='INFO', 
+    logger.add(f'/var/log/main_{os.getpid()}.log',
+               level='INFO',
                enqueue=True,
                serialize=False,
                backtrace=False,
@@ -121,9 +121,9 @@ def startup():
 
     # setup tonlib multiclient
     global tonlib
-    tonlib = TonlibClient(loop, 
-                          lite_server_config, 
-                          keystore=keystore, 
+    tonlib = TonlibClient(loop,
+                          lite_server_config,
+                          keystore=keystore,
                           cdll_path=settings.pyton.cdll)
     tonlib.init_tonlib()
 
@@ -131,7 +131,7 @@ def startup():
     if settings.logs.enabled == True:
         with open(settings.logs.mongodb['password_file'], 'r') as f:
             password = f.read()
-        client = MongoClient(host=settings.logs.mongodb['host'], 
+        client = MongoClient(host=settings.logs.mongodb['host'],
                              port=settings.logs.mongodb['port'],
                              username=settings.logs.mongodb['username'],
                              password=password)
@@ -144,17 +144,17 @@ async def http_exception_handler(request, exc):
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
-    res = TonResponse(ok=False, error=f"Validation error: {exc}", code=status.HTTP_422_UNPROCESSABLE_ENTITY)
+    res = TonResponseDefault(ok=False, error=f"Validation error: {exc}", code=status.HTTP_422_UNPROCESSABLE_ENTITY)
     return JSONResponse(res.dict(exclude_none=True), status_code=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
 @app.exception_handler(asyncio.TimeoutError)
 async def timeout_exception_handler(request, exc):
-    res = TonResponse(ok=False, error="Liteserver timeout", code=status.HTTP_504_GATEWAY_TIMEOUT)
+    res = TonResponseDefault(ok=False, error="Liteserver timeout", code=status.HTTP_504_GATEWAY_TIMEOUT)
     return JSONResponse(res.dict(exclude_none=True), status_code=status.HTTP_504_GATEWAY_TIMEOUT)
 
 @app.exception_handler(TonLibWrongResult)
 async def tonlib_wront_result_exception_handler(request, exc):
-    res = TonResponse(ok=False, error=str(exc), code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    res = TonResponseDefault(ok=False, error=str(exc), code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     return JSONResponse(res.dict(exclude_none=True), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @app.exception_handler(Exception)
@@ -187,7 +187,7 @@ def wrap_result(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
         result = await asyncio.wait_for(func(*args, **kwargs), settings.pyton.request_timeout)
-        return TonResponse(ok=True, result=result)
+        return TonResponseDefault(ok=True, result=result)
     return wrapper
 
 json_rpc_methods = {}
@@ -201,7 +201,7 @@ def json_rpc(method):
                 # Add function's default value parameters to kwargs.
                 if k not in kwargs and v.default is not inspect._empty:
                     default_val = v.default
-                    
+
                     if isinstance(default_val, Param) or isinstance(default_val, Body):
                         if default_val.default == ...:
                             raise TypeError("Non-optional argument expected")
@@ -242,7 +242,7 @@ async def get_address_information(
         result["balance"] = 0
     return result
 
-@app.get('/getExtendedAddressInformation', response_model=TonResponseGetExtendedAddressInformation, response_model_exclude_none=True, tags=['accounts'])
+@app.get('/getExtendedAddressInformation', response_model=TonResponseDefault, response_model_exclude_none=True, tags=['accounts'])
 @json_rpc('getExtendedAddressInformation')
 @wrap_result
 async def get_extended_address_information(
@@ -255,7 +255,7 @@ async def get_extended_address_information(
     result = await tonlib.generic_get_account_state(address)
     return result
 
-@app.get('/getWalletInformation', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
+@app.get('/getWalletInformation', response_model=TonResponseDefault, response_model_exclude_none=True, tags=['accounts'])
 @json_rpc('getWalletInformation')
 @wrap_result
 async def get_wallet_information(
@@ -279,15 +279,15 @@ async def get_wallet_information(
         wallet_handler["data_extractor"](res, result)
     return res
 
-@app.get('/getTransactions', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts', 'transactions'])
+@app.get('/getTransactions', response_model=TonResponseDefault, response_model_exclude_none=True, tags=['accounts', 'transactions'])
 @json_rpc('getTransactions')
 @wrap_result
 async def get_transactions(
-    address: str = Query(..., description="Identifier of target TON account in any form."), 
-    limit: Optional[int] = Query(default=10, description="Maximum number of transactions in response."), 
-    lt: Optional[int] = Query(default=None, description="Logical time of transaction to start with, must be sent with *hash*."), 
-    hash: Optional[str] = Query(default=None, description="Hash of transaction to start with, in *base64* or *hex* encoding , must be sent with *lt*."), 
-    to_lt: Optional[int] = Query(default=0, description="Logical time of transaction to finish with (to get tx from *lt* to *to_lt*)."), 
+    address: str = Query(..., description="Identifier of target TON account in any form."),
+    limit: Optional[int] = Query(default=10, description="Maximum number of transactions in response."),
+    lt: Optional[int] = Query(default=None, description="Logical time of transaction to start with, must be sent with *hash*."),
+    hash: Optional[str] = Query(default=None, description="Hash of transaction to start with, in *base64* or *hex* encoding , must be sent with *lt*."),
+    to_lt: Optional[int] = Query(default=0, description="Logical time of transaction to finish with (to get tx from *lt* to *to_lt*)."),
     archival: bool = Query(default=False, description="By default getTransaction request is processed by any available liteserver. If *archival=true* only liteservers with full history are used.")
     ):
     """
@@ -296,7 +296,7 @@ async def get_transactions(
     address = prepare_address(address)
     return await tonlib.get_transactions(address, from_transaction_lt=lt, from_transaction_hash=hash, to_transaction_lt=to_lt, limit=limit, archival=archival)
 
-@app.get('/getAddressBalance', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
+@app.get('/getAddressBalance', response_model=TonResponseDefault, response_model_exclude_none=True, tags=['accounts'])
 @json_rpc('getAddressBalance')
 @wrap_result
 async def get_address_balance(
@@ -311,7 +311,7 @@ async def get_address_balance(
         result["balance"] = 0
     return result["balance"]
 
-@app.get('/getAddressState', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
+@app.get('/getAddressState', response_model=TonResponseDefault, response_model_exclude_none=True, tags=['accounts'])
 @json_rpc('getAddressState')
 @wrap_result
 async def get_address(
@@ -324,7 +324,7 @@ async def get_address(
     result = await tonlib.raw_get_account_state(address)
     return address_state(result)
 
-@app.get('/packAddress', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
+@app.get('/packAddress', response_model=TonResponseDefault, response_model_exclude_none=True, tags=['accounts'])
 @json_rpc('packAddress')
 @wrap_result
 async def pack_address(
@@ -335,7 +335,7 @@ async def pack_address(
     """
     return prepare_address(address)
 
-@app.get('/unpackAddress', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
+@app.get('/unpackAddress', response_model=TonResponseDefault, response_model_exclude_none=True, tags=['accounts'])
 @json_rpc('unpackAddress')
 @wrap_result
 async def unpack_address(
@@ -346,7 +346,7 @@ async def unpack_address(
     """
     return _detect_address(address)["raw_form"]
 
-@app.get('/getMasterchainInfo', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
+@app.get('/getMasterchainInfo', response_model=TonResponseDefault, response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('getMasterchainInfo')
 @wrap_result
 async def get_masterchain_info():
@@ -355,7 +355,7 @@ async def get_masterchain_info():
     """
     return await tonlib.getMasterchainInfo()
 
-@app.get('/getConsensusBlock', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
+@app.get('/getConsensusBlock', response_model=TonResponseDefault, response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('getConsensusBlock')
 @wrap_result
 async def get_consensus_block():
@@ -364,14 +364,14 @@ async def get_consensus_block():
     """
     return await tonlib.getConsensusBlock()
 
-@app.get('/lookupBlock', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
+@app.get('/lookupBlock', response_model=TonResponseDefault, response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('lookupBlock')
 @wrap_result
 async def lookup_block(
-    workchain: int = Query(..., description="Workchain id to look up block in"), 
+    workchain: int = Query(..., description="Workchain id to look up block in"),
     shard: int = Query(..., description="Shard id to look up block in"),
     seqno: Optional[int] = Query(None, description="Block's height"),
-    lt: Optional[int] = Query(None, description="Block's logical time"), 
+    lt: Optional[int] = Query(None, description="Block's logical time"),
     unixtime: Optional[int] = Query(None, description="Block's unixtime")
     ):
     """
@@ -379,7 +379,7 @@ async def lookup_block(
     """
     return await tonlib.lookupBlock(workchain, shard, seqno, lt, unixtime)
 
-@app.get('/shards', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
+@app.get('/shards', response_model=TonResponseDefault, response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('shards')
 @wrap_result
 async def shards(
@@ -390,17 +390,17 @@ async def shards(
     """
     return await tonlib.getShards(seqno)
 
-@app.get('/getBlockTransactions', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks','transactions'])
+@app.get('/getBlockTransactions', response_model=TonResponseDefault, response_model_exclude_none=True, tags=['blocks','transactions'])
 @json_rpc('getBlockTransactions')
 @wrap_result
 async def get_block_transactions(
-    workchain: int, 
-    shard: int, 
-    seqno: int, 
-    root_hash: Optional[str] = None, 
-    file_hash: Optional[str] = None, 
-    after_lt: Optional[int] = None, 
-    after_hash: Optional[str] = None, 
+    workchain: int,
+    shard: int,
+    seqno: int,
+    root_hash: Optional[str] = None,
+    file_hash: Optional[str] = None,
+    after_lt: Optional[int] = None,
+    after_hash: Optional[str] = None,
     count: int = 40
     ):
     """
@@ -408,14 +408,14 @@ async def get_block_transactions(
     """
     return await tonlib.getBlockTransactions(workchain, shard, seqno, count, root_hash, file_hash, after_lt, after_hash)
 
-@app.get('/getBlockHeader', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
+@app.get('/getBlockHeader', response_model=TonResponseDefault, response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('getBlockHeader')
 @wrap_result
 async def get_block_header(
-    workchain: int, 
-    shard: int, 
-    seqno: int, 
-    root_hash: Optional[str] = None, 
+    workchain: int,
+    shard: int,
+    seqno: int,
+    root_hash: Optional[str] = None,
     file_hash: Optional[str] = None
     ):
     """
@@ -423,12 +423,12 @@ async def get_block_header(
     """
     return await tonlib.getBlockHeader(workchain, shard, seqno, root_hash, file_hash)
 
-@app.get('/tryLocateTx', response_model=TonResponse, response_model_exclude_none=True, tags=['transactions'])
+@app.get('/tryLocateTx', response_model=TonResponseDefault, response_model_exclude_none=True, tags=['transactions'])
 @json_rpc('tryLocateTx')
 @wrap_result
 async def get_try_locate_tx(
-    source: str, 
-    destination: str, 
+    source: str,
+    destination: str,
     created_lt: int
     ):
     """
@@ -436,12 +436,12 @@ async def get_try_locate_tx(
     """
     return await tonlib.tryLocateTxByIncomingMessage(source, destination, created_lt)
 
-@app.get('/tryLocateResultTx', response_model=TonResponse, response_model_exclude_none=True, tags=['transactions'])
+@app.get('/tryLocateResultTx', response_model=TonResponseDefault, response_model_exclude_none=True, tags=['transactions'])
 @json_rpc('tryLocateResultTx')
 @wrap_result
 async def get_try_locate_result_tx(
-    source: str, 
-    destination: str, 
+    source: str,
+    destination: str,
     created_lt: int
     ):
     """
@@ -449,12 +449,12 @@ async def get_try_locate_result_tx(
     """
     return await tonlib.tryLocateTxByIncomingMessage(source, destination, created_lt)
 
-@app.get('/tryLocateSourceTx', response_model=TonResponse, response_model_exclude_none=True, tags=['transactions'])
+@app.get('/tryLocateSourceTx', response_model=TonResponseDefault, response_model_exclude_none=True, tags=['transactions'])
 @json_rpc('tryLocateSourceTx')
 @wrap_result
 async def get_try_locate_source_tx(
-    source: str, 
-    destination: str, 
+    source: str,
+    destination: str,
     created_lt: int
     ):
     """
@@ -462,7 +462,7 @@ async def get_try_locate_source_tx(
     """
     return await tonlib.tryLocateTxByOutcomingMessage(source, destination, created_lt)
 
-@app.get('/detectAddress', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
+@app.get('/detectAddress', response_model=TonResponseDefault, response_model_exclude_none=True, tags=['accounts'])
 @json_rpc('detectAddress')
 @wrap_result
 async def detect_address(
@@ -473,7 +473,7 @@ async def detect_address(
     """
     return _detect_address(address)
 
-@app.post('/sendBoc', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
+@app.post('/sendBoc', response_model=TonResponseDefault, response_model_exclude_none=True, tags=['send'])
 @json_rpc('sendBoc')
 @wrap_result
 async def send_boc(
@@ -485,7 +485,7 @@ async def send_boc(
     boc = base64.b64decode(boc)
     return await tonlib.raw_send_message(boc)
 
-@app.post('/sendCellSimple', response_model=TonResponse, response_model_exclude_none=True, include_in_schema=False, tags=['send'])
+@app.post('/sendCellSimple', response_model=TonResponseDefault, response_model_exclude_none=True, include_in_schema=False, tags=['send'])
 @json_rpc('sendCellSimple')
 @wrap_result
 async def send_cell(
@@ -501,13 +501,13 @@ async def send_cell(
         raise HTTPException(status_code=400, detail="Error while parsing cell")
     return await tonlib.raw_send_message(boc)
 
-@app.post('/sendQuery', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
+@app.post('/sendQuery', response_model=TonResponseDefault, response_model_exclude_none=True, tags=['send'])
 @json_rpc('sendQuery')
 @wrap_result
 async def send_query(
-    address: str = Body(..., description="Address in any format"), 
-    body: str = Body(..., description="b64-encoded boc-serialized cell with message body"), 
-    init_code: str = Body(default='', description="b64-encoded boc-serialized cell with init-code"), 
+    address: str = Body(..., description="Address in any format"),
+    body: str = Body(..., description="b64-encoded boc-serialized cell with message body"),
+    init_code: str = Body(default='', description="b64-encoded boc-serialized cell with init-code"),
     init_data: str = Body(default='', description="b64-encoded boc-serialized cell with init-data")
     ):
     """
@@ -519,13 +519,13 @@ async def send_query(
     data = codecs.decode(codecs.encode(init_data, "utf-8"), 'base64')
     return await tonlib.raw_create_and_send_query(address, body, init_code=code, init_data=data)
 
-@app.post('/sendQuerySimple', response_model=TonResponse, response_model_exclude_none=True, include_in_schema=False, tags=['send'])
+@app.post('/sendQuerySimple', response_model=TonResponseDefault, response_model_exclude_none=True, include_in_schema=False, tags=['send'])
 @json_rpc('sendQuerySimple')
 @wrap_result
 async def send_query_cell(
-    address: str = Body(..., description="Address in any format"), 
-    body: str = Body(..., description='Body cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'), 
-    init_code: Optional[Dict[str, Any]] = Body(default=None, description='init-code cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'), 
+    address: str = Body(..., description="Address in any format"),
+    body: str = Body(..., description='Body cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'),
+    init_code: Optional[Dict[str, Any]] = Body(default=None, description='init-code cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'),
     init_data: Optional[Dict[str, Any]] = Body(default=None, description='init-data cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`')
     ):
     """
@@ -543,14 +543,14 @@ async def send_query_cell(
         raise HTTPException(status_code=400, detail="Error while parsing cell object")
     return await tonlib.raw_create_and_send_query(address, body, init_code=qcode, init_data=qdata)
 
-@app.post('/estimateFee', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
+@app.post('/estimateFee', response_model=TonResponseDefault, response_model_exclude_none=True, tags=['send'])
 @json_rpc('estimateFee')
 @wrap_result
 async def estimate_fee(
-    address: str = Body(..., description='Address in any format'), 
-    body: str = Body(..., description='b64-encoded cell with message body'), 
-    init_code: str = Body(default='', description='b64-encoded cell with init-code'), 
-    init_data: str = Body(default='', description='b64-encoded cell with init-data'), 
+    address: str = Body(..., description='Address in any format'),
+    body: str = Body(..., description='b64-encoded cell with message body'),
+    init_code: str = Body(default='', description='b64-encoded cell with init-code'),
+    init_data: str = Body(default='', description='b64-encoded cell with init-data'),
     ignore_chksig: bool = Body(default=True, description='If true during test query processing assume that all chksig operations return True')
     ):
     """
@@ -562,14 +562,14 @@ async def estimate_fee(
     data = codecs.decode(codecs.encode(init_data, "utf-8"), 'base64')
     return await tonlib.raw_estimate_fees(address, body, init_code=code, init_data=data, ignore_chksig=ignore_chksig)
 
-@app.post('/estimateFeeSimple', response_model=TonResponse, response_model_exclude_none=True, include_in_schema=False, tags=['send'])
+@app.post('/estimateFeeSimple', response_model=TonResponseDefault, response_model_exclude_none=True, include_in_schema=False, tags=['send'])
 @json_rpc('estimateFeeSimple')
 @wrap_result
 async def estimate_fee_cell(
-    address: str = Body(..., description='Address in any format'), 
-    body: Dict[str, Any] = Body(..., description='Body cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'), 
-    init_code: Optional[Dict[str, Any]] = Body(default=None, description='init-code cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'), 
-    init_data: Optional[Dict[str, Any]] = Body(default=None, description='init-data cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'), 
+    address: str = Body(..., description='Address in any format'),
+    body: Dict[str, Any] = Body(..., description='Body cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'),
+    init_code: Optional[Dict[str, Any]] = Body(default=None, description='init-code cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'),
+    init_data: Optional[Dict[str, Any]] = Body(default=None, description='init-data cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'),
     ignore_chksig: bool = Body(default=True, description='If true during test query processing assume that all chksig operations return True')
     ):
     """
@@ -589,12 +589,12 @@ async def estimate_fee_cell(
 
 
 if settings.pyton.get_methods:
-    @app.post('/runGetMethod', response_model=TonResponse, response_model_exclude_none=True, tags=["run method"])
+    @app.post('/runGetMethod', response_model=TonResponseDefault, response_model_exclude_none=True, tags=["run method"])
     @json_rpc('runGetMethod')
     @wrap_result
     async def run_get_method(
-        address: str = Body(..., description='Contract address'), 
-        method: Union[str, int] = Body(..., description='Method name or method id'), 
+        address: str = Body(..., description='Contract address'),
+        method: Union[str, int] = Body(..., description='Method name or method id'),
         stack: List[List[Any]] = Body(..., description="Array of stack elements: `[['num',3], ['cell', cell_object], ['slice', slice_object]]`")
         ):
         """
@@ -628,7 +628,7 @@ if settings.pyton.json_rpc:
         except TypeError as e:
             response.status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
             return TonResponseJsonRPC(ok=False, error=f'TypeError: {e}', id=_id)
-        
+
         return TonResponseJsonRPC(ok=result.ok, result=result.result, error=result.error, code=result.code, id=_id)
 
 

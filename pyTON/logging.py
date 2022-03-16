@@ -15,7 +15,7 @@ from limits.aio.storage import RedisStorage
 from limits.aio.strategies import FixedWindowRateLimiter
 
 from pyTON.api_key_manager import per_method_limits, total_limits, api_key_from_request, api_key_header, api_key_query
-from pyTON.models import TonResponse
+from pyTON.models.shared import TonResponseDefault
 from config import settings
 
 from loguru import logger
@@ -48,11 +48,11 @@ def to_mongodb(collection):
 # https://github.com/tiangolo/fastapi/issues/2750
 # As workaround - catch and handle this exception in the middleware.
 def generic_exception_handler(exc):
-    res = TonResponse(ok=False, error=str(exc), code=status.HTTP_503_SERVICE_UNAVAILABLE)
+    res = TonResponseDefault(ok=False, error=str(exc), code=status.HTTP_503_SERVICE_UNAVAILABLE)
     return JSONResponse(res.dict(exclude_none=True), status_code=status.HTTP_503_SERVICE_UNAVAILABLE)
 
 def generic_http_exception_handler(exc):
-    res = TonResponse(ok=False, error=str(exc.detail), code=exc.status_code)
+    res = TonResponseDefault(ok=False, error=str(exc.detail), code=exc.status_code)
     return JSONResponse(res.dict(exclude_none=True), status_code=res.code)
 
 class LoggerAndRateLimitMiddleware(BaseHTTPMiddleware):
@@ -127,7 +127,7 @@ class LoggerAndRateLimitMiddleware(BaseHTTPMiddleware):
                 break
 
         if failed_limit:
-            res = TonResponse(ok=False, error=f"Rate limit exceeded: {failed_limit}", code=429)
+            res = TonResponseDefault(ok=False, error=f"Rate limit exceeded: {failed_limit}", code=429)
             return JSONResponse(res.dict(exclude_none=True), status_code=res.code)
         result = await call_next(request)
         return result
