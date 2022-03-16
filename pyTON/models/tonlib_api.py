@@ -9,7 +9,7 @@ https://github.com/ton-blockchain/ton/blob/24dc184a2ea67f9c47042b4104bbb4d82289f
 
 
 class TLObject(BaseModel):
-    type: str = Field(alias="@type", title="TL Object type name.")
+    type: str = Field(alias="@type", title="TypeLanguage constructor type name.")
 
 
 class TonLibExecutionResult(BaseModel):
