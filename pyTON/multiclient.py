@@ -213,18 +213,16 @@ class TonlibMultiClient:
                 from_transaction_lt, from_transaction_hash = int(addr["last_transaction_id"]["lt"]), b64str_to_hex(addr["last_transaction_id"]["hash"])
             except KeyError:
                 raise TonLibWrongResult("Can't get last_transaction_id data", addr)
+
         reach_lt = False
         all_transactions = []
-        current_lt, curret_hash = from_transaction_lt, from_transaction_hash
-        while (not reach_lt) and (len(all_transactions) < limit):
-            raw_transactions = await self.raw_get_transactions(account_address, current_lt, curret_hash, archival)
-            if(raw_transactions['@type']) == 'error':
-                break
-                # TODO probably we should chenge get_transactions API
-                # if 'message' in raw_transactions['message']:
-                #  raise Exception(raw_transactions['message'])
-                # else:
-                #  raise Exception("Can't get transactions")
+        current_lt, current_hash = from_transaction_lt, from_transaction_hash
+        while not reach_lt and len(all_transactions) < limit:
+            raw_transactions = await self.raw_get_transactions(account_address, current_lt, current_hash, archival)
+            if raw_transactions.get('@type', 'error') == 'error':
+                error_message = raw_transactions.get('message', '')
+                raise TonLibWrongResult(f"Couldn't get next transactions chunk: {error_message}", raw_transactions)
+
             transactions, next = raw_transactions['transactions'], raw_transactions.get("previous_transaction_id", None)
             for t in transactions:
                 tlt = int(t['transaction_id']['lt'])
@@ -233,11 +231,12 @@ class TonlibMultiClient:
                     break
                 all_transactions.append(copy.deepcopy(t))
             if next:
-                current_lt, curret_hash = int(next["lt"]), b64str_to_hex(next["hash"])
+                current_lt, current_hash = int(next["lt"]), b64str_to_hex(next["hash"])
             else:
                 break
             if current_lt == 0:
                 break
+
         for t in all_transactions:
             try:
                 if "in_msg" in t:
@@ -280,6 +279,7 @@ class TonlibMultiClient:
                             o["message"] = ""
             except Exception as e:
                 print("getTransaction exception", e)
+
         return all_transactions[:limit]
 
     @redis_cached(expire=5)
