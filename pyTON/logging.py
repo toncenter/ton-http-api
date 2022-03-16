@@ -29,6 +29,9 @@ if settings.logs.enabled:
                          username=settings.logs.mongodb.username,
                          password=mongo_password)
     mongo_db = settings.logs.mongodb.database
+    mongo_client[mongo_db].requests.create_index('timestamp', expireAfterSeconds=settings.logs.record_ttl)
+    mongo_client[mongo_db].liteserver_tasks.create_index('timestamp', expireAfterSeconds=settings.logs.record_ttl)
+    mongo_client[mongo_db].request_stats.create_index('timestamp', expireAfterSeconds=settings.logs.record_ttl)
 else:
     mongo_client = None
 

@@ -13,6 +13,7 @@ pyton:
 logs:
   enabled: $TON_API_LOGS_ENABLED
   log_successful_requests: false
+  record_ttl: 86400
   mongodb:
     host: mongodb
     port: 27017
