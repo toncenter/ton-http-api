@@ -325,18 +325,32 @@ class TonlibClient(multiprocessing.Process):
 
     async def raw_get_account_state(self, address: str):
         """
-        TL Spec:
-            raw.getAccountState account_address:accountAddress = raw.AccountState;
-            accountAddress account_address:string = AccountAddress;
+        Method arguments TL spec: https://github.com/ton-blockchain/ton/blob/24dc184a2ea67f9c47042b4104bbb4d82289fac1/tl/generate/scheme/tonlib_api.tl#L235
+        Method execution result TL spec: https://github.com/ton-blockchain/ton/blob/24dc184a2ea67f9c47042b4104bbb4d82289fac1/tl/generate/scheme/tonlib_api.tl#L52
+        
         :param address: str with raw or user friendly address
         :return: dict as
             {
-                '@type': 'raw.accountState',
-                'balance': str,
-                'code': str,
-                'data': str,
-                'last_transaction_id': internal.transactionId,
-                'sync_utime': int
+                '@extra`: str,
+                '@type': 'raw.fullAccountState',
+                'balance': str (int64),
+                'code': str (bytes),
+                'data': str (bytes),
+                'last_transaction_id': {
+                    '@type': 'internal.transactionId',
+                    'lt': str (int64),
+                    'hash: str (bytes)
+                },
+                'block_id': {
+                    '@type': 'ton.blockIdExt',
+                    'workchain': int (int32),
+                    'shard': str (int64),
+                    'seqno': int (int32),
+                    'root_hash': str (bytes),
+                    'file_hash': str (bytes)
+                },
+                'frozen_hash': str (bytes),
+                'sync_utime': in (int53)
             }
         """
         account_address = prepare_address(address)  # TODO: understand why this is not used
