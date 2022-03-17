@@ -8,6 +8,7 @@ import traceback
 
 from datetime import datetime
 from pathlib import Path
+from typing import Optional, Any, Dict
 
 import aioprocessing
 
@@ -15,7 +16,8 @@ from config import settings
 from pyTON.utils import TonLibWrongResult, b64str_to_hex, hash_to_hex
 from pyTON.logging import to_mongodb
 from pyTON.cache import redis_cached
-from pyTON.client import TonlibClient, TonlibClientResult, MsgType
+from pyTON.dispatcher import Dispatcher
+from pyTON.client import TonlibClient
 from tvm_valuetypes import deserialize_boc
 
 from loguru import logger
@@ -23,6 +25,28 @@ from loguru import logger
 
 def current_function_name():
     return inspect.stack()[1].function
+
+
+class TonlibClientResult:
+    def __init__(self, 
+                 task_id, 
+                 method: str,
+                 elapsed_time: float,
+                 params: Optional[Any]=None,
+                 result: Optional[Any]=None, 
+                 exception: Optional[Exception]=None, 
+                 liteserver_info: Optional[Any]=None):
+        if result is None and exception is None:
+            raise ValueError("TonlibClientResult: both result and exception is None")
+
+        self.task_id = task_id
+        self.method = method
+        self.elapsed_time = elapsed_time
+        self.params = params
+        self.result = result
+        self.exception = exception
+        self.liteserver_info = liteserver_info
+
 
 @to_mongodb('liteserver_tasks')
 def log_liteserver_task(task_result: TonlibClientResult):
@@ -45,12 +69,19 @@ def log_liteserver_task(task_result: TonlibClientResult):
 
 
 class TonlibMultiClient:
-    def __init__(self, loop, config, keystore, cdll_path=None):
+    def __init__(self, 
+                 loop, 
+                 config: Dict[str, Any], 
+                 keystore: str, 
+                 dispatcher: Optional[Dispatcher]=None, 
+                 cdll_path: Optional[str]=None):
         self.loop = loop
         self.config = config
         self.futures = {}
         self.keystore = keystore
         self.cdll_path = cdll_path
+
+        self.dispatcher = dispatcher or Dispatcher(len(config['liteservers']))
         self.current_consensus_block = 0
         self.current_consensus_block_timestamp = 0
 
@@ -59,9 +90,7 @@ class TonlibMultiClient:
           Try to init as many tonlib clients as there are liteservers in config
         '''
         self.all_clients = []
-        self.read_output_tasks = []
-
-        result_queue = aioprocessing.AioQueue()
+        init_task_list = []
         for i, ls in enumerate(self.config["liteservers"]):
             c = copy.deepcopy(self.config)
             c["liteservers"] = [ls]
@@ -69,19 +98,9 @@ class TonlibMultiClient:
 
             Path(keystore).mkdir(parents=True, exist_ok=True)
 
-            client = TonlibClient(aioprocessing.AioQueue(), result_queue, c, keystore=keystore, cdll_path=self.cdll_path)
-
-            client.number = i
-            client.is_working = False
-            client.is_archival = False
-
-            client.start()
-
+            client = TonlibClient(self.loop, i, c, keystore=keystore, cdll_path=self.cdll_path)
+            asyncio.ensure_future(client.init_tonlib(), loop=self.loop)
             self.all_clients.append(client)
-        self.read_output_tasks.append(asyncio.ensure_future(self.read_output(result_queue), loop=self.loop))
-
-        self.check_working_task = asyncio.ensure_future(self.check_working(), loop=self.loop)
-        self.check_children_alive_task = asyncio.ensure_future(self.check_children_alive(), loop=self.loop)
 
     # Used by ring library. Since we need shared cache across
     # multiple TonlibMultiClient instances this function must
@@ -89,116 +108,57 @@ class TonlibMultiClient:
     def __ring_key__(self):
         return "static"
 
-    async def read_output(self, result_queue):
-        while True:
-            try:
-                msg_type, ls_index, msg_content = await result_queue.coro_get()
-                if msg_type == MsgType.TASK_RESULT:
-                    task_id = msg_content.task_id
-                    result = msg_content.result
-                    exception = msg_content.exception
-                    if task_id in self.futures and not self.futures[task_id].done():
-                        if exception is not None:
-                            self.futures[task_id].set_exception(exception)
-                        if result is not None:    
-                            self.futures[task_id].set_result(result)
-                        logger.debug(f"Client #{ls_index:03d}, task '{task_id}' result: {result}, exception: {exception}")
-                        
-                        # log liteserver task
-                        log_liteserver_task(msg_content)
-                    else:
-                        logger.warning(f"Client #{ls_index:03d}, task '{task_id}' doesn't exist or is done.")
 
-                if msg_type == MsgType.LAST_BLOCK_UPDATE:
-                    self.all_clients[ls_index].last_block = msg_content
+    async def dispatch_request(self, method, archival, *args, **kwargs):
+        client_idx = self.dispatcher.getLiteServerIndex(archival)
+        client = self.all_clients[client_idx]
 
-                if msg_type == MsgType.ARCHIVAL_UPDATE:
-                    self.all_clients[ls_index].is_archival = msg_content
-            except Exception as e:
-                logger.error(f"read_output exception {traceback.format_exc()}")
+        result = None
+        exception = None
 
-    async def check_working(self):
-        while True:
-            last_blocks = [client.last_block for client in self.all_clients]
-            best_block = max([i for i in last_blocks])
-            consensus_block = 0
-            # detect 'consensus':
-            # it is no more than 3 blocks less than best block
-            # at least 60% of ls know it
-            # it is not earlier than prev
-            last_blocks_non_zero = [i for i in last_blocks if i != 0]
-            strats = [sum([1 if ls == (best_block-i) else 0 for ls in last_blocks_non_zero]) for i in range(4)]
-            total_suitable = sum(strats)
-            sm = 0
-            for i, am in enumerate(strats):
-                sm += am
-                if sm >= total_suitable * 0.6:
-                    consensus_block = best_block - i
-                    break
-            if consensus_block > self.current_consensus_block:
-                self.current_consensus_block = consensus_block
-                self.current_consensus_block_timestamp = datetime.utcnow().timestamp()
-            for i in range(len(self.all_clients)):
-                self.all_clients[i].is_working = last_blocks[i] >= self.current_consensus_block
-
-            await asyncio.sleep(1)
-
-    async def check_children_alive(self):
-        while True:
-            for i, client in enumerate(self.all_clients):
-                if not client.is_alive():
-                    logger.error(f"Client #{i:03d} dead!!! Exit code: {client.exitcode}")
-
-                    self.read_output_tasks[i].cancel()
-                    client.close()
-
-                    c = copy.deepcopy(self.config)
-                    c["liteservers"] = [self.config["liteservers"][i]]
-                    keystore = self.keystore + str(i)
-                    new_client = TonlibClient(aioprocessing.AioQueue(), aioprocessing.AioQueue(), c, keystore=keystore, cdll_path=self.cdll_path)
-                    
-                    # lite server info
-                    new_client.number = i
-                    new_client.is_working = False
-                    new_client.is_archival = False
-                    new_client.start()
-                    self.all_clients[i] = new_client
-
-                    self.read_output_tasks[i] = asyncio.ensure_future(self.read_output(new_client), loop=self.loop)
-
-            await asyncio.sleep(1)
-
-    async def _dispatch_request_to_liteserver(self, method, client, *args, **kwargs):
-        task_id = "{}:{}".format(time.time(), random.random())
-        timeout = time.time() + settings.pyton.request_timeout
-        await client.input_queue.coro_put((task_id, timeout, method, args, kwargs))
-
+        start_time = datetime.now()
         try:
-            self.futures[task_id] = self.loop.create_future()
-            await self.futures[task_id]
-            return self.futures[task_id].result()
-        finally:
-            self.futures.pop(task_id)
+            result = await asyncio.wait_for(client.__getattribute__(method)(*args, **kwargs), timeout=settings.pyton.request_timeout)
+        except asyncio.CancelledError:
+            exception = Exception('Liteserver timeout (cancelled)')
+            logger.warning(f"Client #{client_idx:03d} did not get response from liteserver before timeout")
+        except asyncio.TimeoutError:
+            exception = Exception("Liteserver timeout (asyncio)")
+            logger.warning(f"Client #{client_idx:03d} task timeout")
+        except Exception as e:
+            exception = e
+            logger.warning(f"Client #{client_idx:03d} raised exception {e} while executing task")
+        else:
+            logger.info(f"Client #{client_idx:03d} got result {method}")
 
-    async def dispatch_request(self, method, *args, **kwargs):
-        client = random.choice([cl for cl in self.all_clients if cl.is_working])
-        result = await self._dispatch_request_to_liteserver(method, client, *args, **kwargs)
-        return result
+        end_time = datetime.now()
+        elapsed_time = (end_time - start_time).total_seconds()
 
-    async def dispatch_archive_request(self, method, *args, **kwargs):
-        clnts = [cl for cl in self.all_clients if cl.is_working and cl.is_archival]
-        if not len(clnts):
-            clnts = [cl for cl in self.all_clients if cl.is_working]
-        client = random.choice(clnts)
-        result = await self._dispatch_request_to_liteserver(method, client, *args, **kwargs)
+        # result
+        tonlib_task_result = TonlibClientResult('?',
+                                                method,
+                                                elapsed_time=elapsed_time,
+                                                params=[args, kwargs],
+                                                result=result,
+                                                exception=exception,
+                                                liteserver_info=client.info)
+        logger.debug(f"Client #{client_idx:03d}, result: {result}, exception: {exception}")
+
+        # logging
+        log_liteserver_task(tonlib_task_result)
+
+        # return results
+        if exception is not None:
+            raise exception
+
         return result
 
     @redis_cached(expire=5)
     async def raw_get_transactions(self, account_address: str, from_transaction_lt: str, from_transaction_hash: str, archival: bool):
         if archival:
-            return await self.dispatch_archive_request(current_function_name(), account_address, from_transaction_lt, from_transaction_hash)
+            return await self.dispatch_request(current_function_name(), True, account_address, from_transaction_lt, from_transaction_hash)
         else:
-            return await self.dispatch_request(current_function_name(), account_address, from_transaction_lt, from_transaction_hash)
+            return await self.dispatch_request(current_function_name(), False, account_address, from_transaction_lt, from_transaction_hash)
 
     @redis_cached(expire=15, check_error=False)
     async def get_transactions(self, account_address, from_transaction_lt=None, from_transaction_hash=None, to_transaction_lt=0, limit=10, archival=False):
@@ -286,21 +246,21 @@ class TonlibMultiClient:
 
     @redis_cached(expire=5)
     async def raw_get_account_state(self, address: str):
-        addr = await self.dispatch_request(current_function_name(), address)
+        addr = await self.dispatch_request(current_function_name(), False, address)
         # FIXME: refactor this code
         if addr.get('@type','error') == 'error':
-            addr = await self.dispatch_request(current_function_name(), address)
+            addr = await self.dispatch_request(current_function_name(), False, address)
         if addr.get('@type','error') == 'error':
             raise TonLibWrongResult("raw.getAccountState failed", addr)
         return addr
 
     @redis_cached(expire=5)
     async def generic_get_account_state(self, address: str):
-        return await self.dispatch_request(current_function_name(), address)
+        return await self.dispatch_request(current_function_name(), False, address)
 
     @redis_cached(expire=5)
     async def raw_run_method(self, address, method, stack_data, output_layout=None):
-        return await self.dispatch_request(current_function_name(), address, method, stack_data, output_layout)
+        return await self.dispatch_request(current_function_name(), False, address, method, stack_data, output_layout)
 
     async def raw_send_message(self, serialized_boc):
         working = [cl for cl in self.all_clients if cl.is_working]
@@ -328,24 +288,24 @@ class TonlibMultiClient:
         return result
 
     async def _raw_create_query(self, destination, body, init_code=b'', init_data=b''):
-        return await self.dispatch_request(current_function_name(), destination, body, init_code, init_data)
+        return await self.dispatch_request(current_function_name(), False, destination, body, init_code, init_data)
 
     async def _raw_send_query(self, query_info):
         return await self.dispatch_request(current_function_name(), query_info)
 
     async def raw_create_and_send_query(self, destination, body, init_code=b'', init_data=b''):
-        return await self.dispatch_request(current_function_name(), destination, body, init_code, init_data)
+        return await self.dispatch_request(current_function_name(), False, destination, body, init_code, init_data)
 
     async def raw_create_and_send_message(self, destination, body, initial_account_state=b''):
-        return await self.dispatch_request(current_function_name(), destination, body, initial_account_state)
+        return await self.dispatch_request(current_function_name(), False, destination, body, initial_account_state)
 
     @redis_cached(expire=5)
     async def raw_estimate_fees(self, destination, body, init_code=b'', init_data=b'', ignore_chksig=True):
-        return await self.dispatch_request(current_function_name(), destination, body, init_code, init_data, ignore_chksig)
+        return await self.dispatch_request(current_function_name(), False, destination, body, init_code, init_data, ignore_chksig)
 
     @redis_cached(expire=1)
     async def getMasterchainInfo(self):
-        return await self.dispatch_request(current_function_name())
+        return await self.dispatch_request(current_function_name(), False)
 
     async def getConsensusBlock(self):
         return {
@@ -356,20 +316,20 @@ class TonlibMultiClient:
     @redis_cached(expire=600)
     async def lookupBlock(self, workchain, shard, seqno=None, lt=None, unixtime=None):
         if workchain == -1 and seqno and self.current_consensus_block - seqno < 2000:
-            return await self.dispatch_request(current_function_name(), workchain, shard, seqno, lt, unixtime)
+            return await self.dispatch_request(current_function_name(), False, workchain, shard, seqno, lt, unixtime)
         else:
-            return await self.dispatch_archive_request(current_function_name(), workchain, shard, seqno, lt, unixtime)
+            return await self.dispatch_request(current_function_name(), True, workchain, shard, seqno, lt, unixtime)
 
     @redis_cached(expire=600)
     async def getShards(self, master_seqno=None, lt=None, unixtime=None):
         if master_seqno and self.current_consensus_block - master_seqno < 2000:
-            return await self.dispatch_request(current_function_name(), master_seqno)
+            return await self.dispatch_request(current_function_name(), False, master_seqno)
         else:
-            return await self.dispatch_archive_request(current_function_name(), master_seqno)
+            return await self.dispatch_request(current_function_name(), True, master_seqno)
 
     @redis_cached(expire=600)
     async def raw_getBlockTransactions(self, fullblock, count, after_tx):
-        return await self.dispatch_archive_request(current_function_name(), fullblock, count, after_tx)
+        return await self.dispatch_request(current_function_name(), True, fullblock, count, after_tx)
 
     @redis_cached(expire=600)
     async def getBlockTransactions(self, workchain, shard, seqno, count, root_hash=None, file_hash=None, after_lt=None, after_hash=None):
@@ -420,14 +380,14 @@ class TonlibMultiClient:
     @redis_cached(expire=600)
     async def getBlockHeader(self, workchain, shard, seqno, root_hash=None, file_hash=None):
         if workchain == -1 and seqno and self.current_consensus_block - seqno < 2000:
-            return await self.dispatch_request(current_function_name(), workchain, shard, seqno, root_hash, file_hash)
+            return await self.dispatch_request(current_function_name(), False, workchain, shard, seqno, root_hash, file_hash)
         else:
-            return await self.dispatch_archive_request(current_function_name(), workchain, shard, seqno, root_hash, file_hash)
+            return await self.dispatch_request(current_function_name(), True, workchain, shard, seqno, root_hash, file_hash)
 
     @redis_cached(expire=600, check_error=False)
     async def tryLocateTxByOutcomingMessage(self, source, destination, creation_lt):
-        return await self.dispatch_archive_request(current_function_name(),  source, destination, creation_lt)
+        return await self.dispatch_request(current_function_name(), True, source, destination, creation_lt)
 
     @redis_cached(expire=600, check_error=False)
     async def tryLocateTxByIncomingMessage(self, source, destination, creation_lt):
-        return await self.dispatch_archive_request(current_function_name(),  source, destination, creation_lt)
+        return await self.dispatch_request(current_function_name(), True, source, destination, creation_lt)

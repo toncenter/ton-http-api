@@ -25,128 +25,61 @@ from pyTON.utils import TonLibWrongResult, b64str_to_hex, hex_to_b64str
 from loguru import logger
 
 
-class MsgType(Enum):
-    TASK_RESULT = 1
-    LAST_BLOCK_UPDATE = 2
-    ARCHIVAL_UPDATE = 3
-
-
-class TonlibClientResult:
-    def __init__(self, 
-                 task_id, 
-                 method: str,
-                 elapsed_time: float,
-                 params: Optional[Any]=None,
-                 result: Optional[Any]=None, 
-                 exception: Optional[Exception]=None, 
-                 liteserver_info: Optional[Any]=None):
-        if result is None and exception is None:
-            raise ValueError("TonlibClientResult: both result and exception is None")
-
-        self.task_id = task_id
-        self.method = method
-        self.elapsed_time = elapsed_time
-        self.params = params
-        self.result = result
-        self.exception = exception
-        self.liteserver_info = liteserver_info
-
-
-class TonlibClient(multiprocessing.Process):
-    def __init__(self, input_queue, output_queue, config, keystore, cdll_path=None):
+class TonlibClient:
+    def __init__(self, loop, number, config, keystore, cdll_path=None):
         super(TonlibClient, self).__init__()
-        self.input_queue = input_queue
-        self.output_queue = output_queue
+        self.loop = loop
         self.config = config
         self.keystore = keystore
         self.cdll_path = cdll_path
-        self.requests_num = 0
-        self.last_block = 0
-        self.number = 0
-        self.archival = False
-        self.max_parallel_requests = config['liteservers'][0].get("max_parallel_requests", 
-                                                                  settings.pyton.parallel_requests_per_liteserver)
 
-    def run(self):
-        self.semaphore = asyncio.Semaphore(self.max_parallel_requests)
-        policy = asyncio.get_event_loop_policy()
-        policy.set_event_loop(policy.new_event_loop())
-        loop = asyncio.get_event_loop()
-        self.loop = loop
-        loop.run_until_complete(self.init_tonlib(self.cdll_path))
-        self.report_last_block_task = asyncio.ensure_future(self.report_last_block(), loop=self.loop)
-        self.report_archival_task = asyncio.ensure_future(self.report_archival(), loop=self.loop)
-        loop.run_until_complete(self.read_tasks())
+        self.requests_num = 0
+        self.number = number
 
     @property
     def info(self):
         return {
             'ip': f"{self.config['liteservers'][0]['ip']}",
             'port': f"{self.config['liteservers'][0]['port']}",
-            'last_block': self.last_block,
-            'archival': self.archival,
             'number': self.number,
         }
 
-    async def read_tasks(self):
-        while True:
-            async with self.semaphore:
-                task_id, timeout, method, args, kwargs = await self.input_queue.coro_get()
+    # async def read_tasks(self):
+    #     while True:
+    #         async with self.semaphore:
+    #             task_id, timeout, method, args, kwargs = await self.input_queue.coro_get()
  
-                result = None
-                exception = None
+    #             result = None
+    #             exception = None
 
-                start_time = datetime.now()
-                if time.time() < timeout:
-                    try:
-                        result = await self.__getattribute__(method)(*args, **kwargs)
-                    except asyncio.CancelledError:
-                        exception = Exception("Liteserver timeout")
-                        logger.warning(f"Client #{self.number:03d} did not get response from liteserver before timeout")
-                    except Exception as e:
-                        exception = e
-                        logger.warning(f"Client #{self.number:03d} raised exception {e} while executing task")
-                    else:
-                        logger.info(f"Client #{self.number:03d} got result {method}")
-                else:
-                    logger.warning(f"Client #{self.number:03d} received task after timeout")
-                    exception = asyncio.TimeoutError()
+    #             start_time = datetime.now()
+    #             if time.time() < timeout:
+    #                 try:
+    #                     result = await self.__getattribute__(method)(*args, **kwargs)
+    #                 except asyncio.CancelledError:
+    #                     exception = Exception("Liteserver timeout")
+    #                     logger.warning(f"Client #{self.number:03d} did not get response from liteserver before timeout")
+    #                 except Exception as e:
+    #                     exception = e
+    #                     logger.warning(f"Client #{self.number:03d} raised exception {e} while executing task")
+    #                 else:
+    #                     logger.info(f"Client #{self.number:03d} got result {method}")
+    #             else:
+    #                 logger.warning(f"Client #{self.number:03d} received task after timeout")
+    #                 exception = asyncio.TimeoutError()
 
-                end_time = datetime.now()
-                elapsed_time = (end_time - start_time).total_seconds()
+    #             end_time = datetime.now()
+    #             elapsed_time = (end_time - start_time).total_seconds()
 
-                # result
-                tonlib_task_result = TonlibClientResult(task_id,
-                                                      method,
-                                                      elapsed_time=elapsed_time,
-                                                      params=[args, kwargs],
-                                                      result=result,
-                                                      exception=exception,
-                                                      liteserver_info=self.info)
-                await self.output_queue.coro_put((MsgType.TASK_RESULT, self.number, tonlib_task_result))
-
-    async def report_last_block(self):
-        while True:
-            last_block = -1
-            try:
-                masterchain_info = await self.getMasterchainInfo()
-                last_block = masterchain_info["last"]["seqno"]
-                self.last_block = last_block
-            except Exception as e:
-                logger.error(f"Client #{self.number:03d} report_last_block exception {e}")
-            await self.output_queue.coro_put((MsgType.LAST_BLOCK_UPDATE, self.number, last_block))
-            await asyncio.sleep(1)
-
-    async def report_archival(self):
-        while True:
-            try:
-                block_transactions = await self.getBlockTransactions(-1, -9223372036854775808, random.randint(2, 2000000))
-                is_archival = block_transactions.get("@type", "") == "blocks.transactions"
-                self.is_archival = is_archival
-                await self.output_queue.coro_put((MsgType.ARCHIVAL_UPDATE, self.number, is_archival))
-            except Exception as e:
-                logger.error(f"Client #{self.number:03d} report_archival exception {e}")
-            await asyncio.sleep(600)
+    #             # result
+    #             tonlib_task_result = TonlibClientResult(task_id,
+    #                                                   method,
+    #                                                   elapsed_time=elapsed_time,
+    #                                                   params=[args, kwargs],
+    #                                                   result=result,
+    #                                                   exception=exception,
+    #                                                   liteserver_info=self.info)
+    #             await self.output_queue.coro_put((MsgType.TASK_RESULT, self.number, tonlib_task_result))
 
     async def reconnect(self):
         if not self.tonlib_wrapper.shutdown_state:
@@ -155,7 +88,7 @@ class TonlibClient(multiprocessing.Process):
             await self.init_tonlib()
             logger.info(f'Client #{self.number:03d} reconnected')
 
-    async def init_tonlib(self, cdll_path=None):
+    async def init_tonlib(self):
         """
         TL Spec
             init options:options = options.Info;
@@ -190,11 +123,11 @@ class TonlibClient(multiprocessing.Process):
             }
         }
 
-        await wrapper.execute(request)
-        wrapper.set_restart_hook(hook=self.reconnect, max_requests=500)
         self.tonlib_wrapper = wrapper
         await self.set_verbosity_level(0)
-        logger.info(F"TonLib inited successfully")
+        await self.tonlib_wrapper.execute(request)
+        self.tonlib_wrapper.set_restart_hook(hook=self.reconnect, max_requests=1024)
+        logger.info(F"TonLibClient #{self.number:03d} inited successfully")
 
     async def set_verbosity_level(self, level):
         request = {

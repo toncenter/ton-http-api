@@ -1,3 +1,5 @@
+from traceback import format_exc
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi import Request, status
@@ -48,6 +50,7 @@ def to_mongodb(collection):
 # https://github.com/tiangolo/fastapi/issues/2750
 # As workaround - catch and handle this exception in the middleware.
 def generic_exception_handler(exc):
+    logger.error(format_exc())
     res = TonResponse(ok=False, error=str(exc), code=status.HTTP_503_SERVICE_UNAVAILABLE)
     return JSONResponse(res.dict(exclude_none=True), status_code=status.HTTP_503_SERVICE_UNAVAILABLE)
 
@@ -202,7 +205,8 @@ class LoggerAndRateLimitMiddleware(BaseHTTPMiddleware):
         }
 
         mongo_client[mongo_db].request_stats.insert_one(stat_record)
-
+        
+        response.headers['X-Elapsed-Time'] = elapsed
         return response
 
     async def dispatch(self, request: Request, call_next):

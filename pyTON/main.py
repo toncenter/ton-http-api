@@ -115,8 +115,7 @@ def startup():
         raise
 
     keystore = settings.pyton.keystore
-    if not os.path.exists(keystore):
-        os.makedirs(keystore)
+    os.makedirs(keystore, exist_ok=True)
 
     # setup tonlib multiclient
     global tonlib
