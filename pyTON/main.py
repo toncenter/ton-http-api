@@ -21,7 +21,7 @@ from fastapi import FastAPI, APIRouter, Depends, Security, Response, Request
 from fastapi.params import Body, Query, Param
 from fastapi.exceptions import HTTPException, RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi import status
 from datetime import datetime, timedelta
 from bson import ObjectId
@@ -82,7 +82,7 @@ app = FastAPI(
     title="TON HTTP API",
     description=description,
     version='2.0.0',
-    docs_url='/',
+    docs_url='/swagger',
     responses={
         422: {'description': 'Validation Error'},
         504: {'description': 'Lite Server Timeout'}
@@ -223,6 +223,51 @@ def json_rpc(method):
     return g
 
 # Endpoints
+
+
+@app.get('/', response_class=HTMLResponse, include_in_schema=False)
+async def get_rapidoc():
+    """
+    This handler returns RapiDoc web component which displays current OpenAPI schema
+    via fancy UI. It is allowed to modify rendered HTML page according to available
+    rapi-doc component attributes:
+    https://mrin9.github.io/RapiDoc/api.html
+
+    More examples and allowed modifications:
+    https://mrin9.github.io/RapiDoc/examples
+    """
+
+    f"""
+    
+    """
+
+    return f"""
+        <!doctype html>
+        <html>
+            <head>
+                <meta charset="utf-8">
+                <link 
+                    href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;600&amp;family=Roboto+Mono&amp;display=swap" 
+                    rel="stylesheet"
+                />
+                <script 
+                    type="module" 
+                    src="https://unpkg.com/rapidoc/dist/rapidoc-min.js"
+                ></script>
+            </head>
+            <body>
+                <rapi-doc 
+                    bg-color="#14191f"
+                    mono-font="Roboto Mono" 
+                    primary-color="#01a6dc"
+                    regular-font="Open Sans"
+                    show-header="false"
+                    spec-url="{app.root_path + app.openapi_url}"
+                    theme="dark"
+                    text-color="#ccc"></rapi-doc>
+            </body> 
+        </html>
+    """
 
 
 @app.get('/getAddressInformation', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
