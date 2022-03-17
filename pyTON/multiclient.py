@@ -60,6 +60,8 @@ class TonlibMultiClient:
         '''
         self.all_clients = []
         self.read_output_tasks = []
+
+        result_queue = aioprocessing.AioQueue()
         for i, ls in enumerate(self.config["liteservers"]):
             c = copy.deepcopy(self.config)
             c["liteservers"] = [ls]
@@ -67,7 +69,7 @@ class TonlibMultiClient:
 
             Path(keystore).mkdir(parents=True, exist_ok=True)
 
-            client = TonlibClient(aioprocessing.AioQueue(), aioprocessing.AioQueue(), c, keystore=keystore, cdll_path=self.cdll_path)
+            client = TonlibClient(aioprocessing.AioQueue(), result_queue, c, keystore=keystore, cdll_path=self.cdll_path)
 
             client.number = i
             client.is_working = False
@@ -76,7 +78,7 @@ class TonlibMultiClient:
             client.start()
 
             self.all_clients.append(client)
-            self.read_output_tasks.append(asyncio.ensure_future(self.read_output(client), loop=self.loop))
+        self.read_output_tasks.append(asyncio.ensure_future(self.read_output(result_queue), loop=self.loop))
 
         self.check_working_task = asyncio.ensure_future(self.check_working(), loop=self.loop)
         self.check_children_alive_task = asyncio.ensure_future(self.check_children_alive(), loop=self.loop)
@@ -87,10 +89,10 @@ class TonlibMultiClient:
     def __ring_key__(self):
         return "static"
 
-    async def read_output(self, client):
+    async def read_output(self, result_queue):
         while True:
             try:
-                msg_type, msg_content = await client.output_queue.coro_get()
+                msg_type, ls_index, msg_content = await result_queue.coro_get()
                 if msg_type == MsgType.TASK_RESULT:
                     task_id = msg_content.task_id
                     result = msg_content.result
@@ -100,18 +102,18 @@ class TonlibMultiClient:
                             self.futures[task_id].set_exception(exception)
                         if result is not None:    
                             self.futures[task_id].set_result(result)
-                        logger.debug(f"Client #{client.number:03d}, task '{task_id}' result: {result}, exception: {exception}")
+                        logger.debug(f"Client #{ls_index:03d}, task '{task_id}' result: {result}, exception: {exception}")
                         
                         # log liteserver task
                         log_liteserver_task(msg_content)
                     else:
-                        logger.warning(f"Client #{client.number:03d}, task '{task_id}' doesn't exist or is done.")
+                        logger.warning(f"Client #{ls_index:03d}, task '{task_id}' doesn't exist or is done.")
 
                 if msg_type == MsgType.LAST_BLOCK_UPDATE:
-                    client.last_block = msg_content
+                    self.all_clients[ls_index].last_block = msg_content
 
                 if msg_type == MsgType.ARCHIVAL_UPDATE:
-                    client.is_archival = msg_content
+                    self.all_clients[ls_index].is_archival = msg_content
             except Exception as e:
                 logger.error(f"read_output exception {traceback.format_exc()}")
 

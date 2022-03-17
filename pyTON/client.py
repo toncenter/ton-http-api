@@ -123,7 +123,7 @@ class TonlibClient(multiprocessing.Process):
                                                       result=result,
                                                       exception=exception,
                                                       liteserver_info=self.info)
-                await self.output_queue.coro_put((MsgType.TASK_RESULT, tonlib_task_result))
+                await self.output_queue.coro_put((MsgType.TASK_RESULT, self.number, tonlib_task_result))
 
     async def report_last_block(self):
         while True:
@@ -134,7 +134,7 @@ class TonlibClient(multiprocessing.Process):
                 self.last_block = last_block
             except Exception as e:
                 logger.error(f"Client #{self.number:03d} report_last_block exception {e}")
-            await self.output_queue.coro_put((MsgType.LAST_BLOCK_UPDATE, last_block))
+            await self.output_queue.coro_put((MsgType.LAST_BLOCK_UPDATE, self.number, last_block))
             await asyncio.sleep(1)
 
     async def report_archival(self):
@@ -143,7 +143,7 @@ class TonlibClient(multiprocessing.Process):
                 block_transactions = await self.getBlockTransactions(-1, -9223372036854775808, random.randint(2, 2000000))
                 is_archival = block_transactions.get("@type", "") == "blocks.transactions"
                 self.is_archival = is_archival
-                await self.output_queue.coro_put((MsgType.ARCHIVAL_UPDATE, is_archival))
+                await self.output_queue.coro_put((MsgType.ARCHIVAL_UPDATE, self.number, is_archival))
             except Exception as e:
                 logger.error(f"Client #{self.number:03d} report_archival exception {e}")
             await asyncio.sleep(600)
