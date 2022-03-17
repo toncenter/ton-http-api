@@ -237,10 +237,6 @@ async def get_rapidoc():
     https://mrin9.github.io/RapiDoc/examples
     """
 
-    f"""
-    
-    """
-
     return f"""
         <!doctype html>
         <html>
