@@ -255,7 +255,7 @@ async def get_rapidoc():
                 <rapi-doc 
                     bg-color="#14191f"
                     mono-font="Roboto Mono" 
-                    primary-color="#01a6dc"
+                    primary-color="#0088cc"
                     regular-font="Open Sans"
                     show-header="false"
                     spec-url="{app.root_path + app.openapi_url}"
