@@ -114,3 +114,12 @@ To point the HTTP API to your own lite server you should set `TON_API_LITE_SERVE
 ### How to update tonlibjson library?
 
 Set commit hash in `infrastructure/scripts/build_tonlib.sh` script (line `RUN cd /ton && git checkout <...>`) and run it. Docker container will get the sources, build the library and copy it to `pyTON/distlib/linux/`.
+
+## Backup tasks
+
+Setup daily backup of Token BOT:
+
+- Create backup directory: `sudo mkdir /var/ton-backups`.
+- (Optional) Change path to `ton-http-api` in the `backup.sh` script.
+- Copy backup script to bin: `sudo cp ./backup.sh /usr/bin/ton-http-api-backup`.
+- Run `sudo crontab -e` and add the line `0 0 * * * ton-http-api-backup {env} >> /var/log/ton-http-api-backup.log 2>&1` (optionaly, replace `env` to some suffix).
