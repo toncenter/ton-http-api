@@ -422,7 +422,7 @@ async def get_block_header(
     """
     return await tonlib.getBlockHeader(workchain, shard, seqno, root_hash, file_hash)
 
-@app.get('/getConfig', response_model=TonResponse, response_model_exclude_none=True, tags=[])
+@app.get('/getConfig', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('getConfig')
 @wrap_result
 async def get_config(
@@ -433,7 +433,6 @@ async def get_config(
     Get config by id.
     """
     return await tonlib.get_config(config_id, seqno)
-
 
 @app.get('/tryLocateTx', response_model=TonResponse, response_model_exclude_none=True, tags=['transactions'])
 @json_rpc('tryLocateTx')
