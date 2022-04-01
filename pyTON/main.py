@@ -422,6 +422,19 @@ async def get_block_header(
     """
     return await tonlib.getBlockHeader(workchain, shard, seqno, root_hash, file_hash)
 
+@app.get('/getConfig', response_model=TonResponse, response_model_exclude_none=True, tags=[])
+@json_rpc('getConfig')
+@wrap_result
+async def get_config(
+    config_id: int = Query(..., description="Config id"),
+    seqno: Optional[int] = Query(None, description="Masterchain seqno. If not passed, latest blockchain state will be used.")
+    ):
+    """
+    Get config by id.
+    """
+    return await tonlib.get_config(config_id, seqno)
+
+
 @app.get('/tryLocateTx', response_model=TonResponse, response_model_exclude_none=True, tags=['transactions'])
 @json_rpc('tryLocateTx')
 @wrap_result
