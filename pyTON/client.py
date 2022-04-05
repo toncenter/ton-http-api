@@ -92,7 +92,7 @@ class TonlibClient(multiprocessing.Process):
         while True:
             async with self.semaphore:
                 task_id, timeout, method, args, kwargs = await self.input_queue.coro_get()
- 
+
                 result = None
                 exception = None
 
@@ -669,3 +669,26 @@ class TonlibClient(multiprocessing.Process):
                     except KeyError:
                         pass
         raise Exception("Tx not found")
+
+    async def get_config(self, config_id: int, seqno: int):
+        wc, shard = -1, -9223372036854775808
+        fullblock = await self.lookupBlock(wc, shard, seqno)
+        request = {
+            '@type': 'getConfigParam',
+            'id': fullblock,
+            'param': config_id,
+            'mode': 0
+        }
+
+        res = await self.tonlib_wrapper.execute(request)
+
+        if res.get('@type') == 'configInfo':
+            try:
+                cell_bytes = res['config']['bytes']
+                if len(cell_bytes) > 0:
+                    cell_bytes = codecs.decode(codecs.encode(cell_bytes, 'utf8'), 'base64')
+                    res['config']['deserialized'] = deserialize_boc(cell_bytes).serialize_to_object()
+            except Exception as e:
+                logger.error(f"Cell deserialization error: {e}")
+
+        return res
