@@ -8,7 +8,6 @@ import traceback
 
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import aioprocessing
 
@@ -430,11 +429,3 @@ class TonlibMultiClient:
     @redis_cached(expire=600, check_error=False)
     async def tryLocateTxByIncomingMessage(self, source, destination, creation_lt):
         return await self.dispatch_archive_request(current_function_name(),  source, destination, creation_lt)
-
-    @redis_cached(expire=10)
-    async def get_config(self, config_id: int, seqno: Optional[int]):
-        seqno = seqno or self.current_consensus_block
-        if self.current_consensus_block - seqno < 2000:
-            return await self.dispatch_request(current_function_name(), config_id, seqno)
-        else:
-            return await self.dispatch_archive_request(current_function_name(), config_id, seqno)
