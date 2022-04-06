@@ -1,20 +1,5 @@
-From b46941e50462b6d74806a9f4a49d6c001f60612c Mon Sep 17 00:00:00 2001
-From: Starlight Duck <starlightduck@gmail.com>
-Date: Thu, 20 Jan 2022 23:20:56 +0200
-Subject: [PATCH] tonlib use correct c7: config and address when executing
-
----
- crypto/smc-envelope/SmartContract.cpp | 64 ++++++++++++++++++---------
- crypto/smc-envelope/SmartContract.h   | 18 ++++++++
- crypto/vm/vm.cpp                      |  1 +
- crypto/vm/vm.h                        |  4 ++
- tonlib/tonlib/LastConfig.cpp          |  4 +-
- tonlib/tonlib/TonlibClient.cpp        | 45 +++++++++++++------
- tonlib/tonlib/TonlibClient.h          |  1 +
- 7 files changed, 99 insertions(+), 38 deletions(-)
-
 diff --git a/crypto/smc-envelope/SmartContract.cpp b/crypto/smc-envelope/SmartContract.cpp
-index f3485be9..30030aae 100644
+index f3485be..30030aa 100644
 --- a/crypto/smc-envelope/SmartContract.cpp
 +++ b/crypto/smc-envelope/SmartContract.cpp
 @@ -52,30 +52,51 @@ td::Ref<vm::Stack> prepare_vm_stack(td::RefInt256 amount, td::Ref<vm::CellSlice>
@@ -158,7 +143,7 @@ index f3485be9..30030aae 100644
  
  SmartContract::Answer SmartContract::run_get_method(td::Slice method, Args args) const {
 diff --git a/crypto/smc-envelope/SmartContract.h b/crypto/smc-envelope/SmartContract.h
-index b26f4885..95dd2e84 100644
+index b26f488..95dd2e8 100644
 --- a/crypto/smc-envelope/SmartContract.h
 +++ b/crypto/smc-envelope/SmartContract.h
 @@ -26,6 +26,7 @@
@@ -208,7 +193,7 @@ index b26f4885..95dd2e84 100644
      td::Result<td::int32> get_method_id() const {
        if (!method_id) {
 diff --git a/crypto/vm/vm.cpp b/crypto/vm/vm.cpp
-index 038640a5..fb2f4d1e 100644
+index 038640a..fb2f4d1 100644
 --- a/crypto/vm/vm.cpp
 +++ b/crypto/vm/vm.cpp
 @@ -604,6 +604,7 @@ Ref<Cell> VmState::load_library(td::ConstBitPtr hash) {
@@ -220,7 +205,7 @@ index 038640a5..fb2f4d1e 100644
  }
  
 diff --git a/crypto/vm/vm.h b/crypto/vm/vm.h
-index 0fef9642..44aa7f23 100644
+index 0fef964..44aa7f2 100644
 --- a/crypto/vm/vm.h
 +++ b/crypto/vm/vm.h
 @@ -96,6 +96,7 @@ class VmState final : public VmStateInterface {
@@ -242,7 +227,7 @@ index 0fef9642..44aa7f23 100644
   private:
    void init_cregs(bool same_c3 = false, bool push_0 = true);
 diff --git a/tonlib/tonlib/LastConfig.cpp b/tonlib/tonlib/LastConfig.cpp
-index d07482ce..0111095b 100644
+index d07482c..0111095 100644
 --- a/tonlib/tonlib/LastConfig.cpp
 +++ b/tonlib/tonlib/LastConfig.cpp
 @@ -62,9 +62,7 @@ void LastConfig::with_last_block(td::Result<LastBlockState> r_last_block) {
@@ -257,7 +242,7 @@ index d07482ce..0111095b 100644
  }
  
 diff --git a/tonlib/tonlib/TonlibClient.cpp b/tonlib/tonlib/TonlibClient.cpp
-index 1ac3a0d7..422dae12 100644
+index 1ac3a0d..eefc581 100644
 --- a/tonlib/tonlib/TonlibClient.cpp
 +++ b/tonlib/tonlib/TonlibClient.cpp
 @@ -861,13 +861,13 @@ class Query {
@@ -299,7 +284,19 @@ index 1ac3a0d7..422dae12 100644
        auto dest_storage_fee_256 =
            destination ? block::StoragePrices::compute_storage_fees(
                              destination->get_sync_time(), storage_prices, destination->raw().storage_stat,
-@@ -3266,7 +3268,7 @@ void TonlibClient::query_estimate_fees(td::int64 id, bool ignore_chksig, td::Res
+@@ -2306,9 +2308,10 @@ struct ToRawTransactions {
+           return td::Status::Error("Failed to unpack CommonMsgInfo::ext_out_msg_info");
+         }
+         TRY_RESULT(src, to_std_address(msg_info.src));
++        auto created_lt = static_cast<td::int64>(msg_info.created_lt);
+         return tonlib_api::make_object<tonlib_api::raw_message>(
+             tonlib_api::make_object<tonlib_api::accountAddress>(src),
+-            tonlib_api::make_object<tonlib_api::accountAddress>(), 0, 0, 0, 0, std::move(body_hash), get_data(src));
++            tonlib_api::make_object<tonlib_api::accountAddress>(), 0, 0, 0, created_lt, std::move(body_hash), get_data(src));
+       }
+     }
+ 
+@@ -3266,7 +3269,7 @@ void TonlibClient::query_estimate_fees(td::int64 id, bool ignore_chksig, td::Res
      return;
    }
    TRY_RESULT_PROMISE(promise, state, std::move(r_state));
@@ -308,7 +305,7 @@ index 1ac3a0d7..422dae12 100644
                              TonlibError::Internal());
    promise.set_value(tonlib_api::make_object<tonlib_api::query_fees>(
        fees.first.to_tonlib_api(), td::transform(fees.second, [](auto& x) { return x.to_tonlib_api(); })));
-@@ -3493,14 +3495,29 @@ td::Status TonlibClient::do_request(const tonlib_api::smc_runGetMethod& request,
+@@ -3493,14 +3496,29 @@ td::Status TonlibClient::do_request(const tonlib_api::smc_runGetMethod& request,
    args.set_stack(std::move(stack));
    args.set_balance(it->second->get_balance());
    args.set_now(it->second->get_sync_time());
@@ -345,7 +342,7 @@ index 1ac3a0d7..422dae12 100644
  }
  
 diff --git a/tonlib/tonlib/TonlibClient.h b/tonlib/tonlib/TonlibClient.h
-index bedc1d49..4dfbe8c6 100644
+index bedc1d4..4dfbe8c 100644
 --- a/tonlib/tonlib/TonlibClient.h
 +++ b/tonlib/tonlib/TonlibClient.h
 @@ -107,6 +107,7 @@ class TonlibClient : public td::actor::Actor {
@@ -356,4 +353,3 @@ index bedc1d49..4dfbe8c6 100644
  
    // network
    td::actor::ActorOwn<ton::adnl::AdnlExtClient> raw_client_;
-
