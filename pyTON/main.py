@@ -3,28 +3,18 @@ import sys
 import json
 import asyncio
 import base64
-import argparse
-import os
 import inspect
 import codecs
-import importlib.resources
-import warnings
-import traceback
-import pytimeparse
 
-from functools import partial, wraps
-from collections import defaultdict, Counter
+from functools import wraps
 
 from typing import Optional, Union, Dict, Any, List
-from pydantic import BaseModel, ValidationError
-from fastapi import FastAPI, APIRouter, Depends, Security, Response, Request
+from fastapi import FastAPI, Depends, Response, Request
 from fastapi.params import Body, Query, Param
 from fastapi.exceptions import HTTPException, RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.responses import JSONResponse
 from fastapi import status
-from datetime import datetime, timedelta
-from bson import ObjectId
 from pymongo import MongoClient
 
 from tvm_valuetypes.cell import deserialize_cell_from_object
@@ -36,7 +26,7 @@ from pyTON.multiclient import TonlibMultiClient as TonlibClient
 from pyTON.address_utils import detect_address as __detect_address, prepare_address as _prepare_address
 from pyTON.wallet_utils import wallets as known_wallets, sha256
 from pyTON.utils import TonLibWrongResult
-from pyTON.api_key_manager import api_key_manager, check_api_key
+from pyTON.api_key_manager import check_api_key
 
 from loguru import logger
 

@@ -10,11 +10,17 @@ from datetime import datetime
 from functools import wraps
 from json import loads
 
-from limits import RateLimitItem, parse_many
+from limits import parse_many
 from limits.aio.storage import RedisStorage
 from limits.aio.strategies import FixedWindowRateLimiter
 
-from pyTON.api_key_manager import per_method_limits, total_limits, api_key_from_request, api_key_header, api_key_query
+from pyTON.api_key_manager import (
+    per_method_limits, 
+    total_limits, 
+    limit_keys_from_request, 
+    api_key_header, 
+    api_key_query
+)
 from pyTON.models import TonResponse
 from config import settings
 
@@ -93,9 +99,7 @@ class LoggerAndRateLimitMiddleware(BaseHTTPMiddleware):
         if endpoint not in self.endpoints:
             return await call_next(request)
 
-        keys = api_key_from_request(request)
-        if not isinstance(keys, list):
-            keys = [keys]
+        keys = limit_keys_from_request(request)
 
         failed_limit = None
         for key in keys:
@@ -107,7 +111,7 @@ class LoggerAndRateLimitMiddleware(BaseHTTPMiddleware):
                 per_method_limits_ = parse_many(per_method_limits_str)
 
             for limit in per_method_limits_:
-                identifiers = [endpoint, key]
+                identifiers = [endpoint, str(key)]
                 if not await self.fixed_window.hit(limit, *identifiers):
                     failed_limit = limit
                     break
@@ -122,7 +126,7 @@ class LoggerAndRateLimitMiddleware(BaseHTTPMiddleware):
                 total_limits_ = parse_many(total_limits_str)
 
             for limit in total_limits_:
-                identifiers = [key]
+                identifiers = [str(key)]
                 if not await self.fixed_window.hit(limit, *identifiers):
                     failed_limit = limit
                     break
@@ -144,7 +148,6 @@ class LoggerAndRateLimitMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
 
         if isinstance(response, StreamingResponse):
-            response_headers = dict(response.headers.items())
             response_body = b''
             async for chunk in response.body_iterator:
                 response_body += chunk
