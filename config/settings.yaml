@@ -38,6 +38,7 @@ ratelimit:
     timeout: 1
   token_bot:
     token_file: /run/secrets/token_file
+    default_total_limit: 10/second
   token_redis:
     endpoint: token_redis
     port: 6379
