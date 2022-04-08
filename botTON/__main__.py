@@ -106,7 +106,7 @@ ACTION, PROJECT_DESCRIPTION, REVOKE_CONFIRMATION, LIMIT_CLIENT_IP, LIMIT_CLIENT_
 def start(update: Update, context: CallbackContext) -> int:
     context.user_data.clear()
     if user_has_token(str(update.message.from_user.id)):
-        reply_keyboard = [['My API Token', 'Revoke My API Token']]
+        reply_keyboard = [['My API Token'], ['Revoke My API Token']]
     else:
         reply_keyboard = [['Create API Token']]
     update.message.reply_text(
@@ -139,7 +139,7 @@ Allowed domains: `{' '.join(token_model.domains) if len(token_model.domains) els
 
 def revoke_my_api_token(update: Update, context: CallbackContext) -> int:
     logger.info(f"User {update.message.from_user.id} wants to revoke their token")
-    reply_keyboard = [['Yes, I confirm to revoke my API token', 'Cancel']]
+    reply_keyboard = [['Yes, I confirm to revoke my API token'], ['Cancel']]
     update.message.reply_text("Do you confirm to revoke you API token? All requests with it will fail after revoking.",
         reply_markup=ReplyKeyboardMarkup(
             reply_keyboard, resize_keyboard=True, one_time_keyboard=True
@@ -186,8 +186,7 @@ def project_description(update: Update, context: CallbackContext) -> int:
     context.user_data['description'] = description
 
     reply_keyboard = [['Do not restrict by IP']]
-    toncenter_domain = (os.getenv('TON_API_DOMAINS') or 'Toncenter').split(':')[0]
-    update.message.reply_text(f"Do you want to restrict usage of your API key to specific IPs? If yes, send a list of IPs separated by space.\n{toncenter_domain} will reject requests from any other IP with your token.",
+    update.message.reply_text(f"Do you want to restrict usage of your API key to specific IPs? If yes, send a list of IPs separated by space.\nTON Center will reject requests from any other IP with your token.",
         reply_markup=ReplyKeyboardMarkup(
             reply_keyboard, resize_keyboard=True, one_time_keyboard=True
         )
