@@ -11,5 +11,5 @@ curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compo
 chmod +x /usr/local/bin/docker-compose
 
 # Download the latest version of config.json
-wget -O config/mainnet.json https://newton-blockchain.github.io/global.config.json
-wget -O config/testnet.json https://newton-blockchain.github.io/testnet-global.config.json
+curl -sL https://newton-blockchain.github.io/global.config.json > config/mainnet.json
+curl -sL https://newton-blockchain.github.io/testnet-global.config.json > config/testnet.json

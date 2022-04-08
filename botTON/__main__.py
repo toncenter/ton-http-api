@@ -59,7 +59,9 @@ def create_token(telegram_user_id: str, telegram_user_name: str, description: st
         'ips': ips,
         'domains': domains,
         'version': 1,
-        'limits': {}
+        'limits': {
+            'total': settings.ratelimit.token_bot.default_total_limit
+        }
     }
     p = r.pipeline()
     p.set(token, json.dumps(record))
@@ -104,14 +106,13 @@ ACTION, PROJECT_DESCRIPTION, REVOKE_CONFIRMATION, LIMIT_CLIENT_IP, LIMIT_CLIENT_
 def start(update: Update, context: CallbackContext) -> int:
     context.user_data.clear()
     if user_has_token(str(update.message.from_user.id)):
-        reply_keyboard = [['My API Token', 'Revoke My API Token']]
+        reply_keyboard = [['My API Token'], ['Revoke My API Token']]
     else:
         reply_keyboard = [['Create API Token']]
-    toncenter_domain = (os.getenv('TON_API_DOMAINS') or 'Toncenter').split(':')[0]
     update.message.reply_text(
-        f"{toncenter_domain} API token management bot. How can I help?",
+        f"TON Center API token management bot. How can I help?",
         reply_markup=ReplyKeyboardMarkup(
-            reply_keyboard, one_time_keyboard=True
+            reply_keyboard, resize_keyboard=True, one_time_keyboard=True
         ),
     )
 
@@ -138,10 +139,10 @@ Allowed domains: `{' '.join(token_model.domains) if len(token_model.domains) els
 
 def revoke_my_api_token(update: Update, context: CallbackContext) -> int:
     logger.info(f"User {update.message.from_user.id} wants to revoke their token")
-    reply_keyboard = [['Yes, I confirm to revoke my API token', 'Cancel']]
+    reply_keyboard = [['Yes, I confirm to revoke my API token'], ['Cancel']]
     update.message.reply_text("Do you confirm to revoke you API token? All requests with it will fail after revoking.",
         reply_markup=ReplyKeyboardMarkup(
-            reply_keyboard, one_time_keyboard=True
+            reply_keyboard, resize_keyboard=True, one_time_keyboard=True
         )
     )
     return REVOKE_CONFIRMATION
@@ -170,7 +171,7 @@ def create_api_token(update: Update, context: CallbackContext) -> int:
     reply_keyboard = [['Cancel']]
     update.message.reply_text("Sure, let's create one. Please, tell me about your project.",
         reply_markup=ReplyKeyboardMarkup(
-            reply_keyboard, one_time_keyboard=True
+            reply_keyboard, resize_keyboard=True, one_time_keyboard=True
         )
     )
     return PROJECT_DESCRIPTION
@@ -185,10 +186,9 @@ def project_description(update: Update, context: CallbackContext) -> int:
     context.user_data['description'] = description
 
     reply_keyboard = [['Do not restrict by IP']]
-    toncenter_domain = (os.getenv('TON_API_DOMAINS') or 'Toncenter').split(':')[0]
-    update.message.reply_text(f"Do you want to restrict usage of your API key to specific IPs? If yes, send a list of IPs separated by space.\n{toncenter_domain} will reject requests from any other IP with your token.",
+    update.message.reply_text(f"Do you want to restrict usage of your API key to specific IPs? If yes, send a list of IPs separated by space.\nTON Center will reject requests from any other IP with your token.",
         reply_markup=ReplyKeyboardMarkup(
-            reply_keyboard, one_time_keyboard=True
+            reply_keyboard, resize_keyboard=True, one_time_keyboard=True
         )
     )
 
@@ -206,7 +206,7 @@ def limit_client_ip(update: Update, context: CallbackContext) -> int:
             reply_keyboard = [['Do not restrict by IP']]
             update.message.reply_text("Error parsing IP addresses. Please, try again.",
                 reply_markup=ReplyKeyboardMarkup(
-                    reply_keyboard, one_time_keyboard=True
+                    reply_keyboard, resize_keyboard=True, one_time_keyboard=True
                 )
             )
             return LIMIT_CLIENT_IP
@@ -214,7 +214,7 @@ def limit_client_ip(update: Update, context: CallbackContext) -> int:
     reply_keyboard = [['Do not restrict by origin domains']]
     update.message.reply_markdown("Do you want to restrict usage of your API key to specific domains? If yes, send a list of domains separated by space. \nExample: `https://ton.org https://ton.sh`\nThese domains will be set as CORS allowed domains for your token.",
         reply_markup=ReplyKeyboardMarkup(
-            reply_keyboard, one_time_keyboard=True
+            reply_keyboard, resize_keyboard=True, one_time_keyboard=True
         )
     )
 
@@ -233,7 +233,7 @@ def limit_client_domains(update: Update, context: CallbackContext) -> int:
             reply_keyboard = [['Do not restrict by origin domains']]
             update.message.reply_text("Error parsing domains. Please, try again.",
                 reply_markup=ReplyKeyboardMarkup(
-                    reply_keyboard, one_time_keyboard=True
+                    reply_keyboard, resize_keyboard=True, one_time_keyboard=True
                 )
             )
             return LIMIT_CLIENT_DOMAINS
