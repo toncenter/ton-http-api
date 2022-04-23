@@ -242,7 +242,7 @@ index d07482c..0111095 100644
  }
  
 diff --git a/tonlib/tonlib/TonlibClient.cpp b/tonlib/tonlib/TonlibClient.cpp
-index 1ac3a0d..eefc581 100644
+index 1ac3a0d..792aa40 100644
 --- a/tonlib/tonlib/TonlibClient.cpp
 +++ b/tonlib/tonlib/TonlibClient.cpp
 @@ -861,13 +861,13 @@ class Query {
@@ -296,6 +296,15 @@ index 1ac3a0d..eefc581 100644
        }
      }
  
+@@ -2353,7 +2356,7 @@ struct ToRawTransactions {
+ 
+       if (trans.outmsg_cnt != 0) {
+         vm::Dictionary dict{trans.r1.out_msgs, 15};
+-        for (int x = 0; x < trans.outmsg_cnt && x < 100; x++) {
++        for (int x = 0; x < trans.outmsg_cnt; x++) {
+           TRY_RESULT(out_msg, to_raw_message(dict.lookup_ref(td::BitArray<15>{x})));
+           fees += out_msg->fwd_fee_;
+           fees += out_msg->ihr_fee_;
 @@ -3266,7 +3269,7 @@ void TonlibClient::query_estimate_fees(td::int64 id, bool ignore_chksig, td::Res
      return;
    }
@@ -305,7 +314,17 @@ index 1ac3a0d..eefc581 100644
                              TonlibError::Internal());
    promise.set_value(tonlib_api::make_object<tonlib_api::query_fees>(
        fees.first.to_tonlib_api(), td::transform(fees.second, [](auto& x) { return x.to_tonlib_api(); })));
-@@ -3493,14 +3496,29 @@ td::Status TonlibClient::do_request(const tonlib_api::smc_runGetMethod& request,
+@@ -3440,7 +3443,8 @@ td::Result<vm::StackEntry> from_tonlib_api(tonlib_api::tvm_StackEntry& entry) {
+           [&](tonlib_api::tvm_stackEntryUnsupported& cell) { return td::Status::Error("Unsuppored stack entry"); },
+           [&](tonlib_api::tvm_stackEntrySlice& cell) -> td::Result<vm::StackEntry> {
+             TRY_RESULT(res, vm::std_boc_deserialize(cell.slice_->bytes_));
+-            return vm::StackEntry{std::move(res)};
++            auto slice = vm::load_cell_slice_ref(std::move(res));
++            return vm::StackEntry{std::move(slice)};
+           },
+           [&](tonlib_api::tvm_stackEntryCell& cell) -> td::Result<vm::StackEntry> {
+             TRY_RESULT(res, vm::std_boc_deserialize(cell.cell_->bytes_));
+@@ -3493,14 +3497,29 @@ td::Status TonlibClient::do_request(const tonlib_api::smc_runGetMethod& request,
    args.set_stack(std::move(stack));
    args.set_balance(it->second->get_balance());
    args.set_now(it->second->get_sync_time());
