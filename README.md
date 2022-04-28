@@ -42,14 +42,6 @@ The service supports the following environment variables for configuration. Afte
 
     Enables API keys for your API and limits maximum request rate. API keys are issued by the Telegram bot and stored in Redis. If you enable this component, you have to put your Telegram bots token in `./private/token_file` file without `\n`.
 
-- `TON_API_DOMAINS` *(default: localhost)*
-
-    List of domains separated by `:` which the service will use. Based on this list `nginx.conf` will be generated. For each domain `server` section will be added with specified `server_name`.
-
-- `TON_API_SSL_ENABLED` *(default: 0)*
-
-    Enables exposing port 443 for SSL connection. To setup SSL you have to set `TON_API_DOMAINS` and run the steps described in *Generate SSL certificates* section.
-
 - `TON_API_HTTP_PORT` *(default: 80)*
 
     Port for HTTP connections that will be listened by Nginx. Since Certbot assumes HTTP is run on 80 any value other can lead to issues with setting up SSL.
@@ -57,14 +49,6 @@ The service supports the following environment variables for configuration. Afte
 - `TON_API_MONGODB_PORT` *(default: 27017)*
 
     Port for connecting to MongoDB with requests logs (see `TON_API_LOGS_ENABLED`).
-
-- `TON_API_INDEX_FOLDER` *(default: empty)*
-
-    Index page folder. All contents will be copied to the nginx html folder. If the variable is empty, index page is not used and redirects to `/api/v2`.
-
-- `TON_API_ANALYTICS_ENABLED` *(default: 0)*
-
-    Enables `/analytics/` route providing useful endpoints for analytics. This features requires logs enabled.
 
 - `TON_API_LITE_SERVER_CONFIG` *(default: config/mainnet.json)*
 
@@ -81,10 +65,6 @@ The service supports the following environment variables for configuration. Afte
 - `TON_API_JSON_RPC_ENABLED` *(default: 1)*
 
     Enables `jsonRPC` endpoint.
-
-- `TON_API_CLOUDFLARE_ENABLED` *(default: 0)*
-
-    Configures Nginx to support Cloudflare CDN.
 
 ## FAQ
 ### How to point the service to my own lite server?
