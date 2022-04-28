@@ -39,7 +39,7 @@ app = FastAPI(
     description=description,
     docs_url='/',
     responses={},
-    root_path='/analytics/api/v0',
+    root_path=settings.logs.api_root_path,
 )
 
 
