@@ -48,11 +48,23 @@ The service supports the following environment variables for configuration. Afte
 
 - `TON_API_MONGODB_PORT` *(default: 27017)*
 
-    Port for connecting to MongoDB with requests logs (see `TON_API_LOGS_ENABLED`).
+    Port for connecting to MongoDB with requests logs. This variable is used if requests logging is enabled (see `TON_API_LOGS_ENABLED`).
+
+- `TON_API_ANALYTICS_PORT` *(default: 8081)*
+
+    Port for requests analytics API. This variable is used if requests logging is enabled (see `TON_API_LOGS_ENABLED`).
 
 - `TON_API_LITE_SERVER_CONFIG` *(default: config/mainnet.json)*
 
     Path to config file with lite servers information.
+
+- `TON_API_ROOT_PATH` and `TON_API_ANALYTICS_ROOT_PATH` *(default: /)*
+
+    If you use a proxy server such as Nginx or Traefik you might change the default API path prefix (e.g. `/api/v2`). If so you have to pass the path prefix to the API service in this variable.
+
+- `TON_API_FORWARDED_ALLOW_IPS` *(default: empty)*
+
+    Comma seperated list of IPs to trust with proxy headers (or `*` to trust all IPs). Make sure to set this value if you use reverse proxy, otherwise clients remote IPs will be determined incorrectly.
 
 - `TON_API_WEBSERVERS_WORKERS` *(default: 1)*
 
