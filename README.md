@@ -20,12 +20,7 @@ Recommended hardware: 2 CPU, 8 GB RAM.
   - Run `./configure.py`, it creates `.env` file used by `docker-compose` (see [Configuration](#Configuration))
   - Build services: `docker-compose build`.
   - Run services: `docker-compose up -d`.
-  - (Optional) Generate SSL certificates: 
-    - Make sure you set `TON_API_DOMAINS` and `TON_API_SSL_ENABLED` environment variables.
-    - Connect to nginx container and run CertBot: `docker-compose exec nginx certbot --nginx`.
-    - Enter email, agree with EULA, choose DNS name and setup SSL certs.
-    - Restart NGINX: `docker-compose restart nginx`.
-   - Stop services: `docker-compose down`. Run this command with`-v` flag to clear docker volumes (mongodb, nginx and ssl data).
+  - Stop services: `docker-compose down`. Run this command with`-v` flag to clear docker volumes (mongodb).
 
 ## Configuration
 The service supports the following environment variables for configuration. After changing any variable run `./configure.py` and rebuild the project.
@@ -44,7 +39,7 @@ The service supports the following environment variables for configuration. Afte
 
 - `TON_API_HTTP_PORT` *(default: 80)*
 
-    Port for HTTP connections that will be listened by Nginx. Since Certbot assumes HTTP is run on 80 any value other can lead to issues with setting up SSL.
+    Port for HTTP connections of API service.
 
 - `TON_API_MONGODB_PORT` *(default: 27017)*
 
@@ -99,9 +94,8 @@ To point the HTTP API to your own lite server you should set `TON_API_LITE_SERVE
 ### How to run multiple API instances on single machine?
 
 - Clone the repo as many times as many instances you need to the folders with different names (otherwise docker-compose containers will conflict). 
-- Configure each instance to have unique exposed ports (`TON_API_HTTP_PORT` and `TON_API_MONGODB_PORT`).
+- Configure each instance to have unique exposed ports (`TON_API_HTTP_PORT` and if logs enabled `TON_API_MONGODB_PORT` and `TON_API_ANALYTICS_PORT`).
 - Build and run every instance. 
-- Note: only one instance is allowed to have SSL enabled.
 
 ### How to update tonlibjson library?
 
