@@ -20,12 +20,7 @@ Recommended hardware: 2 CPU, 8 GB RAM.
   - Run `./configure.py`, it creates `.env` file used by `docker-compose` (see [Configuration](#Configuration))
   - Build services: `docker-compose build`.
   - Run services: `docker-compose up -d`.
-  - (Optional) Generate SSL certificates: 
-    - Make sure you set `TON_API_DOMAINS` and `TON_API_SSL_ENABLED` environment variables.
-    - Connect to nginx container and run CertBot: `docker-compose exec nginx certbot --nginx`.
-    - Enter email, agree with EULA, choose DNS name and setup SSL certs.
-    - Restart NGINX: `docker-compose restart nginx`.
-   - Stop services: `docker-compose down`. Run this command with`-v` flag to clear docker volumes (mongodb, nginx and ssl data).
+  - Stop services: `docker-compose down`. Run this command with`-v` flag to clear docker volumes (mongodb).
 
 ## Configuration
 The service supports the following environment variables for configuration. After changing any variable run `./configure.py` and rebuild the project.
@@ -42,33 +37,29 @@ The service supports the following environment variables for configuration. Afte
 
     Enables API keys for your API and limits maximum request rate. API keys are issued by the Telegram bot and stored in Redis. If you enable this component, you have to put your Telegram bots token in `./private/token_file` file without `\n`.
 
-- `TON_API_DOMAINS` *(default: localhost)*
-
-    List of domains separated by `:` which the service will use. Based on this list `nginx.conf` will be generated. For each domain `server` section will be added with specified `server_name`.
-
-- `TON_API_SSL_ENABLED` *(default: 0)*
-
-    Enables exposing port 443 for SSL connection. To setup SSL you have to set `TON_API_DOMAINS` and run the steps described in *Generate SSL certificates* section.
-
 - `TON_API_HTTP_PORT` *(default: 80)*
 
-    Port for HTTP connections that will be listened by Nginx. Since Certbot assumes HTTP is run on 80 any value other can lead to issues with setting up SSL.
+    Port for HTTP connections of API service.
 
 - `TON_API_MONGODB_PORT` *(default: 27017)*
 
-    Port for connecting to MongoDB with requests logs (see `TON_API_LOGS_ENABLED`).
+    Port for connecting to MongoDB with requests logs. This variable is used if requests logging is enabled (see `TON_API_LOGS_ENABLED`).
 
-- `TON_API_INDEX_FOLDER` *(default: empty)*
+- `TON_API_ANALYTICS_PORT` *(default: 8081)*
 
-    Index page folder. All contents will be copied to the nginx html folder. If the variable is empty, index page is not used and redirects to `/api/v2`.
-
-- `TON_API_ANALYTICS_ENABLED` *(default: 0)*
-
-    Enables `/analytics/` route providing useful endpoints for analytics. This features requires logs enabled.
+    Port for requests analytics API. This variable is used if requests logging is enabled (see `TON_API_LOGS_ENABLED`).
 
 - `TON_API_LITE_SERVER_CONFIG` *(default: config/mainnet.json)*
 
     Path to config file with lite servers information.
+
+- `TON_API_ROOT_PATH` and `TON_API_ANALYTICS_ROOT_PATH` *(default: /)*
+
+    If you use a proxy server such as Nginx or Traefik you might change the default API path prefix (e.g. `/api/v2`). If so you have to pass the path prefix to the API service in this variable.
+
+- `TON_API_FORWARDED_ALLOW_IPS` *(default: empty)*
+
+    Comma seperated list of IPs to trust with proxy headers (or `*` to trust all IPs). Make sure to set this value if you use reverse proxy, otherwise clients remote IPs will be determined incorrectly.
 
 - `TON_API_WEBSERVERS_WORKERS` *(default: 1)*
 
@@ -81,10 +72,6 @@ The service supports the following environment variables for configuration. Afte
 - `TON_API_JSON_RPC_ENABLED` *(default: 1)*
 
     Enables `jsonRPC` endpoint.
-
-- `TON_API_CLOUDFLARE_ENABLED` *(default: 0)*
-
-    Configures Nginx to support Cloudflare CDN.
 
 ## FAQ
 ### How to point the service to my own lite server?
@@ -107,9 +94,8 @@ To point the HTTP API to your own lite server you should set `TON_API_LITE_SERVE
 ### How to run multiple API instances on single machine?
 
 - Clone the repo as many times as many instances you need to the folders with different names (otherwise docker-compose containers will conflict). 
-- Configure each instance to have unique exposed ports (`TON_API_HTTP_PORT` and `TON_API_MONGODB_PORT`).
+- Configure each instance to have unique exposed ports (`TON_API_HTTP_PORT` and if logs enabled `TON_API_MONGODB_PORT` and `TON_API_ANALYTICS_PORT`).
 - Build and run every instance. 
-- Note: only one instance is allowed to have SSL enabled.
 
 ### How to update tonlibjson library?
 

@@ -77,7 +77,7 @@ app = FastAPI(
         422: {'description': 'Validation Error'},
         504: {'description': 'Lite Server Timeout'}
     },
-    root_path='/api/v2',
+    root_path=settings.pyton.api_root_path,
     openapi_tags=tags_metadata,
     dependencies=[Depends(check_api_key)] if settings.ratelimit.enabled else []
 )

@@ -1,5 +1,6 @@
 # pyTON settings
 pyton:
+  api_root_path: $TON_API_ROOT_PATH
   request_timeout: 20
   webserver_workers: $TON_API_WEBSERVERS_WORKERS
   parallel_requests_per_liteserver: 50
@@ -12,6 +13,7 @@ pyton:
 # Logs settings.
 logs:
   enabled: $TON_API_LOGS_ENABLED
+  api_root_path: $TON_API_ANALYTICS_ROOT_PATH
   log_successful_requests: false
   record_ttl: 86400
   mongodb:

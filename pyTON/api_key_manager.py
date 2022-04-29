@@ -145,7 +145,7 @@ def get_origin(request: Request):
     return f'{url_parsed.scheme}://{url_parsed.hostname}'
 
 def get_ip(request: Request):
-    return request.headers.get('x-real-ip', "127.0.0.1")
+    return request.client.host or "127.0.0.1"
 
 def get_api_key(request: Request):
     return check_api_key(request,

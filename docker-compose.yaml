@@ -7,6 +7,8 @@ services:
       args:
         TON_API_LITE_SERVER_CONFIG: ${TON_API_LITE_SERVER_CONFIG}
     command: -w ${TON_API_WEBSERVERS_WORKERS} --bind 0.0.0.0:8081
+    ports:
+      - ${TON_API_HTTP_PORT}:8081
     environment:
       - TON_API_CACHE_ENABLED
       - TON_API_LOGS_ENABLED
@@ -14,30 +16,10 @@ services:
       - TON_API_LITE_SERVER_CONFIG
       - TON_API_GET_METHODS_ENABLED
       - TON_API_JSON_RPC_ENABLED
+      - TON_API_ROOT_PATH
+      - FORWARDED_ALLOW_IPS=${TON_API_FORWARDED_ALLOW_IPS}
     restart: unless-stopped
     networks:
       - internal
-  nginx:
-    build:
-      context: .
-      dockerfile: infrastructure/nginx.Dockerfile
-      args:
-        TON_API_INDEX_FOLDER: ${TON_API_INDEX_FOLDER}
-        TON_API_DOMAINS: ${TON_API_DOMAINS}
-        TON_API_ANALYTICS_ENABLED: ${TON_API_ANALYTICS_ENABLED}
-        TON_API_HTTP_PORT: ${TON_API_HTTP_PORT}
-        TON_API_CLOUDFLARE_ENABLED: ${TON_API_CLOUDFLARE_ENABLED}
-    ports:
-      - ${TON_API_HTTP_PORT}:${TON_API_HTTP_PORT}
-    links:
-      - main
-    volumes:
-      - nginxdata:/etc/nginx
-    networks:
-      - internal
-    restart: unless-stopped
-volumes:
-  nginxdata:
-    external: false
 networks:
   internal:

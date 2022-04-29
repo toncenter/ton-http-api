@@ -28,6 +28,10 @@ services:
     depends_on: 
       - mongodb
     restart: unless-stopped
+    ports:
+      - ${TON_API_ANALYTICS_PORT}:8081
+    environment:
+      - TON_API_ANALYTICS_ROOT_PATH
     networks:
       - internal
     command: --host 0.0.0.0 --port 8081
