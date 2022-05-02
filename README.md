@@ -16,7 +16,7 @@ Does not work on the Apple M1 yet.
 
 Recommended hardware: 2 CPU, 8 GB RAM.
 
-  - First time: run `./setup.sh` to install required building tools: `docker`, `docker-compose`, `curl`.
+  - First time: run `./setup.sh` to install required building tools: `docker`, `docker-compose`, `curl` and download global configs.
   - Run `./configure.py`, it creates `.env` file used by `docker-compose` (see [Configuration](#Configuration))
   - Build services: `docker-compose build`.
   - Run services: `docker-compose up -d`.

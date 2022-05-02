@@ -9,7 +9,7 @@ RUN apt install -y build-essential cmake clang-6.0 openssl libssl-dev zlib1g-dev
 WORKDIR /
 
 # remove /tree/<commit> to build master branch
-RUN git clone --recurse-submodules https://github.com/newton-blockchain/ton.git
+RUN git clone --recurse-submodules https://github.com/ton-blockchain/ton.git
 
 # fix lib version and patch logging
 WORKDIR /ton
