@@ -21,7 +21,7 @@ from tvm_valuetypes.cell import deserialize_cell_from_object
 
 from pyTON.models import TonResponse, TonResponseJsonRPC, TonRequestJsonRPC
 from config import settings
-from pyTON.logging import LoggerAndRateLimitMiddleware, generic_exception_handler, generic_http_exception_handler
+from pyTON.logging import LoggerMiddleware, generic_exception_handler, generic_http_exception_handler
 from pyTON.multiclient import TonlibMultiClient as TonlibClient
 from pyTON.address_utils import detect_address as __detect_address, prepare_address as _prepare_address
 from pyTON.wallet_utils import wallets as known_wallets, sha256
