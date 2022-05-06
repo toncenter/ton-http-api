@@ -33,10 +33,6 @@ The service supports the following environment variables for configuration. Afte
 
     Enables caching lite server responses with Redis.
 
-- `TON_API_RATE_LIMIT_ENABLED` *(default: 0)*
-
-    Enables API keys for your API and limits maximum request rate. API keys are issued by the Telegram bot and stored in Redis. If you enable this component, you have to put your Telegram bots token in `./private/token_file` file without `\n`.
-
 - `TON_API_HTTP_PORT` *(default: 80)*
 
     Port for HTTP connections of API service.
