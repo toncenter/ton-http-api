@@ -30,17 +30,3 @@ cache:
     endpoint: cache_redis
     port: 6379
     timeout: 1
-
-# Rate limitting settings.
-ratelimit:
-  enabled: $TON_API_RATE_LIMIT_ENABLED
-  redis:
-    endpoint: ratelimit_redis
-    port: 6379
-    timeout: 1
-  token_bot:
-    token_file: /run/secrets/token_file
-    default_total_limit: 10/second
-  token_redis:
-    endpoint: token_redis
-    port: 6379

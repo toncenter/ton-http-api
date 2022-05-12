@@ -10,17 +10,6 @@ from datetime import datetime
 from functools import wraps
 from json import loads
 
-from limits import parse_many
-from limits.aio.storage import RedisStorage
-from limits.aio.strategies import FixedWindowRateLimiter
-
-from pyTON.api_key_manager import (
-    per_method_limits, 
-    total_limits, 
-    limit_keys_from_request, 
-    api_key_header, 
-    api_key_query
-)
 from pyTON.models import TonResponse
 from config import settings
 
@@ -64,16 +53,9 @@ def generic_http_exception_handler(exc):
     res = TonResponse(ok=False, error=str(exc.detail), code=exc.status_code)
     return JSONResponse(res.dict(exclude_none=True), status_code=res.code)
 
-class LoggerAndRateLimitMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, endpoints, temp_disable_ratelimit=False):
+class LoggerMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app):
         super().__init__(app)
-
-        self.temp_disable_ratelimit = temp_disable_ratelimit
-
-        if settings.ratelimit.enabled:
-            self.endpoints = endpoints
-            self.rate_limit_storage = RedisStorage(f"redis://{settings.ratelimit.redis.endpoint}:{settings.ratelimit.redis.port}")
-            self.fixed_window = FixedWindowRateLimiter(self.rate_limit_storage)
 
     # Workaround for https://github.com/tiangolo/fastapi/issues/394#issuecomment-927272627
     async def set_body(self, request: Request):
@@ -83,61 +65,6 @@ class LoggerAndRateLimitMiddleware(BaseHTTPMiddleware):
             return receive_
 
         request._receive = receive
-
-    async def rate_limit_and_call(self, request: Request, call_next):
-        if not settings.ratelimit.enabled or self.temp_disable_ratelimit:
-            return await call_next(request)
-
-        path_comps = list(filter(None, request.url.path.split('/')))
-        if len(path_comps) == 0:
-            return await call_next(request)
-        endpoint = path_comps[-1]
-        if endpoint == 'jsonRPC':
-            body = await request.json()
-            endpoint = body.get('method')
-
-        if endpoint not in self.endpoints:
-            return await call_next(request)
-
-        keys = limit_keys_from_request(request)
-
-        failed_limit = None
-        for key in keys:
-            # Per method limits
-            per_method_limits_str = per_method_limits(endpoint, key)
-            if per_method_limits_str == 'unlimited':
-                per_method_limits_ = []
-            else:    
-                per_method_limits_ = parse_many(per_method_limits_str)
-
-            for limit in per_method_limits_:
-                identifiers = [endpoint, str(key)]
-                if not await self.fixed_window.hit(limit, *identifiers):
-                    failed_limit = limit
-                    break
-            if failed_limit:
-                break
-
-            # Total limits
-            total_limits_str = total_limits(key)
-            if total_limits_str == 'unlimited':
-                total_limits_ = []
-            else:    
-                total_limits_ = parse_many(total_limits_str)
-
-            for limit in total_limits_:
-                identifiers = [str(key)]
-                if not await self.fixed_window.hit(limit, *identifiers):
-                    failed_limit = limit
-                    break
-            if failed_limit:
-                break
-
-        if failed_limit:
-            res = TonResponse(ok=False, error=f"Rate limit exceeded: {failed_limit}", code=429)
-            return JSONResponse(res.dict(exclude_none=True), status_code=res.code)
-        result = await call_next(request)
-        return result
 
     async def call_and_log(self, request: Request, call_next):
         if not settings.logs.enabled:
@@ -201,7 +128,7 @@ class LoggerAndRateLimitMiddleware(BaseHTTPMiddleware):
             'from_ip': request.client.host or "?",
             'referer': request.headers.get('referer', '?'),
             'origin': request.headers.get('origin', '?'),
-            'api_key': request.query_params.get(api_key_query.model.name) or request.headers.get(api_key_header.model.name),
+            'api_key': request.query_params.get('api_key') or request.headers.get('X-API-Key'),
             'url': url,
             'status_code': response.status_code,
             'elapsed': elapsed
@@ -215,7 +142,7 @@ class LoggerAndRateLimitMiddleware(BaseHTTPMiddleware):
         await self.set_body(request)
         body = await request.body()
 
-        submiddlewares = [self.call_and_log, self.rate_limit_and_call]
+        submiddlewares = [self.call_and_log]
 
         async def call_submiddlewares(request):
             if len(submiddlewares) == 0:

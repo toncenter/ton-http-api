@@ -7,7 +7,6 @@ import sys
 LOCAL_ENV = {
 	'TON_API_CACHE_ENABLED': '0',
 	'TON_API_LOGS_ENABLED': '0',
-	'TON_API_RATE_LIMIT_ENABLED': '0',
 	'TON_API_LITE_SERVER_CONFIG': 'config/mainnet.json',
 	'TON_API_ANALYTICS_PORT': '8081',
 	'TON_API_ROOT_PATH': '/',
@@ -40,8 +39,6 @@ def main():
 		compose_file += ':docker-compose.cache.yaml'
 	if strtobool(default_env['TON_API_LOGS_ENABLED']):
 		compose_file += ':docker-compose.logs.yaml'
-	if strtobool(default_env['TON_API_RATE_LIMIT_ENABLED']):
-		compose_file += ':docker-compose.ratelimit.yaml'
 	default_env['COMPOSE_FILE'] = compose_file
 
 	env_content = ''
