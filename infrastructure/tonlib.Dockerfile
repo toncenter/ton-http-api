@@ -9,14 +9,15 @@ RUN apt install -y build-essential cmake clang-6.0 openssl libssl-dev zlib1g-dev
 WORKDIR /
 
 # remove /tree/<commit> to build master branch
-RUN git clone --recurse-submodules https://github.com/ton-blockchain/ton.git
+RUN git clone --recurse-submodules https://github.com/newton-blockchain/ton.git
 
-# fix lib version and patch logging
+# fix lib version
 WORKDIR /ton
-RUN git checkout 9875f02ef4ceba5b065d5e63c920f91aec73224e
-COPY infrastructure/patches/tonlib.patch /ton/
-RUN git apply /ton/tonlib.patch
-RUN cat /ton/crypto/smc-envelope/SmartContract.h
+RUN git checkout safer_overlay_plus
+
+# apply patch
+# COPY infrastructure/patches/tonlib.patch /ton/
+# RUN git apply /ton/tonlib.patch
 
 RUN mkdir /ton/build
 WORKDIR /ton/build
