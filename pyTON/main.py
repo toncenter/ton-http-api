@@ -85,13 +85,7 @@ tonlib = None
 @app.on_event("startup")
 def startup():
     logger.remove(0)
-    logger.add(sys.stdout, level='INFO', enqueue=True)
-    logger.add(f'/var/log/main_{os.getpid()}.log', 
-               level='INFO', 
-               enqueue=True,
-               serialize=False,
-               backtrace=False,
-               rotation='2 weeks')
+    logger.add(sys.stdout, level='INFO', enqueue=True, serialize=settings.logs.jsonify)
 
     loop = asyncio.get_event_loop()
 

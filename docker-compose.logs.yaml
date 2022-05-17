@@ -5,6 +5,10 @@ services:
       - mongodb
     secrets:
       - mongodb_password
+    environment:
+      - TON_API_LOGS_JSON
+    labels:
+      co.elastic.logs/enabled: "true"
   mongodb:
     image: mongo:5.0.5
     volumes:

@@ -81,7 +81,7 @@ class TonlibClient(multiprocessing.Process):
     @property
     def info(self):
         return {
-            'ip': f"{self.config['liteservers'][0]['ip']}",
+            'ip_int': f"{self.config['liteservers'][0]['ip']}",
             'port': f"{self.config['liteservers'][0]['port']}",
             'last_block': self.last_block,
             'archival': self.archival,
@@ -102,14 +102,14 @@ class TonlibClient(multiprocessing.Process):
                         result = await self.__getattribute__(method)(*args, **kwargs)
                     except asyncio.CancelledError:
                         exception = Exception("Liteserver timeout")
-                        logger.warning(f"Client #{self.number:03d} did not get response from liteserver before timeout")
+                        logger.warning("Client #{client_number:03d} did not get response from liteserver before timeout", client_number=self.number)
                     except Exception as e:
                         exception = e
-                        logger.warning(f"Client #{self.number:03d} raised exception {e} while executing task")
+                        logger.warning("Client #{client_number:03d} raised exception {exception} while executing task", client_number=self.number, exception=e)
                     else:
-                        logger.info(f"Client #{self.number:03d} got result {method}")
+                        logger.info("Client #{client_number:03d} got result {method}", client_number=self.number, method=method)
                 else:
-                    logger.warning(f"Client #{self.number:03d} received task after timeout")
+                    logger.warning("Client #{client_number:03d} received task after timeout", client_number=self.number)
                     exception = asyncio.TimeoutError()
 
                 end_time = datetime.now()
@@ -133,7 +133,7 @@ class TonlibClient(multiprocessing.Process):
                 last_block = masterchain_info["last"]["seqno"]
                 self.last_block = last_block
             except Exception as e:
-                logger.error(f"Client #{self.number:03d} report_last_block exception {e}")
+                logger.error("Client #{client_number:03d} report_last_block exception {exception}", client_number=self.number, exception=e)
             await self.output_queue.coro_put((MsgType.LAST_BLOCK_UPDATE, last_block))
             await asyncio.sleep(1)
 
@@ -145,15 +145,15 @@ class TonlibClient(multiprocessing.Process):
                 self.is_archival = is_archival
                 await self.output_queue.coro_put((MsgType.ARCHIVAL_UPDATE, is_archival))
             except Exception as e:
-                logger.error(f"Client #{self.number:03d} report_archival exception {e}")
+                logger.error("Client #{client_number:03d} report_archival exception {exception}", client_number=self.number, exception=e)
             await asyncio.sleep(600)
 
     async def reconnect(self):
         if not self.tonlib_wrapper.shutdown_state:
-            logger.info(f'Client #{self.number:03d} reconnecting')
+            logger.info('Client #{client_number:03d} reconnecting', client_number=self.number)
             self.tonlib_wrapper.shutdown_state = "started"
             await self.init_tonlib()
-            logger.info(f'Client #{self.number:03d} reconnected')
+            logger.info('Client #{client_number:03d} reconnected', client_number=self.number)
 
     async def init_tonlib(self, cdll_path=None):
         """
@@ -194,7 +194,7 @@ class TonlibClient(multiprocessing.Process):
         wrapper.set_restart_hook(hook=self.reconnect, max_requests=500)
         self.tonlib_wrapper = wrapper
         await self.set_verbosity_level(0)
-        logger.info(F"TonLib inited successfully")
+        logger.info("Client #{client_number:03d} TonLib inited successfully", client_number=self.number)
 
     async def set_verbosity_level(self, level):
         request = {

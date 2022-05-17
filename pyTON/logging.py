@@ -134,6 +134,8 @@ class LoggerMiddleware(BaseHTTPMiddleware):
             'elapsed': elapsed
         }
 
+        logger.success("Request info", **stat_record)
+
         mongo_client[mongo_db].request_stats.insert_one(stat_record)
 
         return response

@@ -33,7 +33,8 @@ def log_liteserver_task(task_result: TonlibClientResult):
         details['result'] = task_result.result
         details['exception'] = str(task_result.exception)
     
-    return {
+
+    task_info = {
         'timestamp': datetime.utcnow(),
         'elapsed': task_result.elapsed_time,
         'task_id': task_result.task_id,
@@ -42,6 +43,10 @@ def log_liteserver_task(task_result: TonlibClientResult):
         'result_type': res_type,
         'details': details,
     }
+
+    logger.success("Lite server task result", **task_info)
+
+    return task_info
 
 
 class TonlibMultiClient:
@@ -100,12 +105,14 @@ class TonlibMultiClient:
                             self.futures[task_id].set_exception(exception)
                         if result is not None:    
                             self.futures[task_id].set_result(result)
-                        logger.debug(f"Client #{client.number:03d}, task '{task_id}' result: {result}, exception: {exception}")
-                        
-                        # log liteserver task
+
+                        logger.debug("Client #{client_number:03d}, task: {task_id} result: {result}, exception: {exception}", 
+                            client_number=client.number, task_id=task_id, result=result, exception=exception)
+
                         log_liteserver_task(msg_content)
                     else:
-                        logger.warning(f"Client #{client.number:03d}, task '{task_id}' doesn't exist or is done.")
+                        logger.warning("Client #{client_number:03d}, task '{task_id}' doesn't exist or is done.", 
+                            client_number=client.number, task_id=task_id)
 
                 if msg_type == MsgType.LAST_BLOCK_UPDATE:
                     client.last_block = msg_content
@@ -113,7 +120,7 @@ class TonlibMultiClient:
                 if msg_type == MsgType.ARCHIVAL_UPDATE:
                     client.is_archival = msg_content
             except Exception as e:
-                logger.error(f"read_output exception {traceback.format_exc()}")
+                logger.error("read_output exception: {exception}", exception=traceback.format_exc())
 
     async def check_working(self):
         while True:
@@ -145,7 +152,7 @@ class TonlibMultiClient:
         while True:
             for i, client in enumerate(self.all_clients):
                 if not client.is_alive():
-                    logger.error(f"Client #{i:03d} dead!!! Exit code: {client.exitcode}")
+                    logger.error("Client #{client_number:03d} is dead! Exit code: {exitcode}", client_number=client.number, exitcode=client.exitcode)
 
                     self.read_output_tasks[i].cancel()
                     client.close()

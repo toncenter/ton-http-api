@@ -13,6 +13,7 @@ pyton:
 # Logs settings.
 logs:
   enabled: $TON_API_LOGS_ENABLED
+  jsonify: $TON_API_LOGS_JSON
   api_root_path: $TON_API_ANALYTICS_ROOT_PATH
   log_successful_requests: false
   record_ttl: 86400
