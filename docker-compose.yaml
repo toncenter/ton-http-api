@@ -16,6 +16,7 @@ services:
       - TON_API_GET_METHODS_ENABLED
       - TON_API_JSON_RPC_ENABLED
       - TON_API_ROOT_PATH
+      - TON_API_LOGS_JSON=0
       - FORWARDED_ALLOW_IPS=${TON_API_FORWARDED_ALLOW_IPS}
     restart: unless-stopped
     networks:

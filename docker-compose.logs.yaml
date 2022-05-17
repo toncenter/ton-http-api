@@ -6,7 +6,7 @@ services:
     secrets:
       - mongodb_password
     environment:
-      - TON_API_LOGS_JSON
+      - TON_API_LOGS_JSON=1
     labels:
       co.elastic.logs/enabled: "true"
   mongodb:
