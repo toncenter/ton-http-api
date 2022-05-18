@@ -5,6 +5,7 @@ import copy
 import time
 import codecs
 import traceback
+import json
 
 from datetime import datetime
 from pathlib import Path
@@ -29,7 +30,7 @@ def log_liteserver_task(task_result: TonlibClientResult):
     res_type = task_result.result.get('@type', 'unknown') if task_result.result else 'error'
     details = {}
     if res_type == 'error' or res_type == 'unknown':
-        details['params'] = task_result.params
+        details['params'] = [str(p) for p in task_result.params]
         details['result'] = task_result.result
         details['exception'] = str(task_result.exception)
     
