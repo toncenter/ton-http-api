@@ -5,7 +5,6 @@ import copy
 import time
 import codecs
 import traceback
-import json
 
 from datetime import datetime
 from pathlib import Path
