@@ -16,7 +16,7 @@ Does not work on the Apple M1 yet.
 
 Recommended hardware: 2 CPU, 8 GB RAM.
 
-  - First time: run `./setup.sh` to install required building tools: `docker`, `docker-compose`, `curl` and download global configs.
+  - (Ubuntu only) First time: run `scripts/setup.sh` from the root of the repo to install required building tools: `docker`, `docker-compose`, `curl`.
   - Run `./configure.py`, it creates `.env` file used by `docker-compose` (see [Configuration](#Configuration))
   - Build services: `docker-compose build`.
   - Run services: `docker-compose up -d`.
@@ -96,4 +96,3 @@ To point the HTTP API to your own lite server you should set `TON_API_LITE_SERVE
 ### How to update tonlibjson library?
 
 Set commit hash in `infrastructure/scripts/build_tonlib.sh` script (line `RUN cd /ton && git checkout <...>`) and run it. Docker container will get the sources, build the library and copy it to `pyTON/distlib/linux/`.
-

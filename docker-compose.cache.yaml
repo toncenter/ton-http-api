@@ -1,7 +1,14 @@
-version: '3.3'
+version: '3.7'
 services:
   cache_redis:
     image: redis:latest
     restart: unless-stopped
     networks:
       - internal
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+        max_attempts: 3
+        window: 60s

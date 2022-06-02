@@ -1,10 +1,5 @@
-version: '3.3'
+version: '3.7'
 services:
-  main:
-    depends_on:
-      - mongodb
-    secrets:
-      - mongodb_password
   mongodb:
     image: mongo:5.0.5
     volumes:
@@ -16,25 +11,52 @@ services:
     secrets:
       - mongodb_password
     ports:
-      - ${TON_API_MONGODB_PORT}:27017
+      - ${TON_API_MONGODB_PORT:-27017}:27017
     networks: 
       - internal
-  analytics:
-    build: 
-      context: .
-      dockerfile: infrastructure/analytics.Dockerfile
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+        max_attempts: 3
+        window: 60s
+  main:
     secrets:
       - mongodb_password
-    depends_on: 
-      - mongodb
+  analytics:
+    image: ${DOCKER_REGISTRY:-toncenter}/ton-analytics
+    build: 
+      context: ton-analytics
+      dockerfile: .docker/Dockerfile
+    secrets:
+      - mongodb_password
     restart: unless-stopped
     ports:
-      - ${TON_API_ANALYTICS_PORT}:8081
+      - ${TON_API_ANALYTICS_PORT:-8082}:8081
     environment:
       - TON_API_ANALYTICS_ROOT_PATH
     networks:
       - internal
-    command: --host 0.0.0.0 --port 8081
+    command: uvicorn anTON.main:app --host=0.0.0.0 --port=8081
+    healthcheck:
+      test: curl -sS http://127.0.0.1:8081${TON_API_ANALYTICS_ROOT_PATH}/healthcheck || echo 1
+      interval: 15s
+      timeout: 3s
+      retries: 12
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+        max_attempts: 3
+        window: 60s 
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 4G
 secrets:
   mongodb_password:
     file: private/mongodb_password
