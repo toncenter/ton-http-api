@@ -96,3 +96,4 @@ To point the HTTP API to your own lite server you should set `TON_API_LITE_SERVE
 ### How to update tonlibjson library?
 
 Set commit hash in `infrastructure/scripts/build_tonlib.sh` script (line `RUN cd /ton && git checkout <...>`) and run it. Docker container will get the sources, build the library and copy it to `pyTON/distlib/linux/`.
+
