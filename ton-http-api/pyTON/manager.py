@@ -38,8 +38,6 @@ class TonlibManager:
         self.tasks = {}
         self.consensus_block = ConsensusBlock()
 
-        self.is_dead = False
-
         # cache setup
         self.setup_cache()
 
@@ -140,7 +138,7 @@ class TonlibManager:
         
     async def check_working(self):
         try:
-            while not self.is_dead:
+            while True:
                 last_blocks = [self.workers[ls_index]['worker'].last_block for ls_index in self.workers]
                 best_block = max([i for i in last_blocks])
                 consensus_block_seqno = 0
@@ -170,7 +168,7 @@ class TonlibManager:
 
     async def check_children_alive(self):
         try:
-            while not self.is_dead:
+            while True:
                 for ls_index in self.workers:
                     worker_info = self.workers[ls_index]
                     worker_info['is_enabled'] = worker_info['is_enabled'] or time.time() > worker_info.get('time_to_alive', 1e10)
@@ -188,7 +186,7 @@ class TonlibManager:
 
     async def idle_loop(self):
         try:
-            while not self.is_dead:
+            while True:
                 await asyncio.sleep(1)
         except:
             logger.critical(f'Task idle_loop dead: {traceback.format_exc()}')
@@ -219,7 +217,7 @@ class TonlibManager:
         if len(suitable) < count:
             logger.warning(f'Required number of workers is not reached: found {len(suitable)} of {count}')
         if len(suitable) == 0:
-            raise RuntimeError('All workers dead!')
+            raise RuntimeError('No working liteservers!')
         return suitable[:count] if count > 1 else suitable[0]
 
     async def dispatch_request_to_worker(self, method, ls_index, *args, **kwargs):

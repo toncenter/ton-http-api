@@ -10,10 +10,9 @@ You can use the ready-made [toncenter.com](https://toncenter.com) service or sta
 
 ## Building and running
 
-There are three ways to run HTTP API:
+There are two ways to run HTTP API:
 - __Native__: HTTP API works on following platforms: Ubuntu Linux (x86_64, arm64), MacOSX (Intel x86_64, Apple M1 arm64) and Windows (x86_64).
 - __Docker Compose__: should work on any x86_64 and arm64 OS with Docker available.
-- __Docker Swarm__: should also work on any x86_64 and arm64 machine with Docker Swarm.
 
 Recommended hardware: 
 - HTTP API only: 1 vCPU, 2 GB RAM.
@@ -48,24 +47,6 @@ In the following subsections run and configuration process is explained:
   - Run services: `docker-compose up -d`.
   - Stop services: `docker-compose down`. Run this command with`-v` flag to permanenlty remove the HTTP API services.
 
-#### Docker Swarm mode
-Note: Docker Desktop is running in virtualization mode and do not support more than one node in swarm.
-  - If you are running first time:
-    - Create [swarm](https://docs.docker.com/engine/swarm/swarm-tutorial/create-swarm/): `docker swarm init`.
-      - You can connect nodes to swarm with command and given token.
-    - Specify registry in `DOCKER_REGISTRY` environment variable:
-      - Use `toncenter` registry to pull ready-made images.
-      - Use your [hub.docker.com](https://hub.docker.com) account. You will be able to push your custom images.
-      - Host you own registry: [run registry as a service](https://docs.docker.com/registry/deploying/#run-the-registry-as-a-service).
-  - Pull images: `docker-compose pull`.
-    - If it is necessary, build and push your custom images: `docker-compose build && docker-compose push`. This may require authentification with `docker login`.
-  - Deploy stack: `docker stack deploy <(docker-compose config) ton-http-api`.
-    - If running multiple instances of HTTP API, set unique stack name for each instance.
-    - Note: in Compose file we use environment variables substitution feature, which doesn't work in swarm mode by default.
-    - Bug: if you use Compose V1, you may get an error in `deploy.limits` section of compose file. 
-      In this case, use command: `docker stack deploy <(scripts/swarm-config.sh) ton-http-api`.
-  - Now you can easily scale `main` service: `docker service scale ton-http-api_main=4`. 
-    - Note: when running in swarm mode, we strongly recommend you to set `TON_API_WEBSERVERS_WORKERS=1` and use `docker scale` feature instead of running service with multiple workers. 
 ## Configuration
 
 Configuration process is different in case of native and Docker run:
@@ -184,7 +165,7 @@ The service supports the following environment variables for configuration:
     Usefull when using proxy server (see `TON_API_ROOT_PATH`).
 
 
-#### Docker Compose and Swarm
+#### Docker Compose
 
 - `DOCKER_REGISTRY` *(default: toncenter)*
 
@@ -217,10 +198,12 @@ To point the HTTP API to your own lite server you should set `TON_API_TONLIB_LIT
 #### How to run multiple API instances on single machine?
 
 - Clone the repo as many times as many instances you need to the folders with different names (otherwise docker-compose containers will conflict). 
-- Configure each instance to have unique exposed ports (`TON_API_HTTP_PORT` and if logs enabled `TON_API_MONGODB_PORT` and `TON_API_ANALYTICS_PORT`).
+- Configure each instance to have unique exposed ports (`TON_API_HTTP_PORT` and if logs enabled `TON_API_LOGS_MONGODB_PORT` and `TON_API_ANALYTICS_PORT`).
 - Build and run every instance. 
 
 #### How to update tonlibjson library?
 
+Binary file `libtonlibjson` now moved to [pytonlib](https://github.com/toncenter/pytonlib). 
+Use `pip install --upgrade` or rebuild Docker images:
 - Native run: `cd ton-http-api && pip install -U -r requirements.txt`.
-- Docker Compose and Swarm: `docker-compose build`.
+- Docker Compose: `docker-compose build`.

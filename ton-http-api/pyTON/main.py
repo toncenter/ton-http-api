@@ -245,7 +245,7 @@ async def healthcheck():
     return 'OK'
 
 
-@app.get('/getWorkerState', response_model=TonResponse)
+@app.get('/getWorkerState', response_model=TonResponse, include_in_schema=False)
 @wrap_result
 async def get_worker_state():
     return tonlib.get_workers_state()
