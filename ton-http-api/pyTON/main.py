@@ -125,12 +125,15 @@ tonlib = None
 def startup():
     logger.remove(0)
     logger.add(sys.stdout, level='INFO', enqueue=True)
-    logger.add(f'/var/log/main_{os.getpid()}.log', 
-               level='INFO', 
-               enqueue=True,
-               serialize=False,
-               backtrace=False,
-               rotation='2 weeks')
+    try:
+        logger.add(f'/var/log/main_{os.getpid()}.log', 
+                   level='INFO', 
+                   enqueue=True,
+                   serialize=False,
+                   backtrace=False,
+                   rotation='2 weeks')
+    except Exception as ee:
+        logger.info(f'Failed to add file to logger: {ee}')
 
     # setup tonlib multiclient
     global tonlib

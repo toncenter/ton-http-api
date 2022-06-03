@@ -39,7 +39,7 @@ services:
       - TON_API_ANALYTICS_ROOT_PATH
     networks:
       - internal
-    command: uvicorn anTON.main:app --host=0.0.0.0 --port=8081
+    command: -c "uvicorn anTON.main:app --host=0.0.0.0 --port=8081"
     healthcheck:
       test: curl -sS http://127.0.0.1:8081${TON_API_ANALYTICS_ROOT_PATH}/healthcheck || echo 1
       interval: 15s
