@@ -54,6 +54,7 @@ def main_config(binder):
     if settings.cache.enabled:
         if isinstance(settings.cache, RedisCacheSettings):
             cache_manager = RedisCacheManager(settings.cache)
+            print(settings.cache)
             binder.bind(CacheManager, cache_manager)
         else:
             raise RuntimeError('Only Redis cache supported')

@@ -13,5 +13,5 @@ chmod +x /usr/local/bin/docker-compose
 # Download the latest version of config.json
 mkdir private
 
-# curl -sL https://ton-blockchain.github.io/global.config.json > private/mainnet.json
-# curl -sL https://ton-blockchain.github.io/testnet-global.config.json > private/testnet.json
+curl -sL https://ton-blockchain.github.io/global.config.json > private/mainnet.json
+curl -sL https://ton-blockchain.github.io/testnet-global.config.json > private/testnet.json

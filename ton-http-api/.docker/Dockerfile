@@ -13,5 +13,4 @@ COPY . /app
 WORKDIR /app
 
 # entrypoint
-ENTRYPOINT [ "gunicorn", "pyTON.main:app", "-k", "uvicorn.workers.UvicornWorker" ]
-# ENTRYPOINT [ "/bin/bash" ]
+ENTRYPOINT [ "/bin/bash" ]

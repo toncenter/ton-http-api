@@ -1,32 +1,12 @@
-# pyTON settings
-pyton:
-  api_root_path: $TON_API_ROOT_PATH
-  request_timeout: 20
-  webserver_workers: $TON_API_WEBSERVERS_WORKERS
-  parallel_requests_per_liteserver: 50
-  get_methods: $TON_API_GET_METHODS_ENABLED
-  json_rpc: $TON_API_JSON_RPC_ENABLED
-  liteserver_config: liteserver_config.json
-  keystore: ./ton_keystore/
-  cdll: null
-
 # Logs settings.
 logs:
   enabled: $TON_API_LOGS_ENABLED
   api_root_path: $TON_API_ANALYTICS_ROOT_PATH
-  log_successful_requests: false
+  log_successful_requests: $TON_API_LOGS_LOG_SUCCESSFUL
   record_ttl: 86400
   mongodb:
-    host: mongodb
-    port: 27017
-    database: pyton
-    username: user1
-    password_file: /run/secrets/mongodb_password
-
-# Cache settings.
-cache:
-  enabled: $TON_API_CACHE_ENABLED
-  redis:
-    endpoint: cache_redis
-    port: 6379
-    timeout: 1
+    host: $TON_API_LOGS_MONGODB_HOST
+    port: $TON_API_LOGS_MONGODB_PORT
+    database: $TON_API_LOGS_MONGODB_DATABASE
+    username: $TON_API_LOGS_MONGODB_USERNAME
+    password_file: $TON_API_LOGS_MONGODB_PASSWORD_FILE

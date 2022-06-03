@@ -9,11 +9,11 @@ from loguru import logger
 
 
 def strtobool(val):
-	if val.lower() in ['y', 'yes', 't', 'true', 'on', '1']:
-		return True
-	if val.lower() in ['n', 'no', 'f', 'false', 'off', '0']:
-		return False
-	raise ValueError(f"Invalid bool value {val}")
+    if val.lower() in ['y', 'yes', 't', 'true', 'on', '1']:
+        return True
+    if val.lower() in ['n', 'no', 'f', 'false', 'off', '0']:
+        return False
+    raise ValueError(f"Invalid bool value {val}")
 
 
 @dataclass
@@ -36,11 +36,11 @@ class TonlibSettings:
 
     @classmethod
     def from_environment(cls):
-        return TonlibSettings(parallel_requests_per_liteserver=int(os.environ.get('TON_API_TONLIB_PARALLEL_REQUESTS_PER_LITESERVER', '64')),
+        return TonlibSettings(parallel_requests_per_liteserver=int(os.environ.get('TON_API_TONLIB_PARALLEL_REQUESTS_PER_LITESERVER', '50')),
                               keystore=os.environ.get('TON_API_TONLIB_KEYSTORE', './ton_keystore/'),
                               liteserver_config_path=os.environ.get('TON_API_TONLIB_LITESERVER_CONFIG', 'https://ton.org/global-config.json'),
                               cdll_path=os.environ.get('TON_API_TONLIB_CDLL_PATH', None),
-                              request_timeout=os.environ.get('TON_API_TONLIB_REQUEST_TIMEOUT', 10))
+                              request_timeout=int(os.environ.get('TON_API_TONLIB_REQUEST_TIMEOUT', '10')))
 
 
 @dataclass
@@ -65,11 +65,11 @@ class MongoDBSettings:
     @classmethod
     def from_environment(cls, settings_type):
         if settings_type == 'logging':
-            return MongoDBSettings(host=os.environ.get('TON_API_LOGS_MONGODB_HOST', 'mongodb'),
+            return MongoDBSettings(host=os.environ.get('TON_API_LOGS_MONGODB_HOST', 'localhost'),
                                    port=int(os.environ.get('TON_API_LOGS_MONGODB_PORT', '27017')),
                                    database=os.environ.get('TON_API_LOGS_MONGODB_DATABASE', 'pyton'),
-                                   username=os.environ.get('TON_API_LOGS_MONGODB_USERNAME', 'user1'),
-                                   password_file=os.environ.get('TON_API_LOGS_MONGODB_PASSWORD_FILE', '/run/secrets/mongodb_password'))
+                                   username=os.environ.get('TON_API_LOGS_MONGODB_USERNAME', None),
+                                   password_file=os.environ.get('TON_API_LOGS_MONGODB_PASSWORD_FILE', None))
 
 
 @dataclass
@@ -81,9 +81,9 @@ class RedisSettings:
     @classmethod
     def from_environment(cls, settings_type):
         if settings_type == 'cache':
-            return RedisSettings(endpoint=os.environ.get('TON_API_CACHE_REDIS_ENDPOINT', 'cache_redis'),
-                                port=int(os.environ.get('TON_API_CACHE_REDIS_PORT ', '6379')),
-                                timeout=int(os.environ.get('TON_API_CACHE_REDIS_ENDPOINT', '1')))
+            return RedisSettings(endpoint=os.environ.get('TON_API_CACHE_REDIS_ENDPOINT', 'localhost'),
+                                port=int(os.environ.get('TON_API_CACHE_REDIS_PORT', '6379')),
+                                timeout=int(os.environ.get('TON_API_CACHE_REDIS_TIMEOUT', '1')))
 
 
 @dataclass
