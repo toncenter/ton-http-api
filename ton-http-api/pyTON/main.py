@@ -125,7 +125,7 @@ tonlib = None
 @app.on_event("startup")
 def startup():
     logger.remove(0)
-    logger.add(sys.stdout, level='INFO', enqueue=True)
+    logger.add(sys.stdout, level='INFO', enqueue=True, serialize=settings.logging.jsonify)
     try:
         logger.add(f'/var/log/main_{os.getpid()}.log', 
                    level='INFO', 

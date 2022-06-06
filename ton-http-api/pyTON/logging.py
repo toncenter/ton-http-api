@@ -61,7 +61,7 @@ class MongoLoggingManager(LoggingManager):
             result_type = 'list'
         details = {}
         if res_type == 'error' or res_type == 'unknown':
-            details['params'] = task_result.params
+            details['params'] = [str(p) for p in task_result.params]
             details['result'] = task_result.result
             details['exception'] = str(task_result.exception)
         
@@ -75,6 +75,7 @@ class MongoLoggingManager(LoggingManager):
             'details': details,
         }
         self.mongo_client[self.database]['liteserver_tasks'].insert_one(rec)
+        logger.info("Received result of type: {result_type} task_id: {task_id} method: {method}", **rec)
 
     def log_request_details(self, request_details, *args, **kwargs) -> None:
         self.mongo_client[self.database]['requests'].insert_one(request_details)

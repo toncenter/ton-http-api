@@ -89,12 +89,14 @@ class RedisSettings:
 @dataclass
 class LoggingSettings:
     enabled: bool
+    jsonify: bool
     log_successful_requests: bool
     record_ttl: int
 
     @classmethod
     def from_environment(cls):
         return LoggingSettings(enabled=False,
+                               jsonify=False,
                                log_successful_requests=False,
                                record_ttl=86400)
 
@@ -106,6 +108,7 @@ class MongoDBLoggingSettings(LoggingSettings):
     @classmethod
     def from_environment(cls):
         return MongoDBLoggingSettings(enabled=strtobool(os.environ.get('TON_API_LOGS_ENABLED', '0')),
+                                      enabled=strtobool(os.environ.get('TON_API_LOGS_JSONIFY', '0')),
                                       log_successful_requests=strtobool(os.environ.get('TON_API_LOGS_LOG_SUCCESSFUL', '0')),
                                       record_ttl=86400,
                                       mongodb=MongoDBSettings.from_environment('logging'))
