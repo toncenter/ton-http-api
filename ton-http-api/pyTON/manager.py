@@ -121,7 +121,10 @@ class TonlibManager:
                         logger.debug(f"Client #{ls_index:03d}, task '{task_id}' result: {result}, exception: {exception}")
                         
                         # log liteserver task
-                        self.logging_manager.log_liteserver_task(msg_content)
+                        try:
+                            self.logging_manager.log_liteserver_task(msg_content)
+                        except:
+                            logger.critical(f"Error while logging liteserver task: {traceback.format_exc()}")
                     else:
                         logger.warning(f"Client #{ls_index:03d}, task '{task_id}' doesn't exist or is done.")
 

@@ -1,6 +1,9 @@
 import inject
 import traceback
 
+from collections.abc import Mapping
+from abc import abstractmethod
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi import Request, status
@@ -19,7 +22,6 @@ from pyTON.settings import Settings, MongoDBSettings, LoggingSettings, MongoDBLo
 from typing import Optional
 
 from loguru import logger
-from abc import abstractmethod
 
 
 class LoggingManager:
@@ -52,7 +54,11 @@ class MongoLoggingManager(LoggingManager):
         self.mongo_client[self.database]['request_stats'].create_index('timestamp', expireAfterSeconds=logging_settings.record_ttl)
 
     def log_liteserver_task(self, task_result: TonlibClientResult, *args, **kwargs):
-        res_type = task_result.result.get('@type', 'unknown') if task_result.result else 'error'
+        res_type = None
+        if isinstance(task_result.result, Mapping):
+            res_type = task_result.result.get('@type', 'unknown') if task_result.result else 'error'
+        else:
+            result_type = 'list'
         details = {}
         if res_type == 'error' or res_type == 'unknown':
             details['params'] = task_result.params
@@ -158,7 +164,10 @@ class LoggerMiddleware(BaseHTTPMiddleware):
                     'body': response_body
                 }
             }
-            self.logging_manager.log_request_details(record)
+            try:
+                self.logging_manager.log_request_details(record)
+            except:
+                logger.critical(f"Error while logging request details: {traceback.format_exc()}")
 
         # statistics record
         url = request.url.path
@@ -179,7 +188,10 @@ class LoggerMiddleware(BaseHTTPMiddleware):
             'elapsed': elapsed
         }
 
-        self.logging_manager.log_request_stats(stat_record)
+        try:
+            self.logging_manager.log_request_stats(stat_record)
+        except:
+            logger.critical(f"Error while logging request stats: {traceback.format_exc()}")
         return response
 
     async def dispatch(self, request: Request, call_next):

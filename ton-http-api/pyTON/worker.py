@@ -96,7 +96,7 @@ class TonlibWorker(mp.Process):
             while not self.is_dead:
                 is_archival = False
                 try:
-                    block_transactions = await self.tonlib.get_block_transactions(-1, -9223372036854775808, random.randint(2, 2000000), count=10)
+                    block_transactions = await self.tonlib.get_block_transactions(-1, -9223372036854775808, random.randint(2, 4096), count=10)
                     is_archival = block_transactions.get("@type", "") == "blocks.transactions"
                 except Exception as e:
                     logger.error(f"Client #{self.ls_index:03d} report_archival exception {e}")
@@ -126,7 +126,7 @@ class TonlibWorker(mp.Process):
                         logger.warning(f"Client #{self.ls_index:03d} did not get response from liteserver before timeout")
                     except Exception as e:
                         exception = e
-                        logger.warning(f"Client #{self.ls_index:03d} raised exception {e} while executing task")
+                        logger.warning(f"Client #{self.ls_index:03d} raised exception while executing task. Method: {method}, args: {args}, kwargs: {kwargs}, exception: {e}")
                     else:
                         logger.debug(f"Client #{self.ls_index:03d} got result {method}")
                 else:
