@@ -61,8 +61,8 @@ class TonlibWorker(mp.Process):
     @property
     def info(self):
         return {
-            'ip_int': f"{self.tonlib_settings.liteserver_config['liteservers'][0]['ip']}",
-            'port': f"{self.tonlib_settings.liteserver_config['liteservers'][0]['port']}",
+            'ip_int': f"{self.tonlib_settings.liteserver_config['liteservers'][self.ls_index]['ip']}",
+            'port': f"{self.tonlib_settings.liteserver_config['liteservers'][self.ls_index]['port']}",
             'last_block': self.last_block,
             'archival': self.is_archival,
             'number': self.ls_index,
