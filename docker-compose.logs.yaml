@@ -1,6 +1,8 @@
 version: '3.7'
 services:
   main:
+    secrets:
+      - mongodb_password
     labels:
       co.elastic.logs/enabled: "true"
   mongodb:
@@ -25,9 +27,6 @@ services:
         delay: 15s
         max_attempts: 3
         window: 60s
-  main:
-    secrets:
-      - mongodb_password
   analytics:
     image: ${DOCKER_REGISTRY:-toncenter}/ton-analytics
     build: 
