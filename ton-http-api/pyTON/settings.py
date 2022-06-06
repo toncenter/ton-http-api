@@ -108,7 +108,7 @@ class MongoDBLoggingSettings(LoggingSettings):
     @classmethod
     def from_environment(cls):
         return MongoDBLoggingSettings(enabled=strtobool(os.environ.get('TON_API_LOGS_ENABLED', '0')),
-                                      enabled=strtobool(os.environ.get('TON_API_LOGS_JSONIFY', '0')),
+                                      jsonify=strtobool(os.environ.get('TON_API_LOGS_JSONIFY', '0')),
                                       log_successful_requests=strtobool(os.environ.get('TON_API_LOGS_LOG_SUCCESSFUL', '0')),
                                       record_ttl=86400,
                                       mongodb=MongoDBSettings.from_environment('logging'))
