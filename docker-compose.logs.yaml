@@ -19,7 +19,6 @@ services:
       - ${TON_API_LOGS_MONGODB_PORT:-27017}:${TON_API_LOGS_MONGODB_PORT:-27017}
     networks: 
       - internal
-    restart: unless-stopped
     deploy:
       replicas: 1
       restart_policy:
