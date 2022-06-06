@@ -70,7 +70,7 @@ class TonlibManager:
         if ls_index in self.workers:
             worker_info = self.workers[ls_index]
             if not force_restart and worker_info.is_alive():
-                logger.warning(f'Worker for liteserver #{ls_index} already exists')
+                logger.warning('Worker for liteserver #{ls_index} already exists', ls_index=ls_index)
                 return
             try:
                 worker_info['reader'].cancel()  
@@ -79,7 +79,7 @@ class TonlibManager:
                     worker_info['worker'].terminate()
                     worker_info['worker'].join()
             except Exception as ee:
-                logger.error(f'Failed to delete existing process: {ee}')
+                logger.error('Failed to delete existing process: {exc}', exc=ee)
         # running new worker
         if not ls_index in self.workers:
             self.workers[ls_index] = {
@@ -118,15 +118,16 @@ class TonlibManager:
                             self.futures[task_id].set_exception(exception)
                         if result is not None:    
                             self.futures[task_id].set_result(result)
-                        logger.debug(f"Client #{ls_index:03d}, task '{task_id}' result: {result}, exception: {exception}")
+                        logger.debug("Client #{ls_index:03d}, task '{task_id}' result: {result}, exception: {exception}", 
+                            ls_index=ls_index, task_id=task_id, result=result, exception=exception)
                         
                         # log liteserver task
                         try:
                             self.logging_manager.log_liteserver_task(msg_content)
                         except:
-                            logger.critical(f"Error while logging liteserver task: {traceback.format_exc()}")
+                            logger.critical("Error while logging liteserver task: {format_exc}", format_exc=traceback.format_exc())
                     else:
-                        logger.warning(f"Client #{ls_index:03d}, task '{task_id}' doesn't exist or is done.")
+                        logger.warning("Client #{ls_index:03d}, task '{task_id}' doesn't exist or is done.", ls_index=ls_index, task_id=task_id)
 
                 if msg_type == TonlibWorkerMsgType.LAST_BLOCK_UPDATE:
                     worker.last_block = msg_content
@@ -137,7 +138,7 @@ class TonlibManager:
                 if msg_type == TonlibWorkerMsgType.DEAD_REPORT:
                     self.spawn_worker(ls_index, force_restart=True)
             except Exception as e:
-                logger.error(f"read_output exception {traceback.format_exc()}")
+                logger.error("read_output exception {format_exc}", format_exc=traceback.format_exc())
         
     async def check_working(self):
         try:
@@ -166,7 +167,7 @@ class TonlibManager:
 
                 await asyncio.sleep(1)
         except:
-            logger.critical(f'Task check_working dead: {traceback.format_exc()}')
+            logger.critical('Task check_working dead: {format_exc}', format_exc=traceback.format_exc())
         return
 
     async def check_children_alive(self):
@@ -180,11 +181,11 @@ class TonlibManager:
                         worker_info['time_to_alive'] = time.time() + 1 * 60
                         worker_info['restart_count'] = 0
                     if not worker_info['worker'].is_alive() and worker_info['is_enabled']:
-                        logger.error(f"Client #{ls_index:03d} dead!!! Exit code: {self.workers[ls_index]['worker'].exitcode}")
+                        logger.error("Client #{ls_index:03d} dead!!! Exit code: {exit_code}", ls_index=ls_index, exit_code=self.workers[ls_index]['worker'].exitcode)
                         self.spawn_worker(ls_index, force_restart=True)
                 await asyncio.sleep(1)
         except:
-            logger.critical(f'Task check_working dead: {traceback.format_exc()}')
+            logger.critical('Task check_working dead: {format_exc}', format_exc=traceback.format_exc())
         return
 
     async def idle_loop(self):
@@ -192,7 +193,7 @@ class TonlibManager:
             while True:
                 await asyncio.sleep(1)
         except:
-            logger.critical(f'Task idle_loop dead: {traceback.format_exc()}')
+            logger.critical('Task idle_loop dead: {format_exc}', format_exc=traceback.format_exc())
         return
 
     def get_workers_state(self):
@@ -218,7 +219,7 @@ class TonlibManager:
                     (archival is None or worker_info['worker'].is_archival == archival)]
         random.shuffle(suitable)
         if len(suitable) < count:
-            logger.warning(f'Required number of workers is not reached: found {len(suitable)} of {count}')
+            logger.warning('Required number of workers is not reached: found {found} of {count}', found=len(suitable), count=count)
         if len(suitable) == 0:
             raise RuntimeError('No working liteservers!')
         return suitable[:count] if count > 1 else suitable[0]

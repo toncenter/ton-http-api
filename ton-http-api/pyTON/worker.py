@@ -61,8 +61,8 @@ class TonlibWorker(mp.Process):
     @property
     def info(self):
         return {
-            'ip': f"{self.tonlib_settings.liteserver_config['liteservers'][0]['ip']}",
-            'port': f"{self.tonlib_settings.liteserver_config['liteservers'][0]['port']}",
+            'ip_int': f"{self.tonlib_settings.liteserver_config['liteservers'][self.ls_index]['ip']}",
+            'port': f"{self.tonlib_settings.liteserver_config['liteservers'][self.ls_index]['port']}",
             'last_block': self.last_block,
             'archival': self.is_archival,
             'number': self.ls_index,
@@ -72,8 +72,7 @@ class TonlibWorker(mp.Process):
         if not self.is_dead:
             self.is_dead = True
 
-            format_exc = traceback.format_exc()
-            logger.info(f'Dead report: {format_exc}')
+            logger.error('Dead report: {format_exc}', format_exc=traceback.format_exc())
             await self.output_queue.coro_put((TonlibWorkerMsgType.DEAD_REPORT, format_exc))
 
     async def report_last_block(self):
@@ -84,7 +83,7 @@ class TonlibWorker(mp.Process):
                     masterchain_info = await self.tonlib.get_masterchain_info()
                     last_block = masterchain_info["last"]["seqno"]
                 except Exception as e:
-                    logger.error(f"Client #{self.ls_index:03d} report_last_block exception: {e}")
+                    logger.error("Client #{ls_index:03d} report_last_block exception: {exc}", ls_index=self.ls_index, exc=e)
                 self.last_block = last_block
                 await self.output_queue.coro_put((TonlibWorkerMsgType.LAST_BLOCK_UPDATE, self.last_block))
                 await asyncio.sleep(1)
@@ -99,7 +98,7 @@ class TonlibWorker(mp.Process):
                     block_transactions = await self.tonlib.get_block_transactions(-1, -9223372036854775808, random.randint(2, 4096), count=10)
                     is_archival = block_transactions.get("@type", "") == "blocks.transactions"
                 except Exception as e:
-                    logger.error(f"Client #{self.ls_index:03d} report_archival exception {e}")
+                    logger.error("Client #{ls_index:03d} report_archival exception: {exc}", ls_index=self.ls_index, exc=e)
                 self.is_archival = is_archival
                 await self.output_queue.coro_put((TonlibWorkerMsgType.ARCHIVAL_UPDATE, self.is_archival))
                 await asyncio.sleep(600)
@@ -123,15 +122,16 @@ class TonlibWorker(mp.Process):
                         result = await self.tonlib.__getattribute__(method)(*args, **kwargs)
                     except asyncio.CancelledError:
                         exception = Exception("Liteserver timeout")
-                        logger.warning(f"Client #{self.ls_index:03d} did not get response from liteserver before timeout")
+                        logger.warning("Client #{ls_index:03d} did not get response from liteserver before timeout", ls_index=self.ls_index)
                     except Exception as e:
                         exception = e
-                        logger.warning(f"Client #{self.ls_index:03d} raised exception while executing task. Method: {method}, args: {args}, kwargs: {kwargs}, exception: {e}")
+                        logger.warning("Client #{ls_index:03d} raised exception while executing task. Method: {method}, args: {args}, kwargs: {kwargs}, exception: {exc}", 
+                            ls_index=self.ls_index, method=method, args=args, kwargs=kwargs, exc=e)
                     else:
-                        logger.debug(f"Client #{self.ls_index:03d} got result {method}")
+                        logger.debug("Client #{ls_index:03d} got result {method}", ls_index=self.ls_index, method=method)
                 else:
                     exception = asyncio.TimeoutError()
-                    logger.warning(f"Client #{self.ls_index:03d} received task after timeout")
+                    logger.warning("Client #{ls_index:03d} received task after timeout", ls_index=self.ls_index)
                 end_time = datetime.now()
                 elapsed_time = (end_time - start_time).total_seconds()
 

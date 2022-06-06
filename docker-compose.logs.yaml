@@ -1,5 +1,10 @@
 version: '3.7'
 services:
+  main:
+    secrets:
+      - mongodb_password
+    labels:
+      co.elastic.logs/enabled: "true"
   mongodb:
     image: mongo:5.0.5
     volumes:
@@ -14,7 +19,6 @@ services:
       - ${TON_API_LOGS_MONGODB_PORT:-27017}:${TON_API_LOGS_MONGODB_PORT:-27017}
     networks: 
       - internal
-    restart: unless-stopped
     deploy:
       replicas: 1
       restart_policy:
@@ -22,9 +26,6 @@ services:
         delay: 15s
         max_attempts: 3
         window: 60s
-  main:
-    secrets:
-      - mongodb_password
   analytics:
     image: ${DOCKER_REGISTRY:-toncenter}/ton-analytics
     build: 
