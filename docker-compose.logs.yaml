@@ -53,18 +53,6 @@ services:
       interval: 15s
       timeout: 3s
       retries: 12
-    deploy:
-      mode: replicated
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-        delay: 15s
-        max_attempts: 3
-        window: 60s 
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 4G
 secrets:
   mongodb_password:
     file: private/mongodb_password

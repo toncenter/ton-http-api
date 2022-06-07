@@ -5,10 +5,3 @@ services:
     restart: unless-stopped
     networks:
       - internal
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-        delay: 15s
-        max_attempts: 3
-        window: 60s

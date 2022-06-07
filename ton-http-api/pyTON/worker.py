@@ -37,6 +37,8 @@ class TonlibWorker(mp.Process):
         self.loop = None
         self.tasks = {}
         self.tonlib = None
+
+        self.timeout_count = 0
         self.is_dead = False
 
     def run(self):
@@ -71,8 +73,9 @@ class TonlibWorker(mp.Process):
     async def report_dead(self):
         if not self.is_dead:
             self.is_dead = True
-
-            logger.error('Dead report: {format_exc}', format_exc=traceback.format_exc())
+            
+            format_exc = traceback.format_exc()
+            logger.error('Dead report: {format_exc}', format_exc=format_exc)
             await self.output_queue.coro_put((TonlibWorkerMsgType.DEAD_REPORT, format_exc))
 
     async def report_last_block(self):
@@ -82,8 +85,17 @@ class TonlibWorker(mp.Process):
                 try:
                     masterchain_info = await self.tonlib.get_masterchain_info()
                     last_block = masterchain_info["last"]["seqno"]
+                    self.timeout_count = 0
+                except asyncio.CancelledError:
+                    logger.warning('Client #{ls_index:03d} report_last_block timeout', ls_index=self.ls_index)
+                    self.timeout_count += 1
                 except Exception as e:
                     logger.error("Client #{ls_index:03d} report_last_block exception: {exc}", ls_index=self.ls_index, exc=e)
+                    self.timeout_count += 1
+
+                if self.timeout_count >= 10:
+                    raise RuntimeError(f'Client #{self.ls_index:03d} got {self.timeout_count} timeouts in report_last_block')
+                
                 self.last_block = last_block
                 await self.output_queue.coro_put((TonlibWorkerMsgType.LAST_BLOCK_UPDATE, self.last_block))
                 await asyncio.sleep(1)
@@ -97,6 +109,8 @@ class TonlibWorker(mp.Process):
                 try:
                     block_transactions = await self.tonlib.get_block_transactions(-1, -9223372036854775808, random.randint(2, 4096), count=10)
                     is_archival = block_transactions.get("@type", "") == "blocks.transactions"
+                except asyncio.CancelledError:
+                    logger.warning('Client #{ls_index:03d} report_archival timeout', ls_index=self.ls_index)
                 except Exception as e:
                     logger.error("Client #{ls_index:03d} report_archival exception: {exc}", ls_index=self.ls_index, exc=e)
                 self.is_archival = is_archival
