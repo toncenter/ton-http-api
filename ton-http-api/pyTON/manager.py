@@ -176,9 +176,9 @@ class TonlibManager:
                 for ls_index in self.workers:
                     worker_info = self.workers[ls_index]
                     worker_info['is_enabled'] = worker_info['is_enabled'] or time.time() > worker_info.get('time_to_alive', 1e10)
-                    if worker_info['restart_count'] >= 10:
+                    if worker_info['restart_count'] >= 3:
                         worker_info['is_enabled'] = False
-                        worker_info['time_to_alive'] = time.time() + 1 * 60
+                        worker_info['time_to_alive'] = time.time() + 10 * 60
                         worker_info['restart_count'] = 0
                     if not worker_info['worker'].is_alive() and worker_info['is_enabled']:
                         logger.error("Client #{ls_index:03d} dead!!! Exit code: {exit_code}", ls_index=ls_index, exit_code=self.workers[ls_index]['worker'].exitcode)
