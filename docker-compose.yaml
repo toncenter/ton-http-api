@@ -29,7 +29,7 @@ services:
       - TON_API_GET_METHODS_ENABLED
       - TON_API_JSON_RPC_ENABLED
       - TON_API_ROOT_PATH
-    shm_size: 512m
+    restart: unless-stopped
     networks:
       - internal
     secrets:
