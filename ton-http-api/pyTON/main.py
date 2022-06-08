@@ -515,7 +515,7 @@ async def send_boc_unsafe_task(boc_bytes: bytes):
     send_duration = 60
     for i in range(send_duration/send_interval):
         await tonlib.raw_send_message(boc_bytes)
-        asyncio.sleep(send_interval)
+        await asyncio.sleep(send_interval)
 
 @app.post('/sendBocUnsafe', response_model=TonResponse, response_model_exclude_none=True, include_in_schema=False, tags=['send'])
 @json_rpc('sendBocUnsafe')
