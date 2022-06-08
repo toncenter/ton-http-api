@@ -91,7 +91,7 @@ class MongoLoggingManager(LoggingManager):
 # https://github.com/tiangolo/fastapi/issues/2750
 # As workaround - catch and handle this exception in the middleware.
 def generic_exception_handler(exc):
-    res = TonResponse(ok=False, error=str(traceback.format_exc()), code=status.HTTP_503_SERVICE_UNAVAILABLE)
+    res = TonResponse(ok=False, error=str(exc), code=status.HTTP_503_SERVICE_UNAVAILABLE)
     return JSONResponse(res.dict(exclude_none=True), status_code=status.HTTP_503_SERVICE_UNAVAILABLE)
 
 
