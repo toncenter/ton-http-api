@@ -513,7 +513,7 @@ async def send_boc(
 async def send_boc_unsafe_task(boc_bytes: bytes):
     send_interval = 5
     send_duration = 60
-    for i in range(send_duration/send_interval):
+    for i in range(int(send_duration / send_interval)):
         await tonlib.raw_send_message(boc_bytes)
         await asyncio.sleep(send_interval)
 
