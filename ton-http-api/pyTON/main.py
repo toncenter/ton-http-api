@@ -11,7 +11,7 @@ import codecs
 from functools import wraps
 
 from typing import Optional, Union, Dict, Any, List
-from fastapi import FastAPI, Depends, Response, Request
+from fastapi import FastAPI, Depends, Response, Request, BackgroundTasks
 from fastapi.params import Body, Query, Param
 from fastapi.exceptions import HTTPException, RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -510,6 +510,28 @@ async def send_boc(
     boc = base64.b64decode(boc)
     return await tonlib.raw_send_message(boc)
 
+async def send_boc_unsafe_task(boc_bytes: bytes):
+    send_interval = 5
+    send_duration = 60
+    for i in range(send_duration/send_interval):
+        await tonlib.raw_send_message(boc_bytes)
+        asyncio.sleep(send_interval)
+
+@app.post('/sendBocUnsafe', response_model=TonResponse, response_model_exclude_none=True, include_in_schema=False, tags=['send'])
+@json_rpc('sendBocUnsafe')
+@wrap_result
+async def send_boc_unsafe(
+    background_tasks: BackgroundTasks,
+    boc: str = Body(..., embed=True, description="b64 encoded bag of cells")
+    ):
+    """
+    Unsafe send serialized boc file: fully packed and serialized external message to blockchain. This method creates
+    background task that sends boc to network every 5 seconds for 1 minute.
+    """
+    boc = base64.b64decode(boc)
+    background_tasks.add_task(send_boc_unsafe_task, boc)
+    return TonResponse(ok=True)
+
 @app.post('/sendCellSimple', response_model=TonResponse, response_model_exclude_none=True, include_in_schema=False, tags=['send'])
 @json_rpc('sendCellSimple')
 @wrap_result
@@ -631,7 +653,7 @@ if settings.webserver.get_methods:
 
 if settings.webserver.json_rpc:
     @app.post('/jsonRPC', response_model=TonResponseJsonRPC, response_model_exclude_none=True, tags=['json rpc'])
-    async def jsonrpc_handler(json_rpc: TonRequestJsonRPC, request: Request, response: Response):
+    async def jsonrpc_handler(json_rpc: TonRequestJsonRPC, request: Request, response: Response, background_tasks: BackgroundTasks):
         """
         All methods in the API are available through JSON-RPC protocol ([spec](https://www.jsonrpc.org/specification)). 
         """
@@ -646,10 +668,11 @@ if settings.webserver.json_rpc:
 
         try:
             if 'request' in inspect.signature(handler).parameters.keys():
-                result = await handler(request=request, **params)
-            else:
-                result = await handler(**params)
+                params['request'] = request
+            if 'background_tasks' in inspect.signature(handler).parameters.keys():
+                params['background_tasks'] = background_tasks
 
+            result = await handler(**params)
         except TypeError as e:
             response.status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
             return TonResponseJsonRPC(ok=False, error=f'TypeError: {e}', id=_id)
