@@ -23,7 +23,7 @@ from tvm_valuetypes.cell import deserialize_cell_from_object
 
 from pyTON.models import TonResponse, TonResponseJsonRPC, TonRequestJsonRPC
 from pyTON.manager import TonlibManager
-from pyTON.logging import LoggingManager, MongoLoggingManager, LoggerMiddleware, generic_exception_handler, generic_http_exception_handler
+from pyTON.logging import LoggingManager, MongoLoggingManager
 from pyTON.cache import CacheManager, RedisCacheManager, DisabledCacheManager
 from pyTON.settings import Settings, MongoDBLoggingSettings, RedisCacheSettings
 
@@ -152,7 +152,8 @@ def startup():
 # Exception handlers
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request, exc):
-    return generic_http_exception_handler(exc)
+    res = TonResponse(ok=False, error=str(exc.detail), code=exc.status_code)
+    return JSONResponse(res.dict(exclude_none=True), status_code=res.code)
 
 
 @app.exception_handler(RequestValidationError)
@@ -175,7 +176,8 @@ async def tonlib_wront_result_exception_handler(request, exc):
 
 @app.exception_handler(Exception)
 async def fastapi_generic_exception_handler(request, exc):
-    return generic_exception_handler(exc)
+    res = TonResponse(ok=False, error=str(exc), code=status.HTTP_503_SERVICE_UNAVAILABLE)
+    return JSONResponse(res.dict(exclude_none=True), status_code=status.HTTP_503_SERVICE_UNAVAILABLE)
 
 
 # Helper functions
@@ -678,8 +680,3 @@ if settings.webserver.json_rpc:
             return TonResponseJsonRPC(ok=False, error=f'TypeError: {e}', id=_id)
         
         return TonResponseJsonRPC(ok=result.ok, result=result.result, error=result.error, code=result.code, id=_id)
-
-
-app.add_middleware(LoggerMiddleware, 
-                   settings=inject.instance(Settings), 
-                   logging_manager=inject.instance(LoggingManager))
