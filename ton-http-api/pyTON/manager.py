@@ -5,11 +5,11 @@ import random
 import aioprocessing as ap
 
 from collections import defaultdict
+from collections.abc import Mapping
 from copy import deepcopy
 
 from pyTON.worker import TonlibWorker
 from pyTON.models import TonlibWorkerMsgType, TonlibClientResult, ConsensusBlock
-from pyTON.logging import LoggingManager, DisabledLoggingManager
 from pyTON.cache import CacheManager, DisabledCacheManager
 from pytonlib.client import TonLibWrongResult
 from pyTON.settings import TonlibSettings
@@ -26,12 +26,10 @@ class TonlibManager:
                  tonlib_settings: TonlibSettings,
                  dispatcher: Optional["Dispatcher"]=None,
                  cache_manager: Optional["CacheManager"]=None,
-                 logging_manager: Optional[LoggingManager]=None,
                  loop: Optional[asyncio.BaseEventLoop]=None):
         self.tonlib_settings = tonlib_settings
         self.dispatcher = dispatcher
         self.cache_manager = cache_manager or DisabledCacheManager()
-        self.logging_manager = logging_manager or LoggingManager()
 
         self.workers = {}
         self.futures = {}
@@ -103,6 +101,30 @@ class TonlibManager:
             self.workers[ls_index]['reader'].cancel()
         self.workers[ls_index]['is_enabled'] = enabled
 
+    def log_liteserver_task(self, task_result: TonlibClientResult):
+        result_type = None
+        if isinstance(task_result.result, Mapping):
+            result_type = task_result.result.get('@type', 'unknown') if task_result.result else 'error'
+        else:
+            result_type = 'list'
+        details = {}
+        if result_type == 'error' or result_type == 'unknown':
+            details['params'] = [str(p) for p in task_result.params]
+            details['result'] = task_result.result
+            details['exception'] = str(task_result.exception)
+        
+        rec = {
+            'timestamp': datetime.utcnow(),
+            'elapsed': task_result.elapsed_time,
+            'task_id': task_result.task_id,
+            'method': task_result.method,
+            'liteserver_info': task_result.liteserver_info,
+            'result_type': result_type,
+            'details': details,
+        }
+
+        logger.info("Received result of type: {result_type} task_id: {task_id} method: {method}", **rec)
+
     async def read_results(self, ls_index):
         worker = self.workers[ls_index]['worker']
         while True:
@@ -118,14 +140,8 @@ class TonlibManager:
                             self.futures[task_id].set_exception(exception)
                         if result is not None:    
                             self.futures[task_id].set_result(result)
-                        logger.debug("Client #{ls_index:03d}, task '{task_id}' result: {result}, exception: {exception}", 
-                            ls_index=ls_index, task_id=task_id, result=result, exception=exception)
                         
-                        # log liteserver task
-                        try:
-                            self.logging_manager.log_liteserver_task(msg_content)
-                        except:
-                            logger.critical("Error while logging liteserver task: {format_exc}", format_exc=traceback.format_exc())
+                        self.log_liteserver_task(msg_content)
                     else:
                         logger.warning("Client #{ls_index:03d}, task '{task_id}' doesn't exist or is done.", ls_index=ls_index, task_id=task_id)
 
@@ -137,8 +153,8 @@ class TonlibManager:
 
                 if msg_type == TonlibWorkerMsgType.DEAD_REPORT:
                     self.spawn_worker(ls_index, force_restart=True)
-            except Exception as e:
-                logger.error("read_output exception {format_exc}", format_exc=traceback.format_exc())
+            except:
+                logger.error("read_results exception {format_exc}", format_exc=traceback.format_exc())
         
     async def check_working(self):
         try:

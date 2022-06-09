@@ -1,7 +1,7 @@
 version: '3.7'
 services:
   main:
-    image: ${DOCKER_REGISTRY:-toncenter}/ton-http-api
+    image: toncenter/ton-http-api
     build: 
       context: ton-http-api
       dockerfile: .docker/Dockerfile
@@ -12,20 +12,12 @@ services:
       - TON_API_CACHE_REDIS_ENDPOINT
       - TON_API_CACHE_REDIS_PORT
       - TON_API_CACHE_REDIS_TIMEOUT
-      - TON_API_LOGS_ENABLED
       - TON_API_LOGS_JSONIFY
-      - TON_API_LOGS_LOG_SUCCESSFUL
-      - TON_API_LOGS_MONGODB_HOST
-      - TON_API_LOGS_MONGODB_PORT
-      - TON_API_LOGS_MONGODB_DATABASE
-      - TON_API_LOGS_MONGODB_USERNAME
-      - TON_API_LOGS_MONGODB_PASSWORD_FILE
       - TON_API_TONLIB_LITESERVER_CONFIG=/run/secrets/liteserver_config
       - TON_API_TONLIB_KEYSTORE
       - TON_API_TONLIB_PARALLEL_REQUESTS_PER_LITESERVER
       - TON_API_TONLIB_CDLL_PATH
       - TON_API_TONLIB_REQUEST_TIMEOUT
-      - FORWARDED_ALLOW_IPS=${TON_API_FORWARDED_ALLOW_IPS}
       - TON_API_GET_METHODS_ENABLED
       - TON_API_JSON_RPC_ENABLED
       - TON_API_ROOT_PATH

@@ -7,7 +7,6 @@ pyyaml
 fastapi
 pydantic
 uvicorn
-pymongo
 crc16
 limits
 requests

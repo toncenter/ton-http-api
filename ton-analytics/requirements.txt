@@ -1,9 +1,0 @@
-loguru
-pyyaml
-fastapi
-pydantic
-uvicorn
-pymongo
-pytimeparse
-pandas
-Inject
