@@ -51,7 +51,8 @@ class TonlibWorker(mp.Process):
                                    config=self.tonlib_settings.liteserver_config,
                                    keystore=self.tonlib_settings.keystore,
                                    loop=self.loop,
-                                   cdll_path=self.tonlib_settings.cdll_path)
+                                   cdll_path=self.tonlib_settings.cdll_path,
+                                   verbosity_level=self.tonlib_settings.verbosity_level)
         self.loop.run_until_complete(self.tonlib.init())
 
         # creating tasks

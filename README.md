@@ -82,6 +82,10 @@ The service supports the following environment variables for configuration:
 
   Enables printing all logs in json format.
 
+- `TON_API_LOGS_LEVEL` *(default: ERROR)*
+
+  Defines log verbosity level. Values allowed: `DEBUG`,`INFO`,`WARNING`,`ERROR`,`CRITICAL`.
+
 #### Tonlib settings
 - `TON_API_TONLIB_LITESERVER_CONFIG` *(default docker: private/mainnet.json local: https://ton.org/global-config.json)*
 

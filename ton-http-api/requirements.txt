@@ -5,7 +5,6 @@ loguru
 fastapi
 pydantic
 uvicorn
-crc16
 requests
 ring
 gunicorn

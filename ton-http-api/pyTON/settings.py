@@ -23,6 +23,7 @@ class TonlibSettings:
     liteserver_config_path: str
     cdll_path: Optional[str] 
     request_timeout: int
+    verbosity_level: int
     
     @property
     def liteserver_config(self):
@@ -36,11 +37,15 @@ class TonlibSettings:
 
     @classmethod
     def from_environment(cls):
+        verbosity_level = 0
+        if os.environ.get('TON_API_LOGS_LEVEL') == 'DEBUG':
+            verbosity_level = 4
         return TonlibSettings(parallel_requests_per_liteserver=int(os.environ.get('TON_API_TONLIB_PARALLEL_REQUESTS_PER_LITESERVER', '50')),
                               keystore=os.environ.get('TON_API_TONLIB_KEYSTORE', './ton_keystore/'),
                               liteserver_config_path=os.environ.get('TON_API_TONLIB_LITESERVER_CONFIG', 'https://ton.org/global-config.json'),
                               cdll_path=os.environ.get('TON_API_TONLIB_CDLL_PATH', None),
-                              request_timeout=int(os.environ.get('TON_API_TONLIB_REQUEST_TIMEOUT', '10')))
+                              request_timeout=int(os.environ.get('TON_API_TONLIB_REQUEST_TIMEOUT', '10')),
+                              verbosity_level=verbosity_level)
 
 
 @dataclass
@@ -60,10 +65,12 @@ class RedisSettings:
 @dataclass
 class LoggingSettings:
     jsonify: bool
+    level: str
 
     @classmethod
     def from_environment(cls):
-        return LoggingSettings(jsonify=strtobool(os.environ.get('TON_API_LOGS_JSONIFY', '0')))
+        return LoggingSettings(jsonify=strtobool(os.environ.get('TON_API_LOGS_JSONIFY', '0')),
+                               level=os.environ.get('TON_API_LOGS_LEVEL', 'WARNING'))
 
 
 @dataclass
