@@ -17,15 +17,13 @@ from fastapi.exceptions import HTTPException, RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.responses import JSONResponse
 from fastapi import status
-from pymongo import MongoClient
 
 from tvm_valuetypes.cell import deserialize_cell_from_object
 
 from pyTON.models import TonResponse, TonResponseJsonRPC, TonRequestJsonRPC
 from pyTON.manager import TonlibManager
-from pyTON.logging import LoggingManager, MongoLoggingManager
 from pyTON.cache import CacheManager, RedisCacheManager, DisabledCacheManager
-from pyTON.settings import Settings, MongoDBLoggingSettings, RedisCacheSettings
+from pyTON.settings import Settings, RedisCacheSettings
 
 from pytonlib.utils.address import detect_address as __detect_address, prepare_address as _prepare_address
 from pytonlib.utils.wallet import wallets as known_wallets, sha256
@@ -40,17 +38,7 @@ def main_config(binder):
     settings = Settings.from_environment()
     binder.bind(Settings, settings)
 
-    # logging
-    if settings.logging.enabled:
-        if isinstance(settings.logging, MongoDBLoggingSettings):
-            logging_manager = MongoLoggingManager(settings.logging)
-            binder.bind(LoggingManager, logging_manager)
-        else:
-            raise RuntimeError('Only MongoDB logging supported')
-    else:
-        logging_manager = LoggingManager()
-        binder.bind(LoggingManager, logging_manager)
-
+    # cache
     if settings.cache.enabled:
         if isinstance(settings.cache, RedisCacheSettings):
             cache_manager = RedisCacheManager(settings.cache)
@@ -125,27 +113,16 @@ tonlib = None
 @app.on_event("startup")
 def startup():
     logger.remove(0)
-    logger.add(sys.stdout, level='INFO', enqueue=True, serialize=settings.logging.jsonify)
-    try:
-        logger.add(f'/var/log/main_{os.getpid()}.log', 
-                   level='INFO', 
-                   enqueue=True,
-                   serialize=False,
-                   backtrace=False,
-                   rotation='2 weeks')
-    except Exception as ee:
-        logger.info(f'Failed to add file to logger: {ee}')
+    logger.add(sys.stdout, level=settings.logging.level, enqueue=True, serialize=settings.logging.jsonify)
 
     # setup tonlib multiclient
     global tonlib
 
     loop = asyncio.get_event_loop()
-    logging_manager = inject.instance(LoggingManager)
     cache_manager = inject.instance(CacheManager)
     tonlib = TonlibManager(tonlib_settings=settings.tonlib,
                            dispatcher=None,
                            cache_manager=cache_manager,
-                           logging_manager=logging_manager,
                            loop=loop)
 
 

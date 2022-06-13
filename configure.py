@@ -9,16 +9,8 @@ LOCAL_ENV = {
     'TON_API_CACHE_REDIS_ENDPOINT': 'cache_redis',
     'TON_API_CACHE_REDIS_PORT': '6379',
     'TON_API_CACHE_REDIS_TIMEOUT': '1',
-    'TON_API_LOGS_ENABLED': '0',
     'TON_API_LOGS_JSONIFY': '0',
-    'TON_API_LOGS_MONGODB_HOST': 'mongodb',
-    'TON_API_LOGS_MONGODB_PORT': '27017',
-    'TON_API_LOGS_MONGODB_DATABASE': 'pyton',
-    'TON_API_LOGS_MONGODB_USERNAME': 'user1',
-    'TON_API_LOGS_MONGODB_PASSWORD_FILE': '/run/secrets/mongodb_password',
-    'TON_API_ANALYTICS_PORT': '8081',
-    'TON_API_ANALYTICS_ROOT_PATH': '/',
-    'TON_API_FORWARDED_ALLOW_IPS': '',
+    'TON_API_LOGS_LEVEL': 'ERROR',
     'TON_API_GET_METHODS_ENABLED': '1',
     'TON_API_HTTP_PORT': '80',
     'TON_API_JSON_RPC_ENABLED': '1',
@@ -28,8 +20,7 @@ LOCAL_ENV = {
     'TON_API_TONLIB_KEYSTORE': '/tmp/ton_keystore/',
     'TON_API_TONLIB_PARALLEL_REQUESTS_PER_LITESERVER': '50',
     'TON_API_TONLIB_CDLL_PATH': '',
-    'TON_API_TONLIB_REQUEST_TIMEOUT': '10',
-    'DOCKER_REGISTRY': 'toncenter',
+    'TON_API_TONLIB_REQUEST_TIMEOUT': '10'
 }
 
 
@@ -50,11 +41,8 @@ def main():
     compose_file = 'docker-compose.yaml'
 
     cache_enabled = strtobool(default_env['TON_API_CACHE_ENABLED'])
-    logs_enabled = strtobool(default_env['TON_API_LOGS_ENABLED'])
     if cache_enabled:
         compose_file += ':docker-compose.cache.yaml'
-    if logs_enabled:
-        compose_file += ':docker-compose.logs.yaml'
     default_env['COMPOSE_FILE'] = compose_file
 
     env_content = ''

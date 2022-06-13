@@ -23,6 +23,7 @@ class TonlibSettings:
     liteserver_config_path: str
     cdll_path: Optional[str] 
     request_timeout: int
+    verbosity_level: int
     
     @property
     def liteserver_config(self):
@@ -36,40 +37,15 @@ class TonlibSettings:
 
     @classmethod
     def from_environment(cls):
+        verbosity_level = 0
+        if os.environ.get('TON_API_LOGS_LEVEL') == 'DEBUG':
+            verbosity_level = 4
         return TonlibSettings(parallel_requests_per_liteserver=int(os.environ.get('TON_API_TONLIB_PARALLEL_REQUESTS_PER_LITESERVER', '50')),
                               keystore=os.environ.get('TON_API_TONLIB_KEYSTORE', './ton_keystore/'),
                               liteserver_config_path=os.environ.get('TON_API_TONLIB_LITESERVER_CONFIG', 'https://ton.org/global-config.json'),
                               cdll_path=os.environ.get('TON_API_TONLIB_CDLL_PATH', None),
-                              request_timeout=int(os.environ.get('TON_API_TONLIB_REQUEST_TIMEOUT', '10')))
-
-
-@dataclass
-class MongoDBSettings:
-    host: str
-    port: int
-    database: str
-    username: Optional[str]
-    password_file: Optional[str]
-
-    @property
-    def password(self):
-        if self.password_file is None:
-            return None
-        try:
-            with open(self.password_file, 'r') as f:
-                return f.read()
-        except Exception as ee:
-            logger.error(f'Failed to read password from file: {ee}')
-            return None
-
-    @classmethod
-    def from_environment(cls, settings_type):
-        if settings_type == 'logging':
-            return MongoDBSettings(host=os.environ.get('TON_API_LOGS_MONGODB_HOST', 'localhost'),
-                                   port=int(os.environ.get('TON_API_LOGS_MONGODB_PORT', '27017')),
-                                   database=os.environ.get('TON_API_LOGS_MONGODB_DATABASE', 'pyton'),
-                                   username=os.environ.get('TON_API_LOGS_MONGODB_USERNAME', None),
-                                   password_file=os.environ.get('TON_API_LOGS_MONGODB_PASSWORD_FILE', None))
+                              request_timeout=int(os.environ.get('TON_API_TONLIB_REQUEST_TIMEOUT', '10')),
+                              verbosity_level=verbosity_level)
 
 
 @dataclass
@@ -88,30 +64,13 @@ class RedisSettings:
 
 @dataclass
 class LoggingSettings:
-    enabled: bool
     jsonify: bool
-    log_successful_requests: bool
-    record_ttl: int
+    level: str
 
     @classmethod
     def from_environment(cls):
-        return LoggingSettings(enabled=False,
-                               jsonify=False,
-                               log_successful_requests=False,
-                               record_ttl=86400)
-
-
-@dataclass
-class MongoDBLoggingSettings(LoggingSettings):
-    mongodb: MongoDBSettings
-
-    @classmethod
-    def from_environment(cls):
-        return MongoDBLoggingSettings(enabled=strtobool(os.environ.get('TON_API_LOGS_ENABLED', '0')),
-                                      jsonify=strtobool(os.environ.get('TON_API_LOGS_JSONIFY', '0')),
-                                      log_successful_requests=strtobool(os.environ.get('TON_API_LOGS_LOG_SUCCESSFUL', '0')),
-                                      record_ttl=86400,
-                                      mongodb=MongoDBSettings.from_environment('logging'))
+        return LoggingSettings(jsonify=strtobool(os.environ.get('TON_API_LOGS_JSONIFY', '0')),
+                               level=os.environ.get('TON_API_LOGS_LEVEL', 'WARNING'))
 
 
 @dataclass
@@ -150,15 +109,14 @@ class WebServerSettings:
 class Settings:
     tonlib: TonlibSettings
     webserver: WebServerSettings
-    logging: LoggingSettings
     cache: CacheSettings
+    logging: LoggingSettings
 
     @classmethod
     def from_environment(cls):
         loggging_enabled = strtobool(os.environ.get('TON_API_LOGS_ENABLED', '0'))
         cache_enabled = strtobool(os.environ.get('TON_API_CACHE_ENABLED', '0'))
-
-        logging = (MongoDBLoggingSettings if loggging_enabled else LoggingSettings).from_environment()
+        logging = LoggingSettings.from_environment()
         cache = (RedisCacheSettings if cache_enabled else CacheSettings).from_environment()
         return Settings(tonlib=TonlibSettings.from_environment(),
                         webserver=WebServerSettings.from_environment(),

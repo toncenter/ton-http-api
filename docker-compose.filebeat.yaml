@@ -1,0 +1,5 @@
+version: '3.7'
+services:
+  main:
+    labels:
+      co.elastic.logs/enabled: "true"

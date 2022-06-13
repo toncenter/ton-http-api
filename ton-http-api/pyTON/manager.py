@@ -5,11 +5,11 @@ import random
 import aioprocessing as ap
 
 from collections import defaultdict
+from collections.abc import Mapping
 from copy import deepcopy
 
 from pyTON.worker import TonlibWorker
 from pyTON.models import TonlibWorkerMsgType, TonlibClientResult, ConsensusBlock
-from pyTON.logging import LoggingManager, DisabledLoggingManager
 from pyTON.cache import CacheManager, DisabledCacheManager
 from pytonlib.client import TonLibWrongResult
 from pyTON.settings import TonlibSettings
@@ -26,12 +26,10 @@ class TonlibManager:
                  tonlib_settings: TonlibSettings,
                  dispatcher: Optional["Dispatcher"]=None,
                  cache_manager: Optional["CacheManager"]=None,
-                 logging_manager: Optional[LoggingManager]=None,
                  loop: Optional[asyncio.BaseEventLoop]=None):
         self.tonlib_settings = tonlib_settings
         self.dispatcher = dispatcher
         self.cache_manager = cache_manager or DisabledCacheManager()
-        self.logging_manager = logging_manager or LoggingManager()
 
         self.workers = {}
         self.futures = {}
@@ -103,6 +101,30 @@ class TonlibManager:
             self.workers[ls_index]['reader'].cancel()
         self.workers[ls_index]['is_enabled'] = enabled
 
+    def log_liteserver_task(self, task_result: TonlibClientResult):
+        result_type = None
+        if isinstance(task_result.result, Mapping):
+            result_type = task_result.result.get('@type', 'unknown') if task_result.result else 'error'
+        else:
+            result_type = 'list'
+        details = {}
+        if result_type == 'error' or result_type == 'unknown':
+            details['params'] = [str(p) for p in task_result.params]
+            details['result'] = task_result.result
+            details['exception'] = str(task_result.exception)
+        
+        rec = {
+            'timestamp': datetime.utcnow(),
+            'elapsed': task_result.elapsed_time,
+            'task_id': task_result.task_id,
+            'method': task_result.method,
+            'liteserver_info': task_result.liteserver_info,
+            'result_type': result_type,
+            'details': details,
+        }
+
+        logger.info("Received result of type: {result_type}, method: {method}, task_id: {task_id}", **rec)
+
     async def read_results(self, ls_index):
         worker = self.workers[ls_index]['worker']
         while True:
@@ -118,14 +140,8 @@ class TonlibManager:
                             self.futures[task_id].set_exception(exception)
                         if result is not None:    
                             self.futures[task_id].set_result(result)
-                        logger.debug("Client #{ls_index:03d}, task '{task_id}' result: {result}, exception: {exception}", 
-                            ls_index=ls_index, task_id=task_id, result=result, exception=exception)
                         
-                        # log liteserver task
-                        try:
-                            self.logging_manager.log_liteserver_task(msg_content)
-                        except:
-                            logger.critical("Error while logging liteserver task: {format_exc}", format_exc=traceback.format_exc())
+                        self.log_liteserver_task(msg_content)
                     else:
                         logger.warning("Client #{ls_index:03d}, task '{task_id}' doesn't exist or is done.", ls_index=ls_index, task_id=task_id)
 
@@ -137,8 +153,8 @@ class TonlibManager:
 
                 if msg_type == TonlibWorkerMsgType.DEAD_REPORT:
                     self.spawn_worker(ls_index, force_restart=True)
-            except Exception as e:
-                logger.error("read_output exception {format_exc}", format_exc=traceback.format_exc())
+            except:
+                logger.error("read_results exception {format_exc}", format_exc=traceback.format_exc())
         
     async def check_working(self):
         try:
@@ -228,6 +244,9 @@ class TonlibManager:
         task_id = "{}:{}".format(time.time(), random.random())
         timeout = time.time() + self.tonlib_settings.request_timeout
         self.workers[ls_index]['tasks_count'] += 1
+
+        logger.info("Sending request method: {method}, task_id: {task_id}, ls_index: {ls_index}", 
+            method=method, task_id=task_id, ls_index=ls_index)
         await self.workers[ls_index]['worker'].input_queue.coro_put((task_id, timeout, method, args, kwargs))
 
         try:
@@ -245,7 +264,6 @@ class TonlibManager:
         ls_index = self.select_worker(archival=True)
         return self.dispatch_request_to_worker(method, ls_index, *args, **kwargs)
 
-    # @redis_cached(expire=5)
     async def raw_get_transactions(self, account_address: str, from_transaction_lt: str, from_transaction_hash: str, archival: bool):
         method = 'raw_get_transactions'
         if archival:
@@ -253,7 +271,6 @@ class TonlibManager:
         else:
             return await self.dispatch_request(method, account_address, from_transaction_lt, from_transaction_hash)
 
-    # @redis_cached(expire=15, check_error=False)
     async def get_transactions(self, account_address, from_transaction_lt=None, from_transaction_hash=None, to_transaction_lt=0, limit=10, decode_messages=True, archival=False):
         """
          Return all transactions between from_transaction_lt and to_transaction_lt
@@ -266,7 +283,6 @@ class TonlibManager:
         else:
             return await self.dispatch_request(method, account_address, from_transaction_lt, from_transaction_hash, to_transaction_lt, limit, decode_messages)
 
-    # @redis_cached(expire=5)
     async def raw_get_account_state(self, address: str):
         method = 'raw_get_account_state'
         addr = await self.dispatch_request(method, address)
@@ -277,11 +293,9 @@ class TonlibManager:
             raise TonLibWrongResult("raw.getAccountState failed", addr)
         return addr
 
-    # @redis_cached(expire=5)
     async def generic_get_account_state(self, address: str):
         return await self.dispatch_request('generic_get_account_state', address)
 
-    # @redis_cached(expire=5)
     async def raw_run_method(self, address, method, stack_data, output_layout=None):
         return await self.dispatch_request('raw_run_method', address, method, stack_data, output_layout)
 
@@ -318,11 +332,9 @@ class TonlibManager:
     async def raw_create_and_send_message(self, destination, body, initial_account_state=b''):
         return await self.dispatch_request('raw_create_and_send_message', destination, body, initial_account_state)
 
-    # @redis_cached(expire=5)
     async def raw_estimate_fees(self, destination, body, init_code=b'', init_data=b'', ignore_chksig=True):
         return await self.dispatch_request('raw_estimate_fees', destination, body, init_code, init_data, ignore_chksig)
 
-    # @redis_cached(expire=1)
     async def getMasterchainInfo(self):
         return await self.dispatch_request('get_masterchain_info')
 
@@ -332,7 +344,6 @@ class TonlibManager:
             "timestamp": self.consensus_block.timestamp
         }
 
-    # @redis_cached(expire=600)
     async def lookupBlock(self, workchain, shard, seqno=None, lt=None, unixtime=None):
         method = 'lookup_block'
         if workchain == -1 and seqno and self.consensus_block.seqno - seqno < 2000:
@@ -340,7 +351,6 @@ class TonlibManager:
         else:
             return await self.dispatch_archival_request(method, workchain, shard, seqno, lt, unixtime)
 
-    # @redis_cached(expire=600)
     async def getShards(self, master_seqno=None, lt=None, unixtime=None):
         method = 'get_shards'
         if master_seqno and self.consensus_block.seqno - master_seqno < 2000:
@@ -348,15 +358,12 @@ class TonlibManager:
         else:
             return await self.dispatch_archival_request(method, master_seqno)
 
-    # @redis_cached(expire=600)
     async def raw_getBlockTransactions(self, fullblock, count, after_tx):
         return await self.dispatch_archival_request('raw_get_block_transactions', fullblock, count, after_tx)
 
-    # @redis_cached(expire=600)
     async def getBlockTransactions(self, workchain, shard, seqno, count, root_hash=None, file_hash=None, after_lt=None, after_hash=None):
         return await self.dispatch_archival_request('get_block_transactions', workchain, shard, seqno, count, root_hash, file_hash, after_lt, after_hash)
 
-    # @redis_cached(expire=600)
     async def getBlockHeader(self, workchain, shard, seqno, root_hash=None, file_hash=None):
         method = 'get_block_header'
         if workchain == -1 and seqno and self.consensus_block.seqno - seqno < 2000:
@@ -364,10 +371,8 @@ class TonlibManager:
         else:
             return await self.dispatch_archival_request(method, workchain, shard, seqno, root_hash, file_hash)
 
-    # @redis_cached(expire=600, check_error=False)
     async def tryLocateTxByOutcomingMessage(self, source, destination, creation_lt):
         return await self.dispatch_archival_request('try_locate_tx_by_outcoming_message',  source, destination, creation_lt)
 
-    # @redis_cached(expire=600, check_error=False)
     async def tryLocateTxByIncomingMessage(self, source, destination, creation_lt):
         return await self.dispatch_archival_request('try_locate_tx_by_incoming_message',  source, destination, creation_lt)
