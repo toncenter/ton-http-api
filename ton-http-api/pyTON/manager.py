@@ -366,8 +366,8 @@ class TonlibManager:
 
     # @redis_cached(expire=600, check_error=False)
     async def tryLocateTxByOutcomingMessage(self, source, destination, creation_lt):
-        return await self.dispatch_archival_request('try_locate_tx_by_incoming_message',  source, destination, creation_lt)
+        return await self.dispatch_archival_request('try_locate_tx_by_outcoming_message',  source, destination, creation_lt)
 
     # @redis_cached(expire=600, check_error=False)
     async def tryLocateTxByIncomingMessage(self, source, destination, creation_lt):
-        return await self.dispatch_archival_request('try_locate_tx_by_outcoming_message',  source, destination, creation_lt)
+        return await self.dispatch_archival_request('try_locate_tx_by_incoming_message',  source, destination, creation_lt)
