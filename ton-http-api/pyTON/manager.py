@@ -372,7 +372,7 @@ class TonlibManager:
             return await self.dispatch_archival_request(method, workchain, shard, seqno, root_hash, file_hash)
 
     async def tryLocateTxByOutcomingMessage(self, source, destination, creation_lt):
-        return await self.dispatch_archival_request('try_locate_tx_by_incoming_message',  source, destination, creation_lt)
+        return await self.dispatch_archival_request('try_locate_tx_by_outcoming_message',  source, destination, creation_lt)
 
     async def tryLocateTxByIncomingMessage(self, source, destination, creation_lt):
-        return await self.dispatch_archival_request('try_locate_tx_by_outcoming_message',  source, destination, creation_lt)
+        return await self.dispatch_archival_request('try_locate_tx_by_incoming_message',  source, destination, creation_lt)
