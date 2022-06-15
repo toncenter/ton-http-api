@@ -237,7 +237,7 @@ class TonlibManager:
         if len(suitable) < count:
             logger.warning('Required number of workers is not reached: found {found} of {count}', found=len(suitable), count=count)
         if len(suitable) == 0:
-            raise RuntimeError('No working liteservers!')
+            raise RuntimeError('No working liteservers with ls_index={ls_index}, archival={archival}}')
         return suitable[:count] if count > 1 else suitable[0]
 
     async def dispatch_request_to_worker(self, method, ls_index, *args, **kwargs):
@@ -261,7 +261,12 @@ class TonlibManager:
         return self.dispatch_request_to_worker(method, ls_index, *args, **kwargs)
 
     def dispatch_archival_request(self, method, *args, **kwargs):
-        ls_index = self.select_worker(archival=True)
+        ls_index = None
+        try:
+            ls_index = self.select_worker(archival=True)
+        except RuntimeError as ee:
+            logger.warning(f'Method {method} failed to execute on archival node: {ee}')
+            ls_index = self.select_worker(archival=False)
         return self.dispatch_request_to_worker(method, ls_index, *args, **kwargs)
 
     async def raw_get_transactions(self, account_address: str, from_transaction_lt: str, from_transaction_hash: str, archival: bool):
