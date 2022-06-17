@@ -125,6 +125,9 @@ def startup():
                            cache_manager=cache_manager,
                            loop=loop)
 
+@app.on_event("shutdown")
+async def shutdown_event():
+    await tonlib.shutdown()
 
 # Exception handlers
 @app.exception_handler(StarletteHTTPException)

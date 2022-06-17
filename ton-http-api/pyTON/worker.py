@@ -23,10 +23,12 @@ class TonlibWorker(mp.Process):
                  tonlib_settings: TonlibSettings,
                  input_queue: Optional[ap.AioQueue]=None,
                  output_queue: Optional[ap.AioQueue]=None):
-        super(TonlibWorker, self).__init__()
+        super(TonlibWorker, self).__init__(daemon=True)
 
         self.input_queue = input_queue or ap.AioQueue()
         self.output_queue = output_queue or ap.AioQueue()
+        self.input_queue.cancel_join_thread()
+        self.output_queue.cancel_join_thread()
 
         self.ls_index = ls_index
         self.tonlib_settings = tonlib_settings
