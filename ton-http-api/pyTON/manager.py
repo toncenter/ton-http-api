@@ -48,6 +48,16 @@ class TonlibManager:
         self.tasks['check_working'] = self.loop.create_task(self.check_working())
         self.tasks['check_children_alive'] = self.loop.create_task(self.check_children_alive())
 
+    async def shutdown(self):
+        self.tasks['check_working'].cancel()
+        await self.tasks['check_working']
+        
+        self.tasks['check_children_alive'].cancel()
+        await self.tasks['check_children_alive']
+
+        for i in self.workers:
+            await self.worker_control(i, enabled=False)
+
     def setup_cache(self):
         self.raw_get_transactions = self.cache_manager.cached(expire=5)(self.raw_get_transactions)
         self.get_transactions = self.cache_manager.cached(expire=15, check_error=False)(self.get_transactions)
@@ -76,6 +86,10 @@ class TonlibManager:
                 if worker_info['worker'].is_alive():
                     worker_info['worker'].terminate()
                     worker_info['worker'].join()
+                self.workers[ls_index]['worker'].output_queue.close()
+                self.workers[ls_index]['worker'].output_queue.join_thread()
+                self.workers[ls_index]['worker'].input_queue.close()
+                self.workers[ls_index]['worker'].input_queue.join_thread()
             except Exception as ee:
                 logger.error('Failed to delete existing process: {exc}', exc=ee)
         # running new worker
@@ -99,6 +113,13 @@ class TonlibManager:
             self.workers[ls_index]['worker'].terminate()
             self.workers[ls_index]['worker'].join()
             self.workers[ls_index]['reader'].cancel()
+            await self.workers[ls_index]['reader']
+
+            self.workers[ls_index]['worker'].output_queue.close()
+            self.workers[ls_index]['worker'].output_queue.join_thread()
+            self.workers[ls_index]['worker'].input_queue.close()
+            self.workers[ls_index]['worker'].input_queue.join_thread()
+
         self.workers[ls_index]['is_enabled'] = enabled
 
     def log_liteserver_task(self, task_result: TonlibClientResult):
@@ -153,6 +174,9 @@ class TonlibManager:
 
                 if msg_type == TonlibWorkerMsgType.DEAD_REPORT:
                     self.spawn_worker(ls_index, force_restart=True)
+            except asyncio.CancelledError:
+                logger.info("Task read_results was cancelled")
+                return
             except:
                 logger.error("read_results exception {format_exc}", format_exc=traceback.format_exc())
         
@@ -182,9 +206,11 @@ class TonlibManager:
                     self.workers[ls_index]['is_working'] = last_blocks[ls_index] >= self.consensus_block.seqno
 
                 await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            logger.info('Task check_working was cancelled')
+            return
         except:
             logger.critical('Task check_working dead: {format_exc}', format_exc=traceback.format_exc())
-        return
 
     async def check_children_alive(self):
         try:
@@ -200,17 +226,11 @@ class TonlibManager:
                         logger.error("Client #{ls_index:03d} dead!!! Exit code: {exit_code}", ls_index=ls_index, exit_code=self.workers[ls_index]['worker'].exitcode)
                         self.spawn_worker(ls_index, force_restart=True)
                 await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            logger.info('Task check_children_alive was cancelled')
+            return
         except:
-            logger.critical('Task check_working dead: {format_exc}', format_exc=traceback.format_exc())
-        return
-
-    async def idle_loop(self):
-        try:
-            while True:
-                await asyncio.sleep(1)
-        except:
-            logger.critical('Task idle_loop dead: {format_exc}', format_exc=traceback.format_exc())
-        return
+            logger.critical('Task check_children_alive dead: {format_exc}', format_exc=traceback.format_exc())
 
     def get_workers_state(self):
         result = {}
