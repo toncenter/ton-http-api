@@ -21,7 +21,6 @@ class DisabledCacheManager:
     def cached(self, expire=0, check_error=True):
         def g(func):
             def wrapper(*args, **kwargs):
-                print(f'Wrapperd function called: {args} {kwargs}')
                 return func(*args, **kwargs)
             return wrapper
         return g

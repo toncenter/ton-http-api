@@ -49,6 +49,9 @@ class TonlibManager:
         self.tasks['check_children_alive'] = self.loop.create_task(self.check_children_alive())
 
     async def shutdown(self):
+        for i in self.futures:
+            self.futures[i].cancel()
+        
         self.tasks['check_working'].cancel()
         await self.tasks['check_working']
         
