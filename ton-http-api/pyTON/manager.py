@@ -184,8 +184,8 @@ class TonlibManager:
                 logger.error("read_results exception {format_exc}", format_exc=traceback.format_exc())
         
     async def check_working(self):
-        try:
-            while True:
+        while True:
+            try:
                 last_blocks = [self.workers[ls_index]['worker'].last_block for ls_index in self.workers]
                 best_block = max([i for i in last_blocks])
                 consensus_block_seqno = 0
@@ -209,15 +209,15 @@ class TonlibManager:
                     self.workers[ls_index]['is_working'] = last_blocks[ls_index] >= self.consensus_block.seqno
 
                 await asyncio.sleep(1)
-        except asyncio.CancelledError:
-            logger.info('Task check_working was cancelled')
-            return
-        except:
-            logger.critical('Task check_working dead: {format_exc}', format_exc=traceback.format_exc())
+            except asyncio.CancelledError:
+                logger.info('Task check_working was cancelled')
+                return
+            except:
+                logger.critical('Task check_working dead: {format_exc}', format_exc=traceback.format_exc())
 
     async def check_children_alive(self):
-        try:
-            while True:
+        while True:
+            try:
                 for ls_index in self.workers:
                     worker_info = self.workers[ls_index]
                     worker_info['is_enabled'] = worker_info['is_enabled'] or time.time() > worker_info.get('time_to_alive', 1e10)
@@ -229,11 +229,11 @@ class TonlibManager:
                         logger.error("Client #{ls_index:03d} dead!!! Exit code: {exit_code}", ls_index=ls_index, exit_code=self.workers[ls_index]['worker'].exitcode)
                         self.spawn_worker(ls_index, force_restart=True)
                 await asyncio.sleep(1)
-        except asyncio.CancelledError:
-            logger.info('Task check_children_alive was cancelled')
-            return
-        except:
-            logger.critical('Task check_children_alive dead: {format_exc}', format_exc=traceback.format_exc())
+            except asyncio.CancelledError:
+                logger.info('Task check_children_alive was cancelled')
+                return
+            except:
+                logger.critical('Task check_children_alive dead: {format_exc}', format_exc=traceback.format_exc())
 
     def get_workers_state(self):
         result = {}
