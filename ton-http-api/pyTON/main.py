@@ -515,6 +515,7 @@ async def send_boc_unsafe(
     """
     boc = base64.b64decode(boc)
     background_tasks.add_task(send_boc_unsafe_task, boc)
+    return {'@type': 'ok', '@extra': '0:0:0'}
 
 @app.post('/sendCellSimple', response_model=TonResponse, response_model_exclude_none=True, include_in_schema=False, tags=['send'])
 @json_rpc('sendCellSimple')
