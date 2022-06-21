@@ -58,7 +58,12 @@ jobs:
             --cache-from=${DOCKER_IMAGE}:latest
 
           echo "Pulling latest image for cache"
-          docker pull ${DOCKER_IMAGE}:latest || true
+          IFS=', ' read -r -a PLATFORMS <<< "${DOCKER_PLATFORMS}"
+          for platform in "${PLATFORMS[@]}"
+          do
+            echo "Pulling image for platform ${platform}"
+            docker pull --platform ${platform} ${{ steps.prepare.outputs.docker_image }}:latest || true
+          done
       - name: Docker Buildx (build)
         run: |
           docker buildx build --output "type=image,push=false" ${{ steps.prepare.outputs.buildx_args }}
