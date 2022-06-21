@@ -27,8 +27,7 @@ class TonlibWorker(mp.Process):
 
         self.input_queue = input_queue or ap.AioQueue()
         self.output_queue = output_queue or ap.AioQueue()
-        self.input_queue.cancel_join_thread()
-        self.output_queue.cancel_join_thread()
+        self.exit_event = mp.Event()
 
         self.ls_index = ls_index
         self.tonlib_settings = tonlib_settings
@@ -61,7 +60,22 @@ class TonlibWorker(mp.Process):
         self.tasks['report_last_block'] = self.loop.create_task(self.report_last_block())
         self.tasks['report_archival'] = self.loop.create_task(self.report_archival())
         self.tasks['main_loop'] = self.loop.create_task(self.main_loop())
-        self.loop.run_until_complete(self.idle_loop())
+        self.tasks['idle_loop'] = self.loop.create_task(self.idle_loop())
+
+        finished, unfinished = self.loop.run_until_complete(asyncio.wait([
+            self.tasks['report_last_block'], self.tasks['report_archival'], self.tasks['main_loop'], self.tasks['idle_loop']], 
+            return_when=asyncio.FIRST_COMPLETED))
+        
+        self.exit_event.set()        
+        
+        for to_cancel in unfinished:
+            to_cancel.cancel()
+            self.loop.run_until_complete(to_cancel)
+
+        self.output_queue.cancel_join_thread()
+        self.input_queue.cancel_join_thread()
+        self.output_queue.close()
+        self.input_queue.close()
 
     @property
     def info(self):
@@ -73,97 +87,81 @@ class TonlibWorker(mp.Process):
             'number': self.ls_index,
         }
 
-    async def report_dead(self):
-        if not self.is_dead:
-            self.is_dead = True
-            
-            format_exc = traceback.format_exc()
-            logger.error('Dead report: {format_exc}', format_exc=format_exc)
-            await self.output_queue.coro_put((TonlibWorkerMsgType.DEAD_REPORT, format_exc))
-
     async def report_last_block(self):
-        try:
-            while not self.is_dead:
-                last_block = -1
-                try:
-                    masterchain_info = await self.tonlib.get_masterchain_info()
-                    last_block = masterchain_info["last"]["seqno"]
-                    self.timeout_count = 0
-                except asyncio.CancelledError:
-                    logger.warning('Client #{ls_index:03d} report_last_block timeout', ls_index=self.ls_index)
-                    self.timeout_count += 1
-                except Exception as e:
-                    logger.error("Client #{ls_index:03d} report_last_block exception: {exc}", ls_index=self.ls_index, exc=e)
-                    self.timeout_count += 1
+        while not self.exit_event.is_set():
+            last_block = -1
+            try:
+                masterchain_info = await self.tonlib.get_masterchain_info()
+                last_block = masterchain_info["last"]["seqno"]
+                self.timeout_count = 0
+            except asyncio.CancelledError:
+                logger.warning('Client #{ls_index:03d} report_last_block timeout', ls_index=self.ls_index)
+                self.timeout_count += 1
+            except Exception as e:
+                logger.error("Client #{ls_index:03d} report_last_block exception: {exc}", ls_index=self.ls_index, exc=e)
+                self.timeout_count += 1
 
-                if self.timeout_count >= 10:
-                    raise RuntimeError(f'Client #{self.ls_index:03d} got {self.timeout_count} timeouts in report_last_block')
-                
-                self.last_block = last_block
-                await self.output_queue.coro_put((TonlibWorkerMsgType.LAST_BLOCK_UPDATE, self.last_block))
-                await asyncio.sleep(1)
-        except:
-            await self.report_dead()
+            if self.timeout_count >= 10:
+                raise RuntimeError(f'Client #{self.ls_index:03d} got {self.timeout_count} timeouts in report_last_block')
+            
+            self.last_block = last_block
+            await self.output_queue.coro_put((TonlibWorkerMsgType.LAST_BLOCK_UPDATE, self.last_block))
+            await asyncio.sleep(1)
 
     async def report_archival(self):
-        try:
-            while not self.is_dead:
-                is_archival = False
-                try:
-                    block_transactions = await self.tonlib.get_block_transactions(-1, -9223372036854775808, random.randint(2, 4096), count=10)
-                    is_archival = block_transactions.get("@type", "") == "blocks.transactions"
-                except asyncio.CancelledError:
-                    logger.warning('Client #{ls_index:03d} report_archival timeout', ls_index=self.ls_index)
-                except Exception as e:
-                    logger.error("Client #{ls_index:03d} report_archival exception: {exc}", ls_index=self.ls_index, exc=e)
-                self.is_archival = is_archival
-                await self.output_queue.coro_put((TonlibWorkerMsgType.ARCHIVAL_UPDATE, self.is_archival))
-                await asyncio.sleep(600)
-        except:
-            await self.report_dead()
+        while not self.exit_event.is_set():
+            is_archival = False
+            try:
+                block_transactions = await self.tonlib.get_block_transactions(-1, -9223372036854775808, random.randint(2, 4096), count=10)
+                is_archival = block_transactions.get("@type", "") == "blocks.transactions"
+            except asyncio.CancelledError:
+                logger.warning('Client #{ls_index:03d} report_archival timeout', ls_index=self.ls_index)
+            except Exception as e:
+                logger.error("Client #{ls_index:03d} report_archival exception: {exc}", ls_index=self.ls_index, exc=e)
+            self.is_archival = is_archival
+            await self.output_queue.coro_put((TonlibWorkerMsgType.ARCHIVAL_UPDATE, self.is_archival))
+            await asyncio.sleep(600)
         
     async def main_loop(self):
-        try:
-            while not self.is_dead:
+        while not self.exit_event.is_set():
+            try:
+                task_id, timeout, method, args, kwargs = await self.input_queue.coro_get(timeout=3)
+            except:
+                continue
+
+            result = None
+            exception = None
+
+            start_time = datetime.now()
+            if time.time() < timeout:
                 try:
-                    task_id, timeout, method, args, kwargs = await self.input_queue.coro_get(timeout=3)
-                except:
-                    continue
-
-                result = None
-                exception = None
-
-                start_time = datetime.now()
-                if time.time() < timeout:
-                    try:
-                        result = await self.tonlib.__getattribute__(method)(*args, **kwargs)
-                    except asyncio.CancelledError:
-                        exception = Exception("Liteserver timeout")
-                        logger.warning("Client #{ls_index:03d} did not get response from liteserver before timeout", ls_index=self.ls_index)
-                    except Exception as e:
-                        exception = e
-                        logger.warning("Client #{ls_index:03d} raised exception while executing task. Method: {method}, args: {args}, kwargs: {kwargs}, exception: {exc}", 
-                            ls_index=self.ls_index, method=method, args=args, kwargs=kwargs, exc=e)
-                    else:
-                        logger.debug("Client #{ls_index:03d} got result {method}", ls_index=self.ls_index, method=method)
+                    result = await self.tonlib.__getattribute__(method)(*args, **kwargs)
+                except asyncio.CancelledError:
+                    exception = Exception("Liteserver timeout")
+                    logger.warning("Client #{ls_index:03d} did not get response from liteserver before timeout", ls_index=self.ls_index)
+                except Exception as e:
+                    exception = e
+                    logger.warning("Client #{ls_index:03d} raised exception while executing task. Method: {method}, args: {args}, kwargs: {kwargs}, exception: {exc}", 
+                        ls_index=self.ls_index, method=method, args=args, kwargs=kwargs, exc=e)
                 else:
-                    exception = asyncio.TimeoutError()
-                    logger.warning("Client #{ls_index:03d} received task after timeout", ls_index=self.ls_index)
-                end_time = datetime.now()
-                elapsed_time = (end_time - start_time).total_seconds()
+                    logger.debug("Client #{ls_index:03d} got result {method}", ls_index=self.ls_index, method=method)
+            else:
+                exception = asyncio.TimeoutError()
+                logger.warning("Client #{ls_index:03d} received task after timeout", ls_index=self.ls_index)
+            end_time = datetime.now()
+            elapsed_time = (end_time - start_time).total_seconds()
 
-                # result
-                tonlib_task_result = TonlibClientResult(task_id,
-                                                        method,
-                                                        elapsed_time=elapsed_time,
-                                                        params=[args, kwargs],
-                                                        result=result,
-                                                        exception=exception,
-                                                        liteserver_info=self.info)
-                await self.output_queue.coro_put((TonlibWorkerMsgType.TASK_RESULT, tonlib_task_result))
-        except:
-            await self.report_dead()
-        
+            # result
+            tonlib_task_result = TonlibClientResult(task_id,
+                                                    method,
+                                                    elapsed_time=elapsed_time,
+                                                    params=[args, kwargs],
+                                                    result=result,
+                                                    exception=exception,
+                                                    liteserver_info=self.info)
+            await self.output_queue.coro_put((TonlibWorkerMsgType.TASK_RESULT, tonlib_task_result))
+
     async def idle_loop(self):
-        while not self.is_dead:
+        while not self.exit_event.is_set():
             await asyncio.sleep(0.5)
+        raise Exception("exit_event set")

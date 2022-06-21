@@ -112,15 +112,17 @@ class TonlibManager:
 
     async def worker_control(self, ls_index, enabled):
         if enabled == False:
-            self.workers[ls_index]['worker'].terminate()
-            self.workers[ls_index]['worker'].join()
             self.workers[ls_index]['reader'].cancel()
-            await self.workers[ls_index]['reader']
+            self.workers[ls_index]['worker'].exit_event.set()
 
+            self.workers[ls_index]['worker'].output_queue.cancel_join_thread()
+            self.workers[ls_index]['worker'].input_queue.cancel_join_thread()
             self.workers[ls_index]['worker'].output_queue.close()
-            self.workers[ls_index]['worker'].output_queue.join_thread()
             self.workers[ls_index]['worker'].input_queue.close()
-            self.workers[ls_index]['worker'].input_queue.join_thread()
+
+            self.workers[ls_index]['worker'].join()
+            
+            await self.workers[ls_index]['reader']
 
         self.workers[ls_index]['is_enabled'] = enabled
 
@@ -173,9 +175,6 @@ class TonlibManager:
 
                 if msg_type == TonlibWorkerMsgType.ARCHIVAL_UPDATE:
                     worker.is_archival = msg_content
-
-                if msg_type == TonlibWorkerMsgType.DEAD_REPORT:
-                    self.spawn_worker(ls_index, force_restart=True)
             except asyncio.CancelledError:
                 logger.info("Task read_results was cancelled")
                 return
