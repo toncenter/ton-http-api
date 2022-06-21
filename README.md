@@ -11,12 +11,14 @@ You can use the ready-made [toncenter.com](https://toncenter.com) service or sta
 ## Building and running
 
 Recommended hardware: 
+- CPU architecture: x86_64 or arm64.
 - HTTP API only: 1 vCPU, 2 GB RAM.
 - HTTP API with cache enabled: 2 vCPUs, 4 GB RAM.
 
-There are two ways to run TON HTTP API:
-- __Docker Compose__: works on any x86_64 and arm64 OS with Docker available.
+There are two main ways to run TON HTTP API:
+- __Docker Compose__: flexible configuration, recommended for production environments, works on any x86_64 and arm64 OS with Docker available.
 - __Local__ *(experimental)*: works on following platforms: Ubuntu Linux (x86_64, arm64), MacOSX (Intel x86_64, Apple M1 arm64) and Windows (x86_64). 
+
 
 ### Docker Compose
   - (First time) Install required tools: `docker`, `docker-compose`, `curl`. 
@@ -30,17 +32,26 @@ There are two ways to run TON HTTP API:
     curl -sL https://ton-blockchain.github.io/testnet-global.config.json > private/testnet.json
     ```
   - Run `./configure.py` to create `.env` file with necessary environment variables (see [Configuration](#Configuration) for details).
-  - Build services: `docker-compose build`.
+  - Pull latest images: `docker-compose pull`.
+    - Also, you can build services: `docker-compose build`.
   - Run services: `docker-compose up -d`.
   - Stop services: `docker-compose down`.
 
+Also you can try _ton-http-api_ service with [mainnet](https://ton.org/global-config.json) config in a single command:
+```bash
+docker run -it toncenter/ton-http-api:latest
+```
+
+But, in production we recommend you to run service with Docker Compose.
+
 ### Local run *(experimental)*
+**Note:** we do not recommend to run service locally in production.    
   - (Windows only, first time) Install OpenSSL v1.1.1 for win64 from [here](https://slproweb.com/products/Win32OpenSSL.html).
   - Install package: `pip install ton-http-api`.
   - Run service with `ton-http-api`. This command will run service with [mainnet](https://ton.org/global-config.json) configuration.
     - Run `ton-http-api --help` to show parameters list.
   - To change settings you can use environment variables (see [Configuration](#Configuration) section).
-    
+
 
 ## Configuration
 
