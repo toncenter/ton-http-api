@@ -56,6 +56,9 @@ jobs:
           echo ::set-output name=buildx_args::--platform ${DOCKER_PLATFORMS} \
             ${TAGS} --file ton-http-api/.docker/Dockerfile ton-http-api \
             --cache-from=${DOCKER_IMAGE}:latest
+
+          echo "Pulling latest image for cache"
+          docker pull ${DOCKER_IMAGE}:latest || true
       - name: Docker Buildx (build)
         run: |
           docker buildx build --output "type=image,push=false" ${{ steps.prepare.outputs.buildx_args }}
