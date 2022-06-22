@@ -14,3 +14,4 @@ WORKDIR /app
 
 # entrypoint
 ENTRYPOINT [ "/bin/bash" ]
+CMD [ "/app/.docker/entrypoint.sh" ]
