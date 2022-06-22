@@ -27,7 +27,7 @@ services:
       - internal
     secrets:
       - liteserver_config
-    command: -c "gunicorn -k uvicorn.workers.UvicornWorker -w ${TON_API_WEBSERVERS_WORKERS} --max-requests 50000 --max-requests-jitter 1000 --bind 0.0.0.0:8081 pyTON.main:app"
+    command: -c "gunicorn -k uvicorn.workers.UvicornWorker -w ${TON_API_WEBSERVERS_WORKERS} --bind 0.0.0.0:8081 pyTON.main:app"
     healthcheck:
       test: curl -sS http://127.0.0.1:8081${TON_API_ROOT_PATH}/healthcheck || echo 1
       interval: 15s

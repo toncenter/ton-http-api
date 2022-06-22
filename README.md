@@ -37,11 +37,6 @@ There are two main ways to run TON HTTP API:
   - Run services: `docker-compose up -d`.
   - Stop services: `docker-compose down`.
 
-Also you can try _ton-http-api_ service with [mainnet](https://ton.org/global-config.json) config in a single command:
-```bash
-docker run -it toncenter/ton-http-api:latest
-```
-
 But, in production we recommend you to run service with Docker Compose.
 
 ### Local run *(experimental)*
