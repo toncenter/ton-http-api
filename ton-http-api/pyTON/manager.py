@@ -11,7 +11,6 @@ from copy import deepcopy
 from pyTON.worker import TonlibWorker
 from pyTON.models import TonlibWorkerMsgType, TonlibClientResult, ConsensusBlock
 from pyTON.cache import CacheManager, DisabledCacheManager
-from pytonlib.client import TonLibWrongResult
 from pyTON.settings import TonlibSettings
 
 from typing import Optional, Dict, Any
@@ -260,7 +259,7 @@ class TonlibManager:
         if len(suitable) < count:
             logger.warning('Required number of workers is not reached: found {found} of {count}', found=len(suitable), count=count)
         if len(suitable) == 0:
-            raise RuntimeError('No working liteservers with ls_index={ls_index}, archival={archival}}')
+            raise RuntimeError(f'No working liteservers with ls_index={ls_index}, archival={archival}')
         return suitable[:count] if count > 1 else suitable[0]
 
     async def dispatch_request_to_worker(self, method, ls_index, *args, **kwargs):
@@ -313,12 +312,10 @@ class TonlibManager:
 
     async def raw_get_account_state(self, address: str):
         method = 'raw_get_account_state'
-        addr = await self.dispatch_request(method, address)
-        # FIXME: refactor this code
-        if addr.get('@type','error') == 'error':
+        try:
             addr = await self.dispatch_request(method, address)
-        if addr.get('@type','error') == 'error':
-            raise TonLibWrongResult("raw.getAccountState failed", addr)
+        except TonlibError:
+            addr = await self.dispatch_archival_request(method, address)
         return addr
 
     async def generic_get_account_state(self, address: str):
