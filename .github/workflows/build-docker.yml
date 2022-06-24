@@ -23,7 +23,7 @@ jobs:
           tag_prefix: "v"
           major_pattern: "[MAJOR]"
           minor_pattern: "[MINOR]"
-          format: "${major}.${minor}.${patch}.dev${increment}+${{ steps.branch_name.outputs.GIT_BRANCH }}"
+          format: "${major}.${minor}.${patch}.dev${increment}
           bump_each_commit: false
     outputs:
       version: ${{ github.ref == 'refs/heads/master' && steps.versioning.outputs.version_tag || steps.versioning.outputs.version}}
