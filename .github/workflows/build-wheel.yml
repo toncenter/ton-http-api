@@ -14,7 +14,7 @@ jobs:
       - name: Get branch name
         id: branch_name
         run: |
-          GIT_BRANCH=`git symbolic-ref --short HEAD sed "s/[^[:alnum:].]//g"`
+          GIT_BRANCH=`git symbolic-ref --short HEAD | sed "s/[^[:alnum:].]//g"`
           echo "::set-output name=GIT_BRANCH::${GIT_BRANCH}"
       - name: Get semantic version
         uses: paulhatch/semantic-version@v4.0.2
