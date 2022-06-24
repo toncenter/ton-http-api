@@ -34,7 +34,7 @@ jobs:
             echo "::set-output name=VERSION::${{ steps.versioning.outputs.version }}.${BRANCH_SUFFIX}"
           fi
     outputs:
-      version: ${{ steps.full_version.VERSION }} }}
+      version: ${{ steps.full_version.VERSION }}
   build_wheel:
     runs-on: ubuntu-20.04
     needs: [ set_version ]

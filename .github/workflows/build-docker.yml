@@ -46,7 +46,13 @@ jobs:
         id: prepare
         run: |
           DOCKER_IMAGE=toncenter/ton-http-api
-          DOCKER_PLATFORMS=linux/amd64,linux/arm64
+
+          if ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+          then
+            DOCKER_PLATFORMS=linux/amd64,linux/arm64
+          else
+            DOCKER_PLATFORMS=linux/amd64
+          fi
           VERSION=${{ needs.set_version.outputs.version }}
 
           TAGS="-t ${DOCKER_IMAGE}:${VERSION} -t ${DOCKER_IMAGE}:latest"
