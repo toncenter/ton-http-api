@@ -31,7 +31,7 @@ jobs:
           then
             echo "::set-output name=VERSION::${{ steps.versioning.outputs.version_tag}} "
           else
-            echo "::set-output name=VERSION::${{ steps.versioning.outputs.version }}.${{ steps.version_suffix.branch_suffix }}"  
+            echo "::set-output name=VERSION::${{ steps.versioning.outputs.version }}.${BRANCH_SUFFIX}
           fi
     outputs:
       version: ${{ steps.full_version.VERSION }} }}
