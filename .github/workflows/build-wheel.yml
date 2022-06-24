@@ -26,7 +26,7 @@ jobs:
           format: "${major}.${minor}.${patch}${{ steps.branch_name.outputs.GIT_BRANCH }}${increment}"
           bump_each_commit: false
     outputs:
-      version: ${{ steps.full_version.outputs.VERSION }}
+      version: ${{ github.ref == 'refs/heads/master' && steps.versioning.outputs.version_tag || steps.versioning.outputs.version}}
   build_wheel:
     runs-on: ubuntu-20.04
     needs: [ set_version ]
