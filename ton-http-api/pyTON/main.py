@@ -112,7 +112,7 @@ tonlib = None
 
 @app.on_event("startup")
 def startup():
-    logger.remove(0)
+    logger.remove()
     logger.add(sys.stdout, level=settings.logging.level, enqueue=True, serialize=settings.logging.jsonify)
 
     # setup tonlib multiclient
