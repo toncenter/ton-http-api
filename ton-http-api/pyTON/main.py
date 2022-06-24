@@ -35,9 +35,6 @@ from loguru import logger
 # inject configuration
 
 def main_config(binder):
-    for k, v in os.environ.items():
-        print(f"{k:<50s}{v}")
-
     settings = Settings.from_environment()
     binder.bind(Settings, settings)
 
@@ -115,7 +112,7 @@ tonlib = None
 
 @app.on_event("startup")
 def startup():
-    logger.remove(0)
+    logger.remove()
     logger.add(sys.stdout, level=settings.logging.level, enqueue=True, serialize=settings.logging.jsonify)
 
     # setup tonlib multiclient
