@@ -90,10 +90,10 @@ class TonlibManager:
             try:
                 worker_info['reader'].cancel()  
                 worker_info['worker'].exit_event.set()
+                worker_info['worker'].output_queue.cancel_join_thread()
+                worker_info['worker'].input_queue.cancel_join_thread()
                 worker_info['worker'].output_queue.close()
-                worker_info['worker'].output_queue.join_thread()
                 worker_info['worker'].input_queue.close()
-                worker_info['worker'].input_queue.join_thread()
                 worker_info['worker'].join(timeout=3)
             except Exception as ee:
                 logger.error('Failed to delete existing process: {exc}', exc=ee)
