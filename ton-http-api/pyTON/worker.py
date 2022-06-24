@@ -2,13 +2,14 @@ import asyncio
 import traceback
 import random
 import time
-import aioprocessing as ap
+import queue
 import multiprocessing as mp
 
 from pyTON.settings import TonlibSettings
 from pyTON.models import TonlibWorkerMsgType, TonlibClientResult
 from pytonlib import TonlibClient
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
 
 from enum import Enum
 from dataclasses import dataclass
@@ -21,12 +22,12 @@ class TonlibWorker(mp.Process):
     def __init__(self, 
                  ls_index: int, 
                  tonlib_settings: TonlibSettings,
-                 input_queue: Optional[ap.AioQueue]=None,
-                 output_queue: Optional[ap.AioQueue]=None):
+                 input_queue: Optional[mp.Queue]=None,
+                 output_queue: Optional[mp.Queue]=None):
         super(TonlibWorker, self).__init__(daemon=True)
 
-        self.input_queue = input_queue or ap.AioQueue()
-        self.output_queue = output_queue or ap.AioQueue()
+        self.input_queue = input_queue or mp.Queue()
+        self.output_queue = output_queue or mp.Queue()
         self.exit_event = mp.Event()
 
         self.ls_index = ls_index
@@ -38,11 +39,14 @@ class TonlibWorker(mp.Process):
         self.loop = None
         self.tasks = {}
         self.tonlib = None
+        self.threadpool_executor = None
 
         self.timeout_count = 0
         self.is_dead = False
 
     def run(self):
+        self.threadpool_executor = ThreadPoolExecutor(max_workers=6)
+
         policy = asyncio.get_event_loop_policy()
         policy.set_event_loop(policy.new_event_loop())
         self.loop = asyncio.new_event_loop()
@@ -70,7 +74,12 @@ class TonlibWorker(mp.Process):
         
         for to_cancel in unfinished:
             to_cancel.cancel()
-            self.loop.run_until_complete(to_cancel)
+            try:
+                self.loop.run_until_complete(to_cancel)
+            except:
+                pass
+
+        self.threadpool_executor.shutdown()
 
         self.output_queue.cancel_join_thread()
         self.input_queue.cancel_join_thread()
@@ -105,7 +114,7 @@ class TonlibWorker(mp.Process):
                 raise RuntimeError(f'Client #{self.ls_index:03d} got {self.timeout_count} timeouts in report_last_block')
             
             self.last_block = last_block
-            await self.output_queue.coro_put((TonlibWorkerMsgType.LAST_BLOCK_UPDATE, self.last_block))
+            await self.loop.run_in_executor(self.threadpool_executor, self.output_queue.put, (TonlibWorkerMsgType.LAST_BLOCK_UPDATE, self.last_block))
             await asyncio.sleep(1)
 
     async def report_archival(self):
@@ -119,14 +128,14 @@ class TonlibWorker(mp.Process):
             except Exception as e:
                 logger.error("Client #{ls_index:03d} report_archival exception: {exc}", ls_index=self.ls_index, exc=e)
             self.is_archival = is_archival
-            await self.output_queue.coro_put((TonlibWorkerMsgType.ARCHIVAL_UPDATE, self.is_archival))
+            await self.loop.run_in_executor(self.threadpool_executor, self.output_queue.put, (TonlibWorkerMsgType.ARCHIVAL_UPDATE, self.is_archival))
             await asyncio.sleep(600)
         
     async def main_loop(self):
         while not self.exit_event.is_set():
             try:
-                task_id, timeout, method, args, kwargs = await self.input_queue.coro_get(timeout=3)
-            except:
+                task_id, timeout, method, args, kwargs = await self.loop.run_in_executor(self.threadpool_executor, self.input_queue.get, True, 1)
+            except queue.Empty:
                 continue
 
             result = None
@@ -159,7 +168,7 @@ class TonlibWorker(mp.Process):
                                                     result=result,
                                                     exception=exception,
                                                     liteserver_info=self.info)
-            await self.output_queue.coro_put((TonlibWorkerMsgType.TASK_RESULT, tonlib_task_result))
+            await self.loop.run_in_executor(self.threadpool_executor, self.output_queue.put, (TonlibWorkerMsgType.TASK_RESULT, tonlib_task_result))
 
     async def idle_loop(self):
         while not self.exit_event.is_set():
