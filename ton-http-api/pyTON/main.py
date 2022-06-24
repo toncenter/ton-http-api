@@ -35,6 +35,9 @@ from loguru import logger
 # inject configuration
 
 def main_config(binder):
+    for k, v in os.environ.items():
+        print(f"{k:<50s}{v}")
+
     settings = Settings.from_environment()
     binder.bind(Settings, settings)
 
