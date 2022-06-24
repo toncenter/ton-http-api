@@ -20,16 +20,21 @@ jobs:
           minor_pattern: "[MINOR]"
           format: "${major}.${minor}.${patch}a${increment}"
           bump_each_commit: false
-      - name: Add branch suffix
-        id: version_suffix
-        run: |
-          echo ::set-output name=branch_suffix::${GITHUB_REF##*/}" | sed "s/[^[:alnum:].]/./g"
       - name: Check version
+        id: full_version
         run: |
           echo "Version:     ${{ steps.versioning.outputs.version }}.${{ steps.version_suffix.branch_suffix }}"
           echo "Version tag: ${{ steps.versioning.outputs.version_tag }}"
+          BRANCH_SUFFIX=$(echo "${GITHUB_REF##*/}" | sed "s/[^[:alnum:].]/./g")
+
+          if ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+          then
+            echo "::set-output name=VERSION::${{ steps.versioning.outputs.version_tag}} "
+          else
+            echo "::set-output name=VERSION::${{ steps.versioning.outputs.version }}.${{ steps.version_suffix.branch_suffix }}"  
+          fi
     outputs:
-      version: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.versioning.outputs.version_tag || steps.versioning.outputs.version.${{ steps.version_suffix.branch_suffix }} }}
+      version: ${{ steps.full_version.VERSION }} }}
   build_wheel:
     runs-on: ubuntu-20.04
     needs: [ set_version ]
