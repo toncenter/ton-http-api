@@ -27,7 +27,7 @@ from pyTON.settings import Settings, RedisCacheSettings
 
 from pytonlib.utils.address import detect_address as __detect_address, prepare_address as _prepare_address
 from pytonlib.utils.wallet import wallets as known_wallets, sha256
-from pytonlib.client import TonLibWrongResult
+from pytonlib import TonlibException
 
 from loguru import logger
 
@@ -148,8 +148,8 @@ async def timeout_exception_handler(request, exc):
     return JSONResponse(res.dict(exclude_none=True), status_code=status.HTTP_504_GATEWAY_TIMEOUT)
 
 
-@app.exception_handler(TonLibWrongResult)
-async def tonlib_wront_result_exception_handler(request, exc):
+@app.exception_handler(TonlibException)
+async def tonlib_error_result_exception_handler(request, exc):
     res = TonResponse(ok=False, error=str(exc), code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     return JSONResponse(res.dict(exclude_none=True), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
