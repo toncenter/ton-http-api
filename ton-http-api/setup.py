@@ -16,7 +16,6 @@ setup(
     version=version,
     packages=find_packages('.', exclude=['tests']),
     install_requires=[
-        'aioprocessing>=2.0.0',
         'aioredis>=2.0.1',
         'loguru>=0.6.0',
         'fastapi>=0.78.0',
