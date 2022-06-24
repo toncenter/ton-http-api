@@ -18,8 +18,12 @@ jobs:
           tag_prefix: "v"
           major_pattern: "[MAJOR]"
           minor_pattern: "[MINOR]"
-          format: "${major}.${minor}.${patch}a${increment}"
+          format: "${major}.${minor}.${patch}a${increment}"-${GITHUB_REF##*/}
           bump_each_commit: false
+      - name: Check version
+        run: |
+          echo "Version:     ${{ steps.versioning.outputs.version }}"
+          echo "Version tag: ${{ steps.versioning.outputs.version_tag }}"
     outputs:
       version: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.versioning.outputs.version_tag || steps.versioning.outputs.version}}
   build_wheel:
