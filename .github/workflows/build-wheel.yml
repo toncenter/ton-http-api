@@ -11,7 +11,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      - name: Test version
+      - name: Get semantic version
         uses: paulhatch/semantic-version@v4.0.2
         id: versioning
         with:
@@ -20,7 +20,7 @@ jobs:
           minor_pattern: "[MINOR]"
           format: "${major}.${minor}.${patch}a${increment}"
           bump_each_commit: false
-      - name: Check version
+      - name: Get full version
         id: full_version
         run: |
           echo "Version:     ${{ steps.versioning.outputs.version }}.${{ steps.version_suffix.branch_suffix }}"
