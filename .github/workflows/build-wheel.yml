@@ -29,9 +29,9 @@ jobs:
 
           if ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
           then
-            echo "::set-output name=VERSION::${{ steps.versioning.outputs.version_tag}} "
+            echo "::set-output name=VERSION::${{ steps.versioning.outputs.version_tag}}"
           else
-            echo "::set-output name=VERSION::${{ steps.versioning.outputs.version }}.${BRANCH_SUFFIX}
+            echo "::set-output name=VERSION::${{ steps.versioning.outputs.version }}.${BRANCH_SUFFIX}"
           fi
     outputs:
       version: ${{ steps.full_version.VERSION }} }}
