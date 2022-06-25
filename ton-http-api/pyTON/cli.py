@@ -58,4 +58,4 @@ def main():
     setup_environment(args)
 
     from pyTON.main import app
-    uvicorn.run(app, host=args.host, port=args.port)
+    uvicorn.run(app, host=args.host, port=args.port, log_level=args.logs_level.lower())
