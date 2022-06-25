@@ -25,7 +25,7 @@ setup(
         'ring>=0.9.1',
         'uvicorn>=0.17.6',
         'gunicorn>=20.1.0',
-        'pytonlib==0.0.17',
+        'pytonlib==0.0.20',
         'inject>=4.3.1'
     ],
     package_data={},
