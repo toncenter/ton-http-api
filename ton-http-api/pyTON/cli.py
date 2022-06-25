@@ -1,6 +1,7 @@
 import argparse
 import uvicorn
 import os
+from multiprocessing import set_start_method
 
 
 def setup_environment(args):
@@ -24,6 +25,11 @@ def setup_environment(args):
 
 
 def main():
+    try:
+        set_start_method('fork')
+    except:
+        pass
+
     parser = argparse.ArgumentParser('ton-http-api')
 
     webserver_args = parser.add_argument_group('webserver')
