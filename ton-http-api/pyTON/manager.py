@@ -2,11 +2,12 @@ import asyncio
 import time
 import traceback
 import random
-import aioprocessing as ap
+import queue
 
 from collections import defaultdict
 from collections.abc import Mapping
 from copy import deepcopy
+from concurrent.futures import ThreadPoolExecutor
 
 from pyTON.worker import TonlibWorker
 from pyTON.models import TonlibWorkerMsgType, TonlibClientResult, ConsensusBlock
@@ -38,6 +39,8 @@ class TonlibManager:
         # cache setup
         self.setup_cache()
 
+        self.threadpool_executor = ThreadPoolExecutor(max_workers=len(self.tonlib_settings.liteserver_config['liteservers']) * 2)
+
         # workers spawn
         self.loop = loop or asyncio.get_running_loop()
         for ls_index in range(len(self.tonlib_settings.liteserver_config['liteservers'])):
@@ -59,6 +62,8 @@ class TonlibManager:
 
         for i in self.workers:
             await self.worker_control(i, enabled=False)
+
+        self.threadpool_executor.shutdown()
 
     def setup_cache(self):
         self.raw_get_transactions = self.cache_manager.cached(expire=5)(self.raw_get_transactions)
@@ -84,14 +89,12 @@ class TonlibManager:
                 return
             try:
                 worker_info['reader'].cancel()  
+                worker_info['worker'].exit_event.set()
+                worker_info['worker'].output_queue.cancel_join_thread()
+                worker_info['worker'].input_queue.cancel_join_thread()
+                worker_info['worker'].output_queue.close()
+                worker_info['worker'].input_queue.close()
                 worker_info['worker'].join(timeout=3)
-                if worker_info['worker'].is_alive():
-                    worker_info['worker'].terminate()
-                    worker_info['worker'].join()
-                self.workers[ls_index]['worker'].output_queue.close()
-                self.workers[ls_index]['worker'].output_queue.join_thread()
-                self.workers[ls_index]['worker'].input_queue.close()
-                self.workers[ls_index]['worker'].input_queue.join_thread()
             except Exception as ee:
                 logger.error('Failed to delete existing process: {exc}', exc=ee)
         # running new worker
@@ -112,15 +115,17 @@ class TonlibManager:
 
     async def worker_control(self, ls_index, enabled):
         if enabled == False:
-            self.workers[ls_index]['worker'].terminate()
-            self.workers[ls_index]['worker'].join()
             self.workers[ls_index]['reader'].cancel()
-            await self.workers[ls_index]['reader']
+            self.workers[ls_index]['worker'].exit_event.set()
 
+            self.workers[ls_index]['worker'].output_queue.cancel_join_thread()
+            self.workers[ls_index]['worker'].input_queue.cancel_join_thread()
             self.workers[ls_index]['worker'].output_queue.close()
-            self.workers[ls_index]['worker'].output_queue.join_thread()
             self.workers[ls_index]['worker'].input_queue.close()
-            self.workers[ls_index]['worker'].input_queue.join_thread()
+
+            self.workers[ls_index]['worker'].join()
+            
+            await self.workers[ls_index]['reader']
 
         self.workers[ls_index]['is_enabled'] = enabled
 
@@ -152,7 +157,10 @@ class TonlibManager:
         worker = self.workers[ls_index]['worker']
         while True:
             try:
-                msg_type, msg_content = await worker.output_queue.coro_get()
+                try:
+                    msg_type, msg_content = await self.loop.run_in_executor(self.threadpool_executor, worker.output_queue.get, True, 1)
+                except queue.Empty:
+                    continue
                 if msg_type == TonlibWorkerMsgType.TASK_RESULT:
                     task_id = msg_content.task_id
                     result = msg_content.result
@@ -173,9 +181,6 @@ class TonlibManager:
 
                 if msg_type == TonlibWorkerMsgType.ARCHIVAL_UPDATE:
                     worker.is_archival = msg_content
-
-                if msg_type == TonlibWorkerMsgType.DEAD_REPORT:
-                    self.spawn_worker(ls_index, force_restart=True)
             except asyncio.CancelledError:
                 logger.info("Task read_results was cancelled")
                 return
@@ -269,7 +274,7 @@ class TonlibManager:
 
         logger.info("Sending request method: {method}, task_id: {task_id}, ls_index: {ls_index}", 
             method=method, task_id=task_id, ls_index=ls_index)
-        await self.workers[ls_index]['worker'].input_queue.coro_put((task_id, timeout, method, args, kwargs))
+        await self.loop.run_in_executor(self.threadpool_executor, self.workers[ls_index]['worker'].input_queue.put, (task_id, timeout, method, args, kwargs))
 
         try:
             self.futures[task_id] = self.loop.create_future()
@@ -332,7 +337,7 @@ class TonlibManager:
             for ls_index in ls_index_list:
                 task_id = "{}:{}".format(time.time(), random.random())
                 timeout = time.time() + self.tonlib_settings.request_timeout
-                await self.workers[ls_index]['worker'].input_queue.coro_put((task_id, timeout, 'raw_send_message', [serialized_boc], {}))
+                await self.loop.run_in_executor(self.threadpool_executor, self.workers[ls_index]['worker'].input_queue.put, (task_id, timeout, 'raw_send_message', [serialized_boc], {}))
 
                 self.futures[task_id] = self.loop.create_future()
                 task_ids.append(task_id)

@@ -17,11 +17,9 @@ class TonlibClientResult:
 
 
 class TonlibWorkerMsgType(Enum):
-    DEAD_REPORT = 0
-    TASK_RESULT = 1
-    LAST_BLOCK_UPDATE = 2
-    ARCHIVAL_UPDATE = 3
-
+    TASK_RESULT = 0
+    LAST_BLOCK_UPDATE = 1
+    ARCHIVAL_UPDATE = 2
 
 
 @dataclass
