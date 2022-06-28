@@ -7,7 +7,7 @@ import multiprocessing as mp
 
 from pyTON.settings import TonlibSettings
 from pyTON.models import TonlibWorkerMsgType, TonlibClientResult
-from pytonlib import TonlibClient
+from pytonlib import TonlibClient, TonlibException
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
@@ -103,11 +103,8 @@ class TonlibWorker(mp.Process):
                 masterchain_info = await self.tonlib.get_masterchain_info()
                 last_block = masterchain_info["last"]["seqno"]
                 self.timeout_count = 0
-            except asyncio.CancelledError:
-                logger.warning('Client #{ls_index:03d} report_last_block timeout', ls_index=self.ls_index)
-                self.timeout_count += 1
-            except Exception as e:
-                logger.error("Client #{ls_index:03d} report_last_block exception: {exc}", ls_index=self.ls_index, exc=e)
+            except TonlibException as e:
+                logger.error("Client #{ls_index:03d} report_last_block exception of type {exc_type}: {exc}", ls_index=self.ls_index, exc_type=type(e).__name__, exc=e)
                 self.timeout_count += 1
 
             if self.timeout_count >= 10:
@@ -123,10 +120,8 @@ class TonlibWorker(mp.Process):
             try:
                 block_transactions = await self.tonlib.get_block_transactions(-1, -9223372036854775808, random.randint(2, 4096), count=10)
                 is_archival = block_transactions.get("@type", "") == "blocks.transactions"
-            except asyncio.CancelledError:
-                logger.warning('Client #{ls_index:03d} report_archival timeout', ls_index=self.ls_index)
-            except Exception as e:
-                logger.error("Client #{ls_index:03d} report_archival exception: {exc}", ls_index=self.ls_index, exc=e)
+            except TonlibException as e:
+                logger.error("Client #{ls_index:03d} report_archival exception of type {exc_type}: {exc}", ls_index=self.ls_index, exc_type=type(e).__name__, exc=e)
             self.is_archival = is_archival
             await self.loop.run_in_executor(self.threadpool_executor, self.output_queue.put, (TonlibWorkerMsgType.ARCHIVAL_UPDATE, self.is_archival))
             await asyncio.sleep(600)
@@ -145,13 +140,10 @@ class TonlibWorker(mp.Process):
             if time.time() < timeout:
                 try:
                     result = await self.tonlib.__getattribute__(method)(*args, **kwargs)
-                except asyncio.CancelledError:
-                    exception = Exception("Liteserver timeout")
-                    logger.warning("Client #{ls_index:03d} did not get response from liteserver before timeout", ls_index=self.ls_index)
-                except Exception as e:
+                except TonlibException as e:
                     exception = e
-                    logger.warning("Client #{ls_index:03d} raised exception while executing task. Method: {method}, args: {args}, kwargs: {kwargs}, exception: {exc}", 
-                        ls_index=self.ls_index, method=method, args=args, kwargs=kwargs, exc=e)
+                    logger.warning("Client #{ls_index:03d} raised exception of type {exc_type} while executing task. Method: {method}, args: {args}, kwargs: {kwargs}, exception: {exc}", 
+                        ls_index=self.ls_index, method=method, args=args, kwargs=kwargs, exc_type=type(e).__name__, exc=e)
                 else:
                     logger.debug("Client #{ls_index:03d} got result {method}", ls_index=self.ls_index, method=method)
             else:
