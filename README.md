@@ -91,6 +91,10 @@ The service supports the following environment variables for configuration:
 
   Defines log verbosity level. Values allowed: `DEBUG`,`INFO`,`WARNING`,`ERROR`,`CRITICAL`.
 
+- `TON_API_GUNICORN_FLAGS` *(default: empty)*
+
+  Additional Gunicorn [command line arguments](https://docs.gunicorn.org/en/stable/settings.html).
+
 #### Tonlib settings
 - `TON_API_TONLIB_LITESERVER_CONFIG` *(default docker: private/mainnet.json local: https://ton.org/global-config.json)*
 
