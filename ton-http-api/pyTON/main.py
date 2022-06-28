@@ -111,7 +111,7 @@ app = FastAPI(
 tonlib = None
 
 @app.on_event("startup")
-def startup():
+async def startup():
     logger.remove()
     logger.add(sys.stdout, level=settings.logging.level, enqueue=True, serialize=settings.logging.jsonify)
 
@@ -124,6 +124,8 @@ def startup():
                            dispatcher=None,
                            cache_manager=cache_manager,
                            loop=loop)
+
+    await asyncio.sleep(2) # wait for manager to spawn all workers and report their status
 
 @app.on_event("shutdown")
 async def shutdown_event():
