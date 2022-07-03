@@ -45,7 +45,7 @@ class TonlibWorker(mp.Process):
         self.is_dead = False
 
     def run(self):
-        self.threadpool_executor = ThreadPoolExecutor(max_workers=6)
+        self.threadpool_executor = ThreadPoolExecutor(max_workers=16)
 
         policy = asyncio.get_event_loop_policy()
         policy.set_event_loop(policy.new_event_loop())
@@ -104,11 +104,11 @@ class TonlibWorker(mp.Process):
                 last_block = masterchain_info["last"]["seqno"]
                 self.timeout_count = 0
             except TonlibException as e:
-                logger.error("Client #{ls_index:03d} report_last_block exception of type {exc_type}: {exc}", ls_index=self.ls_index, exc_type=type(e).__name__, exc=e)
+                logger.error("TonlibWorker #{ls_index:03d} report_last_block exception of type {exc_type}: {exc}", ls_index=self.ls_index, exc_type=type(e).__name__, exc=e)
                 self.timeout_count += 1
 
             if self.timeout_count >= 10:
-                raise RuntimeError(f'Client #{self.ls_index:03d} got {self.timeout_count} timeouts in report_last_block')
+                raise RuntimeError(f'TonlibWorker #{self.ls_index:03d} got {self.timeout_count} timeouts in report_last_block')
             
             self.last_block = last_block
             await self.loop.run_in_executor(self.threadpool_executor, self.output_queue.put, (TonlibWorkerMsgType.LAST_BLOCK_UPDATE, self.last_block))
@@ -121,7 +121,7 @@ class TonlibWorker(mp.Process):
                 block_transactions = await self.tonlib.get_block_transactions(-1, -9223372036854775808, random.randint(2, 4096), count=10)
                 is_archival = block_transactions.get("@type", "") == "blocks.transactions"
             except TonlibException as e:
-                logger.error("Client #{ls_index:03d} report_archival exception of type {exc_type}: {exc}", ls_index=self.ls_index, exc_type=type(e).__name__, exc=e)
+                logger.error("TonlibWorker #{ls_index:03d} report_archival exception of type {exc_type}: {exc}", ls_index=self.ls_index, exc_type=type(e).__name__, exc=e)
             self.is_archival = is_archival
             await self.loop.run_in_executor(self.threadpool_executor, self.output_queue.put, (TonlibWorkerMsgType.ARCHIVAL_UPDATE, self.is_archival))
             await asyncio.sleep(600)
@@ -133,36 +133,38 @@ class TonlibWorker(mp.Process):
             except queue.Empty:
                 continue
 
-            result = None
-            exception = None
+            self.loop.create_task(self.process_task(task_id, timeout, method, args, kwargs))
 
-            start_time = datetime.now()
-            if time.time() < timeout:
-                try:
-                    result = await self.tonlib.__getattribute__(method)(*args, **kwargs)
-                except TonlibException as e:
-                    exception = e
-                    logger.warning("Client #{ls_index:03d} raised exception of type {exc_type} while executing task. Method: {method}, args: {args}, kwargs: {kwargs}, exception: {exc}", 
-                        ls_index=self.ls_index, method=method, args=args, kwargs=kwargs, exc_type=type(e).__name__, exc=e)
-                else:
-                    logger.debug("Client #{ls_index:03d} got result {method}", ls_index=self.ls_index, method=method)
+    async def process_task(self, task_id, timeout, method, args, kwargs):
+        result = None
+        exception = None
+
+        start_time = datetime.now()
+        if time.time() < timeout:
+            try:
+                result = await self.tonlib.__getattribute__(method)(*args, **kwargs)
+            except Exception as e:
+                exception = e
+                logger.warning("TonlibWorker #{ls_index:03d} raised exception of type {exc_type} while executing task. Method: {method}, args: {args}, kwargs: {kwargs}, exception: {exc}", 
+                    ls_index=self.ls_index, method=method, args=args, kwargs=kwargs, exc_type=type(e).__name__, exc=e)
             else:
-                exception = asyncio.TimeoutError()
-                logger.warning("Client #{ls_index:03d} received task after timeout", ls_index=self.ls_index)
-            end_time = datetime.now()
-            elapsed_time = (end_time - start_time).total_seconds()
+                logger.debug("TonlibWorker #{ls_index:03d} got result {method} for task '{task_id}'", ls_index=self.ls_index, method=method, task_id=task_id)
+        else:
+            exception = asyncio.TimeoutError()
+            logger.warning("TonlibWorker #{ls_index:03d} received task '{task_id}' after timeout", ls_index=self.ls_index, task_id=task_id)
+        end_time = datetime.now()
+        elapsed_time = (end_time - start_time).total_seconds()
 
-            # result
-            tonlib_task_result = TonlibClientResult(task_id,
-                                                    method,
-                                                    elapsed_time=elapsed_time,
-                                                    params=[args, kwargs],
-                                                    result=result,
-                                                    exception=exception,
-                                                    liteserver_info=self.info)
-            await self.loop.run_in_executor(self.threadpool_executor, self.output_queue.put, (TonlibWorkerMsgType.TASK_RESULT, tonlib_task_result))
+        # result
+        tonlib_task_result = TonlibClientResult(task_id,
+                                                method,
+                                                elapsed_time=elapsed_time,
+                                                params=[args, kwargs],
+                                                result=result,
+                                                exception=exception,
+                                                liteserver_info=self.info)
+        await self.loop.run_in_executor(self.threadpool_executor, self.output_queue.put, (TonlibWorkerMsgType.TASK_RESULT, tonlib_task_result))
 
     async def idle_loop(self):
         while not self.exit_event.is_set():
             await asyncio.sleep(0.5)
-        raise Exception("exit_event set")
