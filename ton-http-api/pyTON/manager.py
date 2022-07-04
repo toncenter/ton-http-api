@@ -39,7 +39,7 @@ class TonlibManager:
         # cache setup
         self.setup_cache()
 
-        self.threadpool_executor = ThreadPoolExecutor(max_workers=len(self.tonlib_settings.liteserver_config['liteservers']) * 2)
+        self.threadpool_executor = ThreadPoolExecutor(max_workers=max(32, len(self.tonlib_settings.liteserver_config['liteservers']) * 4))
 
         # workers spawn
         self.loop = loop or asyncio.get_running_loop()
@@ -174,7 +174,7 @@ class TonlibManager:
                         
                         self.log_liteserver_task(msg_content)
                     else:
-                        logger.warning("Client #{ls_index:03d}, task '{task_id}' doesn't exist or is done.", ls_index=ls_index, task_id=task_id)
+                        logger.warning("TonlibManager received result from TonlibWorker #{ls_index:03d} whose task '{task_id}' doesn't exist or is done.", ls_index=ls_index, task_id=task_id)
 
                 if msg_type == TonlibWorkerMsgType.LAST_BLOCK_UPDATE:
                     worker.last_block = msg_content
