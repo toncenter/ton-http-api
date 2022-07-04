@@ -16,9 +16,15 @@ Recommended hardware:
 - HTTP API with cache enabled: 2 vCPUs, 4 GB RAM.
 
 There are two main ways to run TON HTTP API:
-- __Docker Compose__: flexible configuration, recommended for production environments, works on any x86_64 and arm64 OS with Docker available.
 - __Local__ *(experimental)*: works on following platforms: Ubuntu Linux (x86_64, arm64), MacOSX (Intel x86_64, Apple M1 arm64) and Windows (x86_64). 
+- __Docker Compose__: flexible configuration, recommended for production environments, works on any x86_64 and arm64 OS with Docker available.
 
+### Local run *(experimental)*
+**Note:** It is simple but not stable way to run the service. We do not recommend to use it in production.    
+  - (Windows only, first time) Install OpenSSL v1.1.1 for win64 from [here](https://slproweb.com/products/Win32OpenSSL.html).
+  - Install package: `pip install ton-http-api`.
+  - Run service with `ton-http-api`. This command will run service with [mainnet](https://ton.org/global-config.json) configuration.
+    - Run `ton-http-api --help` to show parameters list.
 
 ### Docker Compose
   - (First time) Install required tools: `docker`, `docker-compose`, `curl`. 
@@ -32,36 +38,20 @@ There are two main ways to run TON HTTP API:
     curl -sL https://ton-blockchain.github.io/testnet-global.config.json > private/testnet.json
     ```
   - Run `./configure.py` to create `.env` file with necessary environment variables (see [Configuration](#Configuration) for details).
-  - Pull latest images: `docker-compose pull`.
-    - Also, you can build services: `docker-compose build`.
+  - Build services: `docker-compose build`.
+    - Or pull latest images: `docker-compose pull`.
   - Run services: `docker-compose up -d`.
   - Stop services: `docker-compose down`.
 
-But, in production we recommend you to run service with Docker Compose.
+### Configuration
 
-### Local run *(experimental)*
-**Note:** we do not recommend to run service locally in production.    
-  - (Windows only, first time) Install OpenSSL v1.1.1 for win64 from [here](https://slproweb.com/products/Win32OpenSSL.html).
-  - Install package: `pip install ton-http-api`.
-  - Run service with `ton-http-api`. This command will run service with [mainnet](https://ton.org/global-config.json) configuration.
-    - Run `ton-http-api --help` to show parameters list.
-  - To change settings you can use environment variables (see [Configuration](#Configuration) section).
-
-
-## Configuration
-
-Configuration process is different in case of local and Docker run:
-
-- In case of local run you can pass parameters using environment variables: 
-  - Windows: run command `set variable=value` in CMD or `$env:variable = 'value'` in PowerShell. 
-  - Linux and MacOS: run command `export variable=value` or path variable inplace: `variable=value uvicorn pyTON.main:app`.
-- In case of Docker you should specify environment parameters and run `./configure.py` to create `.env` file.
+You should specify environment parameters and run `./configure.py` to create `.env` file.
     ```bash
     export TON_API_LITESERVER_CONFIG=private/testnet.json
     ./configure.py
     ```
 
-The service supports the following environment variables for configuration:
+The service supports the following environment variables:
 #### Webserver settings
 - `TON_API_HTTP_PORT` *(default: 80)*
 
@@ -115,7 +105,6 @@ The service supports the following environment variables for configuration:
 - `TON_API_TONLIB_REQUEST_TIMEOUT` *(default: 10)*
 
   Timeout for liteserver requests.
-
 
 #### Cache configuration
 - `TON_API_CACHE_ENABLED` *(default: 0)*
