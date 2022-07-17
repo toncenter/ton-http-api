@@ -14,6 +14,8 @@ from pyTON.models import TonlibWorkerMsgType, TonlibClientResult, ConsensusBlock
 from pyTON.cache import CacheManager, DisabledCacheManager
 from pyTON.settings import TonlibSettings
 
+from pytonlib import TonlibError
+
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
 from datetime import datetime
