@@ -78,6 +78,10 @@ tags_metadata = [
         "name": "transactions",
         "description": "Fetching and locating transactions.",
     },
+    {   
+        "name": "get config",
+        "description": "Get blockchain config"
+    },
     {
         "name": "run method",
         "description": "Run get method of smart contract.",
@@ -432,6 +436,18 @@ async def get_block_header(
     """
     return await tonlib.getBlockHeader(workchain, shard, seqno, root_hash, file_hash)
 
+@app.get('/getConfigParam', response_model=TonResponse, response_model_exclude_none=True, tags=['get config'])
+@json_rpc('getConfigParam')
+@wrap_result
+async def get_config_param(
+    config_id: int = Query(..., description="Config id"),
+    seqno: Optional[int] = Query(None, description="Masterchain seqno. If not specified, latest blockchain state will be used.")
+    ):
+    """
+    Get config by id.
+    """
+    return await tonlib.get_config_param(config_id, seqno)
+
 @app.get('/tryLocateTx', response_model=TonResponse, response_model_exclude_none=True, tags=['transactions'])
 @json_rpc('tryLocateTx')
 @wrap_result
@@ -493,6 +509,18 @@ async def send_boc(
     """
     boc = base64.b64decode(boc)
     return await tonlib.raw_send_message(boc)
+
+@app.post('/sendBocReturnHash', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
+@json_rpc('sendBocReturnHash')
+@wrap_result
+async def send_boc_return_hash(
+    boc: str = Body(..., embed=True, description="b64 encoded bag of cells")
+    ):
+    """
+    Send serialized boc file: fully packed and serialized external message to blockchain. The method returns message hash.
+    """
+    boc = base64.b64decode(boc)
+    return await tonlib.raw_send_message_return_hash(boc)
 
 async def send_boc_unsafe_task(boc_bytes: bytes):
     send_interval = 5

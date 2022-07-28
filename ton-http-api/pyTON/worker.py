@@ -10,6 +10,7 @@ from pyTON.models import TonlibWorkerMsgType, TonlibClientResult
 from pytonlib import TonlibClient, TonlibException
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 from enum import Enum
 from dataclasses import dataclass
@@ -50,6 +51,8 @@ class TonlibWorker(mp.Process):
         policy = asyncio.get_event_loop_policy()
         policy.set_event_loop(policy.new_event_loop())
         self.loop = asyncio.new_event_loop()
+
+        Path(self.tonlib_settings.keystore).mkdir(parents=True, exist_ok=True)
 
         # init tonlib
         self.tonlib = TonlibClient(ls_index=self.ls_index,

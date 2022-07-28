@@ -80,6 +80,7 @@ class TonlibManager:
         self.raw_getBlockTransactions = self.cache_manager.cached(expire=600)(self.raw_getBlockTransactions)
         self.getBlockTransactions = self.cache_manager.cached(expire=600)(self.getBlockTransactions)
         self.getBlockHeader = self.cache_manager.cached(expire=600)(self.getBlockHeader)
+        self.get_config_param = self.cache_manager.cached(expire=5)(self.get_config_param)
         self.tryLocateTxByOutcomingMessage = self.cache_manager.cached(expire=600, check_error=False)(self.tryLocateTxByOutcomingMessage)
         self.tryLocateTxByIncomingMessage = self.cache_manager.cached(expire=600, check_error=False)(self.tryLocateTxByIncomingMessage)
 
@@ -331,7 +332,7 @@ class TonlibManager:
     async def raw_run_method(self, address, method, stack_data, output_layout=None):
         return await self.dispatch_request('raw_run_method', address, method, stack_data, output_layout)
 
-    async def raw_send_message(self, serialized_boc):
+    async def _send_message(self, serialized_boc, method):
         ls_index_list = self.select_worker(count=4)
         result = None
         try:
@@ -339,7 +340,7 @@ class TonlibManager:
             for ls_index in ls_index_list:
                 task_id = "{}:{}".format(time.time(), random.random())
                 timeout = time.time() + self.tonlib_settings.request_timeout
-                await self.loop.run_in_executor(self.threadpool_executor, self.workers[ls_index]['worker'].input_queue.put, (task_id, timeout, 'raw_send_message', [serialized_boc], {}))
+                await self.loop.run_in_executor(self.threadpool_executor, self.workers[ls_index]['worker'].input_queue.put, (task_id, timeout, method, [serialized_boc], {}))
 
                 self.futures[task_id] = self.loop.create_future()
                 task_ids.append(task_id)
@@ -351,6 +352,12 @@ class TonlibManager:
                 self.futures.pop(task_id)
 
         return result
+
+    async def raw_send_message(self, serialized_boc):
+        return await self._send_message(serialized_boc, 'raw_send_message')
+
+    async def raw_send_message_return_hash(self, serialized_boc):
+        return await self._send_message(serialized_boc, 'raw_send_message_return_hash')
 
     async def _raw_create_query(self, destination, body, init_code=b'', init_data=b''):
         return await self.dispatch_request('_raw_create_query', destination, body, init_code, init_data)
@@ -402,6 +409,14 @@ class TonlibManager:
             return await self.dispatch_request(method, workchain, shard, seqno, root_hash, file_hash)
         else:
             return await self.dispatch_archival_request(method, workchain, shard, seqno, root_hash, file_hash)
+
+    async def get_config_param(self, config_id: int, seqno: Optional[int]):
+        seqno = seqno or self.consensus_block.seqno
+        method = 'get_config_param'
+        if self.consensus_block.seqno - seqno < 2000:
+            return await self.dispatch_request(method, config_id, seqno)
+        else:
+            return await self.dispatch_archival_request(method, config_id, seqno)
 
     async def tryLocateTxByOutcomingMessage(self, source, destination, creation_lt):
         return await self.dispatch_archival_request('try_locate_tx_by_outcoming_message',  source, destination, creation_lt)
