@@ -48,7 +48,16 @@ def main():
     logs_args.add_argument('--logs-level', type=str, choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='ERROR', help='Logging level')
     logs_args.add_argument('--logs-jsonify', default=False, action='store_true', help='Print logs in JSON format')
 
+    other_args = parser.add_argument_group('other')
+    other_args.add_argument('--version', default=False, action='store_true', help='Show version of PyPI package')
+
     args = parser.parse_args()
+
+    if args.version:
+        os.system('pip3 show ton-http-api')
+        return
+
+    # running web app
     setup_environment(args)
 
     from pyTON.main import app

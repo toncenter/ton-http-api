@@ -114,7 +114,6 @@ class Settings:
 
     @classmethod
     def from_environment(cls):
-        loggging_enabled = strtobool(os.environ.get('TON_API_LOGS_ENABLED', '0'))
         cache_enabled = strtobool(os.environ.get('TON_API_CACHE_ENABLED', '0'))
         logging = LoggingSettings.from_environment()
         cache = (RedisCacheSettings if cache_enabled else CacheSettings).from_environment()

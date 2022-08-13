@@ -169,5 +169,7 @@ class TonlibWorker(mp.Process):
         await self.loop.run_in_executor(self.threadpool_executor, self.output_queue.put, (TonlibWorkerMsgType.TASK_RESULT, tonlib_task_result))
 
     async def idle_loop(self):
+        await self.tonlib.sync_tonlib()
+        
         while not self.exit_event.is_set():
             await asyncio.sleep(0.5)
