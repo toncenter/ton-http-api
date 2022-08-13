@@ -2,6 +2,12 @@
 
 # HTTP API for [The Open Network](https://ton.org)
 
+[![PyPI](https://img.shields.io/pypi/v/ton-http-api?color=blue)](https://pypi.org/project/ton-http-api/)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/ton-http-api)](https://pypi.org/project/ton-http-api/)
+[![Docker - Image Version](https://img.shields.io/docker/v/toncenter/ton-http-api?label=docker&sort=semver)](https://hub.docker.com/repository/docker/toncenter/ton-http-api)
+[![Docker - Image Size](https://img.shields.io/docker/image-size/toncenter/ton-http-api?label=docker&sort=semver)](https://hub.docker.com/repository/docker/toncenter/ton-http-api)
+![Github last commit](https://img.shields.io/github/last-commit/toncenter/ton-http-api)
+
 Since TON nodes uses its own ADNL binary transport protocol, a intermediate service is needed for an HTTP connection.
 
 TON HTTP API is such a intermediate service, receiving requests via HTTP, it accesses the lite servers of the TON network using `tonlibjson`.
