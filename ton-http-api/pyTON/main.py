@@ -20,7 +20,7 @@ from fastapi import status
 
 from tvm_valuetypes.cell import deserialize_cell_from_object
 
-from pyTON.models import TonResponse, TonResponseJsonRPC, TonRequestJsonRPC
+from pyTON.models import TonResponse, TonResponseJsonRPC, TonRequestJsonRPC, SmartContract
 from pyTON.manager import TonlibManager
 from pyTON.cache import CacheManager, RedisCacheManager, DisabledCacheManager
 from pyTON.settings import Settings, RedisCacheSettings
@@ -238,6 +238,16 @@ async def healthcheck():
 async def get_worker_state():
     return tonlib.get_workers_state()
 
+
+@app.get('/getContractInformation', response_model=SmartContract, response_model_exclude_none=True, tags=['accounts'])
+@json_rpc('getContractInformation')
+async def get_contract_information(
+    address: str = Query(..., description="Identifier of target TON account in any form."),
+    seqno: Optional[int] = Query(None, description="Masterchain seqno of block at which data is requested. If not specified latest blockchain state will be used.")
+    ):
+    address = prepare_address(address)
+    tonlib_result = await tonlib.raw_get_account_state(address)
+    return SmartContract.build(tonlib_result)    
 
 @app.get('/getAddressInformation', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
 @json_rpc('getAddressInformation')
@@ -715,7 +725,7 @@ if settings.webserver.json_rpc:
 
         if not method in json_rpc_methods:
             response.status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
-            return TonResponseJsonRPC(ok=False, error='Unknown method', id=_id)
+            return TonResponseJsonRPC(error='Unknown method', id=_id)
         handler = json_rpc_methods[method]
 
         try:
@@ -727,6 +737,6 @@ if settings.webserver.json_rpc:
             result = await handler(**params)
         except TypeError as e:
             response.status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
-            return TonResponseJsonRPC(ok=False, error=f'TypeError: {e}', id=_id)
+            return TonResponseJsonRPC(error=f'TypeError: {e}', id=_id)
         
-        return TonResponseJsonRPC(ok=result.ok, result=result.result, error=result.error, code=result.code, id=_id)
+        return TonResponseJsonRPC(result=result, id=_id)
