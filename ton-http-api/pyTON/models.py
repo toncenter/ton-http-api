@@ -77,7 +77,7 @@ def address_state(account_info):
 
 class BlockId(BaseModel):
     workchain: int
-    shard: int
+    shard: str
     seqno: int
     root_hash: str
     file_hash: str
@@ -86,12 +86,59 @@ class BlockId(BaseModel):
         check_tonlib_type(tl_obj, 'ton.blockIdExt')
 
         workchain = int(tl_obj['workchain'])
-        shard = int(tl_obj['shard'])
+        shard = tl_obj['shard']
         seqno = int(tl_obj['seqno'])
         root_hash = tl_obj['root_hash']
         file_hash = tl_obj['file_hash']
 
         return BlockId(workchain=workchain, shard=shard, seqno=seqno, root_hash=root_hash, file_hash=file_hash)
+
+class BlockHeader(BaseModel):
+    id: BlockId
+    global_id: int
+    version: int
+    flags: int
+    after_merge: bool
+    after_split: bool
+    before_split: bool
+    want_merge: bool
+    want_split: bool
+    validator_list_hash_short: int
+    catchain_seqno: int
+    min_ref_mc_seqno: int
+    is_key_block: bool
+    prev_key_block_seqno: int
+    start_lt: int
+    end_lt: int
+    gen_utime: int
+    vert_seqno: int
+    prev_blocks: List[BlockId]
+
+    def build(tl_obj: dict):
+        check_tonlib_type(tl_obj, 'blocks.header')
+        print(tl_obj)
+        return BlockHeader(
+            id=BlockId.build(tl_obj['id']),
+            global_id=tl_obj['global_id'],
+            version=tl_obj['version'],
+            flags=tl_obj.get('flags', 0),
+            after_merge=tl_obj['after_merge'],
+            after_split=tl_obj['after_split'],
+            before_split=tl_obj['before_split'],
+            want_merge=tl_obj['want_merge'],
+            want_split=tl_obj['want_split'],
+            validator_list_hash_short=tl_obj['validator_list_hash_short'],
+            catchain_seqno=tl_obj['catchain_seqno'],
+            min_ref_mc_seqno=tl_obj['min_ref_mc_seqno'],
+            is_key_block=tl_obj['is_key_block'],
+            prev_key_block_seqno=tl_obj['prev_key_block_seqno'],
+            start_lt=tl_obj['start_lt'],
+            end_lt=tl_obj['end_lt'],
+            gen_utime=tl_obj['gen_utime'],
+            vert_seqno=tl_obj.get('vert_seqno', 0),
+            prev_blocks=(BlockId.build(p) for p in tl_obj['prev_blocks'])
+        )
+
 
 class SmartContract(BaseModel):
     balance: int
@@ -133,4 +180,143 @@ class SmartContract(BaseModel):
 
         return obj
 
+class AdressUserFriendly(BaseModel):
+    b64: str
+    b64url: str
 
+    def build(raw: dict):
+        return AdressUserFriendly(b64=raw['b64'], b64url=raw['b64url'])
+
+class AddressForms(BaseModel):
+    raw_form: str
+    bounceable: AdressUserFriendly    
+    non_bounceable: AdressUserFriendly
+    given_type: Literal["friendly_bounceable", "friendly_non_bounceable", "raw_form"]
+    test_only: bool
+
+    def build(raw: dict):
+        return AddressForms(raw_form=raw['raw_form'], 
+            bounceable=AdressUserFriendly.build(raw['bounceable']),
+            non_bounceable=AdressUserFriendly.build(raw['non_bounceable']),
+            given_type=raw['given_type'],
+            test_only=raw['test_only']
+        )
+
+class MasterchainInfo(BaseModel):
+    last: BlockId
+    state_root_hash: str
+    init: BlockId
+
+    def build(tl_obj: dict):
+        check_tonlib_type(tl_obj, 'blocks.masterchainInfo')
+
+        return MasterchainInfo(last=BlockId.build(tl_obj['last']), 
+            init=BlockId.build(tl_obj['init']),
+            state_root_hash=tl_obj['state_root_hash']
+        )
+
+class ExternalMessage(BaseModel):
+    msg_hash: str
+
+    def build(tl_obj: dict):
+        check_tonlib_type(tl_obj, 'raw.extMessageInfo')
+
+        return ExternalMessage(msg_hash=tl_obj['hash'])
+
+class SerializedBoc(BaseModel):
+    boc: str
+
+    def build_from_config(tl_obj: dict):
+        check_tonlib_type(tl_obj, 'configInfo')
+
+        return SerializedBoc(boc=tl_obj['config']['bytes'])
+
+class MsgDataRaw(BaseModel):
+    body: str 
+    init_state: str
+
+    def build(tl_obj: dict):
+        check_tonlib_type(tl_obj, 'msg.dataRaw')
+
+        return MsgDataRaw(body=tl_obj['body'], init_state=tl_obj['init_state'])
+
+class MsgDataText(BaseModel):
+    text: str
+
+    def build(tl_obj: dict):
+        check_tonlib_type(tl_obj, 'msg.dataText')
+
+        return MsgDataText(text=tl_obj['text'])
+
+class MsgDataEncryptedText(BaseModel):
+    text: str
+
+    def build(tl_obj: dict):
+        check_tonlib_type(tl_obj, 'msg.dataEncryptedText')
+
+        return MsgDataEncryptedText(text=tl_obj['text'])        
+
+class Message(BaseModel):
+    source: str
+    destination: str
+    value: int
+    fwd_fee: int
+    ihr_fee: int
+    created_lt: int
+    body_hash: str
+    msg_data: Union[MsgDataRaw, MsgDataText, MsgDataEncryptedText]
+    message: Optional[str]
+
+    def build(tl_obj: dict):
+        check_tonlib_type(tl_obj, 'raw.message')
+
+        msg_data = None
+        if tl_obj['msg_data']['@type'] == 'msg.dataRaw':
+            msg_data = MsgDataRaw.build(tl_obj['msg_data'])
+        elif tl_obj['msg_data']['@type'] == 'msg.dataText':
+            msg_data = MsgDataText.build(tl_obj['msg_data'])
+        elif tl_obj['msg_data']['@type'] == 'msg.dataEncryptedText':
+            msg_data = MsgDataEncryptedText.build(tl_obj['msg_data'])
+
+        return Message(source=tl_obj['source'],
+            destination=tl_obj['destination'],
+            value=int(tl_obj['value']),
+            fwd_fee=int(tl_obj['fwd_fee']),
+            ihr_fee=int(tl_obj['ihr_fee']),
+            created_lt=int(tl_obj['created_lt']),
+            body_hash=tl_obj['body_hash'],
+            msg_data=msg_data,
+            message=tl_obj.get('message')
+        )
+
+class TransactionId(BaseModel):
+    lt: int
+    hash: str
+
+    def build(tl_obj: dict):
+        check_tonlib_type(tl_obj, 'internal.transactionId')
+
+        return TransactionId(lt=int(tl_obj['lt']), hash=tl_obj['hash'])
+
+class Transaction(BaseModel):
+    utime: int
+    data: str
+    transaction_id: TransactionId
+    fee: int
+    storage_fee: int
+    other_fee: int
+    in_msg: Optional[Message]
+    out_msgs: List[Message]
+
+    def build(tl_obj: dict):
+        check_tonlib_type(tl_obj, 'raw.transaction')
+
+        return Transaction(utime=int(tl_obj['utime']),
+            data=tl_obj['data'],
+            transaction_id=TransactionId.build(tl_obj['transaction_id']),
+            fee=int(tl_obj['fee']),
+            storage_fee=int(tl_obj['storage_fee']),
+            other_fee=int(tl_obj['other_fee']),
+            in_msg=Message.build(tl_obj.get('in_msg')) if tl_obj.get('in_msg') else None,
+            out_msgs=[Message.build(m) for m in tl_obj['out_msgs']]
+        )
