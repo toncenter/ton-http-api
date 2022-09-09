@@ -20,7 +20,7 @@ from fastapi import status
 
 from tvm_valuetypes.cell import deserialize_cell_from_object
 
-from pyTON.models import TonResponse, TonResponseJsonRPC, TonRequestJsonRPC, SmartContract
+from pyTON.models import TonResponse, TonResponseJsonRPC, TonRequestJsonRPC, SmartContract, AddressForms, MasterchainInfo, ExternalMessage, BlockId, BlockHeader, check_tonlib_type, SerializedBoc, Transaction
 from pyTON.manager import TonlibManager
 from pyTON.cache import CacheManager, RedisCacheManager, DisabledCacheManager
 from pyTON.settings import Settings, RedisCacheSettings
@@ -249,62 +249,61 @@ async def get_contract_information(
     tonlib_result = await tonlib.raw_get_account_state(address)
     return SmartContract.build(tonlib_result)    
 
-@app.get('/getAddressInformation', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
-@json_rpc('getAddressInformation')
-@wrap_result
-async def get_address_information(
-    address: str = Query(..., description="Identifier of target TON account in any form.")
-    ):
-    """
-    Get basic information about the address: balance, code, data, last_transaction_id.
-    """
-    address = prepare_address(address)
-    result = await tonlib.raw_get_account_state(address)
-    result["state"] = address_state(result)
-    if "balance" in result and int(result["balance"]) < 0:
-        result["balance"] = 0
-    return result
+# @app.get('/getAddressInformation', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
+# @json_rpc('getAddressInformation')
+# @wrap_result
+# async def get_address_information(
+#     address: str = Query(..., description="Identifier of target TON account in any form.")
+#     ):
+#     """
+#     Get basic information about the address: balance, code, data, last_transaction_id.
+#     """
+#     address = prepare_address(address)
+#     result = await tonlib.raw_get_account_state(address)
+#     result["state"] = address_state(result)
+#     if "balance" in result and int(result["balance"]) < 0:
+#         result["balance"] = 0
+#     return result
 
-@app.get('/getExtendedAddressInformation', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
-@json_rpc('getExtendedAddressInformation')
-@wrap_result
-async def get_extended_address_information(
-    address: str = Query(..., description="Identifier of target TON account in any form.")
-    ):
-    """
-    Similar to previous one but tries to parse additional information for known contract types. This method is based on tonlib's function *getAccountState*. For detecting wallets we recommend to use *getWalletInformation*.
-    """
-    address = prepare_address(address)
-    result = await tonlib.generic_get_account_state(address)
-    return result
+# @app.get('/getExtendedAddressInformation', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
+# @json_rpc('getExtendedAddressInformation')
+# @wrap_result
+# async def get_extended_address_information(
+#     address: str = Query(..., description="Identifier of target TON account in any form.")
+#     ):
+#     """
+#     Similar to previous one but tries to parse additional information for known contract types. This method is based on tonlib's function *getAccountState*. For detecting wallets we recommend to use *getWalletInformation*.
+#     """
+#     address = prepare_address(address)
+#     result = await tonlib.generic_get_account_state(address)
+#     return result
 
-@app.get('/getWalletInformation', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
-@json_rpc('getWalletInformation')
-@wrap_result
-async def get_wallet_information(
-    address: str = Query(..., description="Identifier of target TON account in any form.")
-    ):
-    """
-    Retrieve wallet information. This method parses contract state and currently supports more wallet types than getExtendedAddressInformation: simple wallet, standart wallet, v3 wallet, v4 wallet.
-    """
-    address = prepare_address(address)
-    result = await tonlib.raw_get_account_state(address)
-    res = {'wallet': False, 'balance': 0, 'account_state': None, 'wallet_type': None, 'seqno': None}
-    res["account_state"] = address_state(result)
-    res["balance"] = result["balance"] if (result["balance"] and int(result["balance"]) > 0) else 0
-    if "last_transaction_id" in result:
-        res["last_transaction_id"] = result["last_transaction_id"]
-    ci = sha256(result["code"])
-    if ci in known_wallets:
-        res["wallet"] = True
-        wallet_handler = known_wallets[ci]
-        res["wallet_type"] = wallet_handler["type"]
-        wallet_handler["data_extractor"](res, result)
-    return res
+# @app.get('/getWalletInformation', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
+# @json_rpc('getWalletInformation')
+# @wrap_result
+# async def get_wallet_information(
+#     address: str = Query(..., description="Identifier of target TON account in any form.")
+#     ):
+#     """
+#     Retrieve wallet information. This method parses contract state and currently supports more wallet types than getExtendedAddressInformation: simple wallet, standart wallet, v3 wallet, v4 wallet.
+#     """
+#     address = prepare_address(address)
+#     result = await tonlib.raw_get_account_state(address)
+#     res = {'wallet': False, 'balance': 0, 'account_state': None, 'wallet_type': None, 'seqno': None}
+#     res["account_state"] = address_state(result)
+#     res["balance"] = result["balance"] if (result["balance"] and int(result["balance"]) > 0) else 0
+#     if "last_transaction_id" in result:
+#         res["last_transaction_id"] = result["last_transaction_id"]
+#     ci = sha256(result["code"])
+#     if ci in known_wallets:
+#         res["wallet"] = True
+#         wallet_handler = known_wallets[ci]
+#         res["wallet_type"] = wallet_handler["type"]
+#         wallet_handler["data_extractor"](res, result)
+#     return res
 
-@app.get('/getTransactions', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts', 'transactions'])
+@app.get('/getTransactions', response_model=List[Transaction], response_model_exclude_none=True, tags=['accounts', 'transactions'])
 @json_rpc('getTransactions')
-@wrap_result
 async def get_transactions(
     address: str = Query(..., description="Identifier of target TON account in any form."), 
     limit: Optional[int] = Query(default=10, description="Maximum number of transactions in response."), 
@@ -317,66 +316,67 @@ async def get_transactions(
     Get transaction history of a given address.
     """
     address = prepare_address(address)
-    return await tonlib.get_transactions(address, from_transaction_lt=lt, from_transaction_hash=hash, to_transaction_lt=to_lt, limit=limit, archival=archival)
+    raw = await tonlib.get_transactions(address, from_transaction_lt=lt, from_transaction_hash=hash, to_transaction_lt=to_lt, limit=limit, archival=archival)
+    return [Transaction.build(x) for x in raw]
 
-@app.get('/getAddressBalance', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
-@json_rpc('getAddressBalance')
-@wrap_result
-async def get_address_balance(
-    address: str = Query(..., description="Identifier of target TON account in any form.")
-    ):
-    """
-    Get balance (in nanotons) of a given address.
-    """
-    address = prepare_address(address)
-    result = await tonlib.raw_get_account_state(address)
-    if "balance" in result and int(result["balance"]) < 0:
-        result["balance"] = 0
-    return result["balance"]
+# @app.get('/getAddressBalance', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
+# @json_rpc('getAddressBalance')
+# @wrap_result
+# async def get_address_balance(
+#     address: str = Query(..., description="Identifier of target TON account in any form.")
+#     ):
+#     """
+#     Get balance (in nanotons) of a given address.
+#     """
+#     address = prepare_address(address)
+#     result = await tonlib.raw_get_account_state(address)
+#     if "balance" in result and int(result["balance"]) < 0:
+#         result["balance"] = 0
+#     return result["balance"]
 
-@app.get('/getAddressState', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
-@json_rpc('getAddressState')
-@wrap_result
-async def get_address(
-    address: str = Query(..., description="Identifier of target TON account in any form.")
-    ):
-    """
-    Get state of a given address. State can be either *unitialized*, *active* or *frozen*.
-    """
-    address = prepare_address(address)
-    result = await tonlib.raw_get_account_state(address)
-    return address_state(result)
+# @app.get('/getAddressState', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
+# @json_rpc('getAddressState')
+# @wrap_result
+# async def get_address(
+#     address: str = Query(..., description="Identifier of target TON account in any form.")
+#     ):
+#     """
+#     Get state of a given address. State can be either *unitialized*, *active* or *frozen*.
+#     """
+#     address = prepare_address(address)
+#     result = await tonlib.raw_get_account_state(address)
+#     return address_state(result)
 
-@app.get('/packAddress', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
-@json_rpc('packAddress')
-@wrap_result
-async def pack_address(
-    address: str = Query(..., description="Identifier of target TON account in raw form.", example="0:83DFD552E63729B472FCBCC8C45EBCC6691702558B68EC7527E1BA403A0F31A8")
-    ):
-    """
-    Convert an address from raw to human-readable format.
-    """
-    return prepare_address(address)
+# @app.get('/packAddress', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
+# @json_rpc('packAddress')
+# @wrap_result
+# async def pack_address(
+#     address: str = Query(..., description="Identifier of target TON account in raw form.", example="0:83DFD552E63729B472FCBCC8C45EBCC6691702558B68EC7527E1BA403A0F31A8")
+#     ):
+#     """
+#     Convert an address from raw to human-readable format.
+#     """
+#     return prepare_address(address)
 
-@app.get('/unpackAddress', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
-@json_rpc('unpackAddress')
-@wrap_result
-async def unpack_address(
-    address: str = Query(..., description="Identifier of target TON account in user-friendly form", example="EQCD39VS5jcptHL8vMjEXrzGaRcCVYto7HUn4bpAOg8xqB2N")
-    ):
-    """
-    Convert an address from human-readable to raw format.
-    """
-    return _detect_address(address)["raw_form"]
+# @app.get('/unpackAddress', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
+# @json_rpc('unpackAddress')
+# @wrap_result
+# async def unpack_address(
+#     address: str = Query(..., description="Identifier of target TON account in user-friendly form", example="EQCD39VS5jcptHL8vMjEXrzGaRcCVYto7HUn4bpAOg8xqB2N")
+#     ):
+#     """
+#     Convert an address from human-readable to raw format.
+#     """
+#     return _detect_address(address)["raw_form"]
 
-@app.get('/getMasterchainInfo', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
+@app.get('/getMasterchainInfo', response_model=MasterchainInfo, response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('getMasterchainInfo')
-@wrap_result
 async def get_masterchain_info():
     """
     Get up-to-date masterchain state.
     """
-    return await tonlib.getMasterchainInfo()
+    raw = await tonlib.getMasterchainInfo()
+    return MasterchainInfo.build(raw)
 
 @app.get('/getConsensusBlock', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('getConsensusBlock')
@@ -387,9 +387,8 @@ async def get_consensus_block():
     """
     return await tonlib.getConsensusBlock()
 
-@app.get('/lookupBlock', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
+@app.get('/lookupBlock', response_model=BlockId, response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('lookupBlock')
-@wrap_result
 async def lookup_block(
     workchain: int = Query(..., description="Workchain id to look up block in"), 
     shard: int = Query(..., description="Shard id to look up block in"),
@@ -400,18 +399,20 @@ async def lookup_block(
     """
     Look up block by either *seqno*, *lt* or *unixtime*.
     """
-    return await tonlib.lookupBlock(workchain, shard, seqno, lt, unixtime)
+    raw = await tonlib.lookupBlock(workchain, shard, seqno, lt, unixtime)
+    return BlockId.build(raw)
 
-@app.get('/shards', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
-@json_rpc('shards')
-@wrap_result
-async def shards(
+@app.get('/getShards', response_model=List[BlockId], response_model_exclude_none=True, tags=['blocks'])
+@json_rpc('getShards')
+async def get_shards(
     seqno: int = Query(..., description="Masterchain seqno to fetch shards of.")
     ):
     """
     Get shards information.
     """
-    return await tonlib.getShards(seqno)
+    raw = await tonlib.getShards(seqno)
+    check_tonlib_type(raw, 'blocks.shards')
+    return [BlockId.build(s) for s in raw['shards']]
 
 @app.get('/getBlockTransactions', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks','transactions'])
 @json_rpc('getBlockTransactions')
@@ -431,9 +432,8 @@ async def get_block_transactions(
     """
     return await tonlib.getBlockTransactions(workchain, shard, seqno, count, root_hash, file_hash, after_lt, after_hash)
 
-@app.get('/getBlockHeader', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
+@app.get('/getBlockHeader', response_model=BlockHeader, response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('getBlockHeader')
-@wrap_result
 async def get_block_header(
     workchain: int, 
     shard: int, 
@@ -444,11 +444,11 @@ async def get_block_header(
     """
     Get metadata of a given block.
     """
-    return await tonlib.getBlockHeader(workchain, shard, seqno, root_hash, file_hash)
+    raw = await tonlib.getBlockHeader(workchain, shard, seqno, root_hash, file_hash)
+    return BlockHeader.build(raw)
 
-@app.get('/getConfigParam', response_model=TonResponse, response_model_exclude_none=True, tags=['get config'])
+@app.get('/getConfigParam', response_model=SerializedBoc, response_model_exclude_none=True, tags=['get config'])
 @json_rpc('getConfigParam')
-@wrap_result
 async def get_config_param(
     config_id: int = Query(..., description="Config id"),
     seqno: Optional[int] = Query(None, description="Masterchain seqno. If not specified, latest blockchain state will be used.")
@@ -456,20 +456,21 @@ async def get_config_param(
     """
     Get config by id.
     """
-    return await tonlib.get_config_param(config_id, seqno)
+    raw = await tonlib.get_config_param(config_id, seqno)
+    return SerializedBoc.build_from_config(raw)
 
-@app.get('/tryLocateTx', response_model=TonResponse, response_model_exclude_none=True, tags=['transactions'])
-@json_rpc('tryLocateTx')
-@wrap_result
-async def get_try_locate_tx(
-    source: str, 
-    destination: str, 
-    created_lt: int
-    ):
-    """
-    Locate outcoming transaction of *destination* address by incoming message.
-    """
-    return await tonlib.tryLocateTxByIncomingMessage(source, destination, created_lt)
+# @app.get('/tryLocateTx', response_model=TonResponse, response_model_exclude_none=True, tags=['transactions'])
+# @json_rpc('tryLocateTx')
+# @wrap_result
+# async def get_try_locate_tx(
+#     source: str, 
+#     destination: str, 
+#     created_lt: int
+#     ):
+#     """
+#     Locate outcoming transaction of *destination* address by incoming message.
+#     """
+#     return await tonlib.tryLocateTxByIncomingMessage(source, destination, created_lt)
 
 @app.get('/tryLocateResultTx', response_model=TonResponse, response_model_exclude_none=True, tags=['transactions'])
 @json_rpc('tryLocateResultTx')
@@ -497,20 +498,30 @@ async def get_try_locate_source_tx(
     """
     return await tonlib.tryLocateTxByOutcomingMessage(source, destination, created_lt)
 
-@app.get('/detectAddress', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
-@json_rpc('detectAddress')
-@wrap_result
-async def detect_address(
+# @app.get('/detectAddress', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
+# @json_rpc('detectAddress')
+# @wrap_result
+# async def detect_address(
+#     address: str = Query(..., description="Identifier of target TON account in any form.")
+#     ):
+#     """
+#     Get all possible address forms.
+#     """
+#     return _detect_address(address)
+
+@app.get('/getAddressForms', response_model=AddressForms, response_model_exclude_none=True, tags=['accounts'])
+@json_rpc('getAddressForms')
+async def get_address_forms(
     address: str = Query(..., description="Identifier of target TON account in any form.")
     ):
     """
     Get all possible address forms.
     """
-    return _detect_address(address)
+    forms_raw = _detect_address(address)
+    return AddressForms.build(forms_raw)
 
-@app.post('/sendBoc', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
+@app.post('/sendBoc', response_model=ExternalMessage, response_model_exclude_none=True, tags=['send'])
 @json_rpc('sendBoc')
-@wrap_result
 async def send_boc(
     boc: str = Body(..., embed=True, description="b64 encoded bag of cells")
     ):
@@ -518,60 +529,61 @@ async def send_boc(
     Send serialized boc file: fully packed and serialized external message to blockchain.
     """
     boc = base64.b64decode(boc)
-    return await tonlib.raw_send_message(boc)
+    raw = await tonlib.raw_send_message_return_hash(boc)
+    return ExternalMessage.build(raw)
 
-@app.post('/sendBocReturnHash', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
-@json_rpc('sendBocReturnHash')
-@wrap_result
-async def send_boc_return_hash(
-    boc: str = Body(..., embed=True, description="b64 encoded bag of cells")
-    ):
-    """
-    Send serialized boc file: fully packed and serialized external message to blockchain. The method returns message hash.
-    """
-    boc = base64.b64decode(boc)
-    return await tonlib.raw_send_message_return_hash(boc)
+# @app.post('/sendBocReturnHash', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
+# @json_rpc('sendBocReturnHash')
+# @wrap_result
+# async def send_boc_return_hash(
+#     boc: str = Body(..., embed=True, description="b64 encoded bag of cells")
+#     ):
+#     """
+#     Send serialized boc file: fully packed and serialized external message to blockchain. The method returns message hash.
+#     """
+#     boc = base64.b64decode(boc)
+#     return await tonlib.raw_send_message_return_hash(boc)
 
-async def send_boc_unsafe_task(boc_bytes: bytes):
-    send_interval = 5
-    send_duration = 60
-    for i in range(int(send_duration / send_interval)):
-        try:
-            await tonlib.raw_send_message(boc_bytes)
-        except:
-            pass
-        await asyncio.sleep(send_interval)
+# async def send_boc_unsafe_task(boc_bytes: bytes):
+#     send_interval = 5
+#     send_duration = 60
+#     for i in range(int(send_duration / send_interval)):
+#         try:
+#             await tonlib.raw_send_message(boc_bytes)
+#         except:
+#             pass
+#         await asyncio.sleep(send_interval)
 
-@app.post('/sendBocUnsafe', response_model=TonResponse, response_model_exclude_none=True, include_in_schema=False, tags=['send'])
-@json_rpc('sendBocUnsafe')
-@wrap_result
-async def send_boc_unsafe(
-    background_tasks: BackgroundTasks,
-    boc: str = Body(..., embed=True, description="b64 encoded bag of cells")
-    ):
-    """
-    Unsafe send serialized boc file: fully packed and serialized external message to blockchain. This method creates
-    background task that sends boc to network every 5 seconds for 1 minute.
-    """
-    boc = base64.b64decode(boc)
-    background_tasks.add_task(send_boc_unsafe_task, boc)
-    return {'@type': 'ok', '@extra': '0:0:0'}
+# @app.post('/sendBocUnsafe', response_model=TonResponse, response_model_exclude_none=True, include_in_schema=False, tags=['send'])
+# @json_rpc('sendBocUnsafe')
+# @wrap_result
+# async def send_boc_unsafe(
+#     background_tasks: BackgroundTasks,
+#     boc: str = Body(..., embed=True, description="b64 encoded bag of cells")
+#     ):
+#     """
+#     Unsafe send serialized boc file: fully packed and serialized external message to blockchain. This method creates
+#     background task that sends boc to network every 5 seconds for 1 minute.
+#     """
+#     boc = base64.b64decode(boc)
+#     background_tasks.add_task(send_boc_unsafe_task, boc)
+#     return {'@type': 'ok', '@extra': '0:0:0'}
 
-@app.post('/sendCellSimple', response_model=TonResponse, response_model_exclude_none=True, include_in_schema=False, tags=['send'])
-@json_rpc('sendCellSimple')
-@wrap_result
-async def send_cell(
-    cell: Dict[str, Any] = Body(..., embed=True, description="Cell serialized as object")
-    ):
-    """
-    (Deprecated) Send cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`, that is fully packed but not serialized external message.
-    """
-    try:
-        cell = deserialize_cell_from_object(cell)
-        boc = codecs.encode(cell.serialize_boc(), 'base64')
-    except:
-        raise HTTPException(status_code=400, detail="Error while parsing cell")
-    return await tonlib.raw_send_message(boc)
+# @app.post('/sendCellSimple', response_model=TonResponse, response_model_exclude_none=True, include_in_schema=False, tags=['send'])
+# @json_rpc('sendCellSimple')
+# @wrap_result
+# async def send_cell(
+#     cell: Dict[str, Any] = Body(..., embed=True, description="Cell serialized as object")
+#     ):
+#     """
+#     (Deprecated) Send cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`, that is fully packed but not serialized external message.
+#     """
+#     try:
+#         cell = deserialize_cell_from_object(cell)
+#         boc = codecs.encode(cell.serialize_boc(), 'base64')
+#     except:
+#         raise HTTPException(status_code=400, detail="Error while parsing cell")
+#     return await tonlib.raw_send_message(boc)
 
 @app.post('/sendQuery', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
 @json_rpc('sendQuery')
@@ -591,29 +603,29 @@ async def send_query(
     data = codecs.decode(codecs.encode(init_data, "utf-8"), 'base64')
     return await tonlib.raw_create_and_send_query(address, body, init_code=code, init_data=data)
 
-@app.post('/sendQuerySimple', response_model=TonResponse, response_model_exclude_none=True, include_in_schema=False, tags=['send'])
-@json_rpc('sendQuerySimple')
-@wrap_result
-async def send_query_cell(
-    address: str = Body(..., description="Address in any format"), 
-    body: str = Body(..., description='Body cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'), 
-    init_code: Optional[Dict[str, Any]] = Body(default=None, description='init-code cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'), 
-    init_data: Optional[Dict[str, Any]] = Body(default=None, description='init-data cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`')
-    ):
-    """
-    (Deprecated) Send query - unpacked external message. This method gets address, body and init-params (if any), packs it to external message and sends to network. Body, init-code and init-data should be passed as objects.
-    """
-    address = prepare_address(address)
-    try:
-        body = deserialize_cell_from_object(body).serialize_boc(has_idx=False)
-        qcode, qdata = b'', b''
-        if init_code is not None:
-            qcode = deserialize_cell_from_object(init_code).serialize_boc(has_idx=False)
-        if init_data is not None:
-            qdata = deserialize_cell_from_object(init_data).serialize_boc(has_idx=False)
-    except:
-        raise HTTPException(status_code=400, detail="Error while parsing cell object")
-    return await tonlib.raw_create_and_send_query(address, body, init_code=qcode, init_data=qdata)
+# @app.post('/sendQuerySimple', response_model=TonResponse, response_model_exclude_none=True, include_in_schema=False, tags=['send'])
+# @json_rpc('sendQuerySimple')
+# @wrap_result
+# async def send_query_cell(
+#     address: str = Body(..., description="Address in any format"), 
+#     body: str = Body(..., description='Body cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'), 
+#     init_code: Optional[Dict[str, Any]] = Body(default=None, description='init-code cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'), 
+#     init_data: Optional[Dict[str, Any]] = Body(default=None, description='init-data cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`')
+#     ):
+#     """
+#     (Deprecated) Send query - unpacked external message. This method gets address, body and init-params (if any), packs it to external message and sends to network. Body, init-code and init-data should be passed as objects.
+#     """
+#     address = prepare_address(address)
+#     try:
+#         body = deserialize_cell_from_object(body).serialize_boc(has_idx=False)
+#         qcode, qdata = b'', b''
+#         if init_code is not None:
+#             qcode = deserialize_cell_from_object(init_code).serialize_boc(has_idx=False)
+#         if init_data is not None:
+#             qdata = deserialize_cell_from_object(init_data).serialize_boc(has_idx=False)
+#     except:
+#         raise HTTPException(status_code=400, detail="Error while parsing cell object")
+#     return await tonlib.raw_create_and_send_query(address, body, init_code=qcode, init_data=qdata)
 
 @app.post('/estimateFee', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
 @json_rpc('estimateFee')
@@ -634,30 +646,30 @@ async def estimate_fee(
     data = codecs.decode(codecs.encode(init_data, "utf-8"), 'base64')
     return await tonlib.raw_estimate_fees(address, body, init_code=code, init_data=data, ignore_chksig=ignore_chksig)
 
-@app.post('/estimateFeeSimple', response_model=TonResponse, response_model_exclude_none=True, include_in_schema=False, tags=['send'])
-@json_rpc('estimateFeeSimple')
-@wrap_result
-async def estimate_fee_cell(
-    address: str = Body(..., description='Address in any format'), 
-    body: Dict[str, Any] = Body(..., description='Body cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'), 
-    init_code: Optional[Dict[str, Any]] = Body(default=None, description='init-code cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'), 
-    init_data: Optional[Dict[str, Any]] = Body(default=None, description='init-data cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'), 
-    ignore_chksig: bool = Body(default=True, description='If true during test query processing assume that all chksig operations return True')
-    ):
-    """
-    (Deprecated) Estimate fees required for query processing. *body*, *init-code* and *init-data* accepted in unserialized format (as objects).
-    """
-    address = prepare_address(address)
-    try:
-        body = deserialize_cell_from_object(body).serialize_boc(has_idx=False)
-        qcode, qdata = b'', b''
-        if init_code is not None:
-            qcode = deserialize_cell_from_object(init_code).serialize_boc(has_idx=False)
-        if init_data is not None:
-            qdata = deserialize_cell_from_object(init_data).serialize_boc(has_idx=False)
-    except:
-        raise HTTPException(status_code=400, detail="Error while parsing cell object")
-    return await tonlib.raw_estimate_fees(address, body, init_code=qcode, init_data=qdata, ignore_chksig=ignore_chksig)
+# @app.post('/estimateFeeSimple', response_model=TonResponse, response_model_exclude_none=True, include_in_schema=False, tags=['send'])
+# @json_rpc('estimateFeeSimple')
+# @wrap_result
+# async def estimate_fee_cell(
+#     address: str = Body(..., description='Address in any format'), 
+#     body: Dict[str, Any] = Body(..., description='Body cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'), 
+#     init_code: Optional[Dict[str, Any]] = Body(default=None, description='init-code cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'), 
+#     init_data: Optional[Dict[str, Any]] = Body(default=None, description='init-data cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'), 
+#     ignore_chksig: bool = Body(default=True, description='If true during test query processing assume that all chksig operations return True')
+#     ):
+#     """
+#     (Deprecated) Estimate fees required for query processing. *body*, *init-code* and *init-data* accepted in unserialized format (as objects).
+#     """
+#     address = prepare_address(address)
+#     try:
+#         body = deserialize_cell_from_object(body).serialize_boc(has_idx=False)
+#         qcode, qdata = b'', b''
+#         if init_code is not None:
+#             qcode = deserialize_cell_from_object(init_code).serialize_boc(has_idx=False)
+#         if init_data is not None:
+#             qdata = deserialize_cell_from_object(init_data).serialize_boc(has_idx=False)
+#     except:
+#         raise HTTPException(status_code=400, detail="Error while parsing cell object")
+#     return await tonlib.raw_estimate_fees(address, body, init_code=qcode, init_data=qdata, ignore_chksig=ignore_chksig)
 
 
 if settings.webserver.get_methods:
