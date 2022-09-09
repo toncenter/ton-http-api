@@ -75,6 +75,7 @@ class TonlibManager:
         self.raw_run_method = self.cache_manager.cached(expire=5)(self.raw_run_method)
         self.raw_estimate_fees = self.cache_manager.cached(expire=5)(self.raw_estimate_fees)
         self.getMasterchainInfo = self.cache_manager.cached(expire=1)(self.getMasterchainInfo)
+        self.getMasterchainBlockSignatures = self.cache_manager.cached(expire=5)(self.getMasterchainBlockSignatures)
         self.lookupBlock = self.cache_manager.cached(expire=600)(self.lookupBlock)
         self.getShards = self.cache_manager.cached(expire=600)(self.getShards)
         self.raw_getBlockTransactions = self.cache_manager.cached(expire=600)(self.raw_getBlockTransactions)
@@ -376,6 +377,9 @@ class TonlibManager:
 
     async def getMasterchainInfo(self):
         return await self.dispatch_request('get_masterchain_info')
+
+    async def getMasterchainBlockSignatures(self, seqno):
+        return await self.dispatch_request('get_masterchain_block_signatures', seqno)
 
     async def getConsensusBlock(self):
         return {

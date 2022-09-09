@@ -368,6 +368,17 @@ async def get_masterchain_info():
     """
     return await tonlib.getMasterchainInfo()
 
+@app.get('/getMasterchainBlockSignatures', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
+@json_rpc('getMasterchainBlockSignatures')
+@wrap_result
+async def get_masterchain_block_signatures(
+    seqno: int
+    ):
+    """
+    Get up-to-date masterchain state.
+    """
+    return await tonlib.getMasterchainBlockSignatures(seqno)
+
 @app.get('/getConsensusBlock', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('getConsensusBlock')
 @wrap_result
