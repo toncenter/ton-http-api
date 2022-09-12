@@ -45,7 +45,7 @@ setup(
     long_description=long_description,
     entry_points={
         'console_scripts': [
-            'ton-http-api = pyTON.cli:main'
+            'ton-http-api = pyTON.__main__:main'
         ]
     }
 )
