@@ -24,7 +24,7 @@ setup(
         'ring>=0.9.1',
         'uvicorn>=0.17.6',
         'gunicorn>=20.1.0',
-        'pytonlib==0.0.20',
+        'pytonlib==0.0.32',
         'inject>=4.3.1'
     ],
     package_data={},
@@ -45,7 +45,7 @@ setup(
     long_description=long_description,
     entry_points={
         'console_scripts': [
-            'ton-http-api = pyTON.cli:main'
+            'ton-http-api = pyTON.__main__:main'
         ]
     }
 )

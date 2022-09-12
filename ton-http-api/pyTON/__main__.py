@@ -62,3 +62,7 @@ def main():
 
     from pyTON.main import app
     uvicorn.run(app, host=args.host, port=args.port, log_level=args.logs_level.lower())
+
+
+if __name__ == '__main__':
+    main()
