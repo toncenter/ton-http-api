@@ -238,23 +238,7 @@ class MsgDataRaw(BaseModel):
     def build(tl_obj: dict):
         check_tonlib_type(tl_obj, 'msg.dataRaw')
 
-        return MsgDataRaw(body=tl_obj['body'], init_state=tl_obj['init_state'])
-
-class MsgDataText(BaseModel):
-    text: str
-
-    def build(tl_obj: dict):
-        check_tonlib_type(tl_obj, 'msg.dataText')
-
-        return MsgDataText(text=tl_obj['text'])
-
-class MsgDataEncryptedText(BaseModel):
-    text: str
-
-    def build(tl_obj: dict):
-        check_tonlib_type(tl_obj, 'msg.dataEncryptedText')
-
-        return MsgDataEncryptedText(text=tl_obj['text'])        
+        return MsgDataRaw(body=tl_obj['body'], init_state=tl_obj['init_state'])    
 
 class Message(BaseModel):
     source: str
@@ -264,19 +248,12 @@ class Message(BaseModel):
     ihr_fee: int
     created_lt: int
     body_hash: str
-    msg_data: Union[MsgDataRaw, MsgDataText, MsgDataEncryptedText]
-    message: Optional[str]
+    msg_data: MsgDataRaw
+    comment: Optional[str]
+    op: Optional[int]
 
     def build(tl_obj: dict):
         check_tonlib_type(tl_obj, 'raw.message')
-
-        msg_data = None
-        if tl_obj['msg_data']['@type'] == 'msg.dataRaw':
-            msg_data = MsgDataRaw.build(tl_obj['msg_data'])
-        elif tl_obj['msg_data']['@type'] == 'msg.dataText':
-            msg_data = MsgDataText.build(tl_obj['msg_data'])
-        elif tl_obj['msg_data']['@type'] == 'msg.dataEncryptedText':
-            msg_data = MsgDataEncryptedText.build(tl_obj['msg_data'])
 
         return Message(source=tl_obj['source'],
             destination=tl_obj['destination'],
@@ -285,8 +262,9 @@ class Message(BaseModel):
             ihr_fee=int(tl_obj['ihr_fee']),
             created_lt=int(tl_obj['created_lt']),
             body_hash=tl_obj['body_hash'],
-            msg_data=msg_data,
-            message=tl_obj.get('message')
+            msg_data=MsgDataRaw.build(tl_obj['msg_data']),
+            comment=tl_obj.get('comment'),
+            op=tl_obj.get('op'),
         )
 
 class TransactionId(BaseModel):
@@ -301,7 +279,8 @@ class TransactionId(BaseModel):
 class Transaction(BaseModel):
     utime: int
     data: str
-    transaction_id: TransactionId
+    hash: str
+    lt: str
     fee: int
     storage_fee: int
     other_fee: int
@@ -313,7 +292,8 @@ class Transaction(BaseModel):
 
         return Transaction(utime=int(tl_obj['utime']),
             data=tl_obj['data'],
-            transaction_id=TransactionId.build(tl_obj['transaction_id']),
+            hash=tl_obj['transaction_id']['hash'],
+            lt=tl_obj['transaction_id']['lt'],
             fee=int(tl_obj['fee']),
             storage_fee=int(tl_obj['storage_fee']),
             other_fee=int(tl_obj['other_fee']),

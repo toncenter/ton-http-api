@@ -67,7 +67,6 @@ class TonlibManager:
         self.threadpool_executor.shutdown()
 
     def setup_cache(self):
-        self.raw_get_transactions = self.cache_manager.cached(expire=5)(self.raw_get_transactions)
         self.get_transactions = self.cache_manager.cached(expire=15, check_error=False)(self.get_transactions)
         self.raw_get_account_state = self.cache_manager.cached(expire=5)(self.raw_get_account_state)
         self.generic_get_account_state = self.cache_manager.cached(expire=5)(self.generic_get_account_state)
@@ -294,13 +293,6 @@ class TonlibManager:
             logger.warning(f'Method {method} failed to execute on archival node: {ee}')
             ls_index = self.select_worker(archival=False)
         return self.dispatch_request_to_worker(method, ls_index, *args, **kwargs)
-
-    async def raw_get_transactions(self, account_address: str, from_transaction_lt: str, from_transaction_hash: str, archival: bool):
-        method = 'raw_get_transactions'
-        if archival:
-            return await self.dispatch_archival_request(method, account_address, from_transaction_lt, from_transaction_hash)
-        else:
-            return await self.dispatch_request(method, account_address, from_transaction_lt, from_transaction_hash)
 
     async def get_transactions(self, account_address, from_transaction_lt=None, from_transaction_hash=None, to_transaction_lt=0, limit=10, decode_messages=True, archival=False):
         """
