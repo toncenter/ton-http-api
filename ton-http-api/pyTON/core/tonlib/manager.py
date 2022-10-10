@@ -4,21 +4,17 @@ import traceback
 import random
 import queue
 
-from collections import defaultdict
 from collections.abc import Mapping
+from typing import Optional
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor
-
-from pyTON.worker import TonlibWorker
-from pyTON.models import TonlibWorkerMsgType, TonlibClientResult, ConsensusBlock
-from pyTON.cache import CacheManager, DisabledCacheManager
-from pyTON.settings import TonlibSettings
-
-from pytonlib import TonlibError
-
-from typing import Optional, Dict, Any
-from dataclasses import dataclass
 from datetime import datetime
+
+from pyTON.core.tonlib.worker import TonlibWorker
+from pyTON.core.tonlib.models import TonlibWorkerMsgType, TonlibClientResult, ConsensusBlock
+from pyTON.core.cache import CacheManager, DisabledCacheManager
+from pyTON.core.settings import TonlibSettings
+from pytonlib import TonlibError
 
 from loguru import logger
 
@@ -184,7 +180,7 @@ class TonlibManager:
                 if msg_type == TonlibWorkerMsgType.ARCHIVAL_UPDATE:
                     worker.is_archival = msg_content
             except asyncio.CancelledError:
-                logger.info("Task read_results was cancelled")
+                logger.debug("Task read_results was cancelled")
                 return
             except:
                 logger.error("read_results exception {format_exc}", format_exc=traceback.format_exc())
@@ -216,7 +212,7 @@ class TonlibManager:
 
                 await asyncio.sleep(1)
             except asyncio.CancelledError:
-                logger.info('Task check_working was cancelled')
+                logger.debug('Task check_working was cancelled')
                 return
             except:
                 logger.critical('Task check_working dead: {format_exc}', format_exc=traceback.format_exc())
@@ -232,11 +228,11 @@ class TonlibManager:
                         worker_info['time_to_alive'] = time.time() + 10 * 60
                         worker_info['restart_count'] = 0
                     if not worker_info['worker'].is_alive() and worker_info['is_enabled']:
-                        logger.error("Client #{ls_index:03d} dead!!! Exit code: {exit_code}", ls_index=ls_index, exit_code=self.workers[ls_index]['worker'].exitcode)
+                        logger.debug("Client #{ls_index:03d} dead!!! Exit code: {exit_code}", ls_index=ls_index, exit_code=self.workers[ls_index]['worker'].exitcode)
                         self.spawn_worker(ls_index, force_restart=True)
                 await asyncio.sleep(1)
             except asyncio.CancelledError:
-                logger.info('Task check_children_alive was cancelled')
+                logger.debug('Task check_children_alive was cancelled')
                 return
             except:
                 logger.critical('Task check_children_alive dead: {format_exc}', format_exc=traceback.format_exc())
@@ -274,7 +270,7 @@ class TonlibManager:
         timeout = time.time() + self.tonlib_settings.request_timeout
         self.workers[ls_index]['tasks_count'] += 1
 
-        logger.info("Sending request method: {method}, task_id: {task_id}, ls_index: {ls_index}", 
+        logger.debug("Sending request method: {method}, task_id: {task_id}, ls_index: {ls_index}", 
             method=method, task_id=task_id, ls_index=ls_index)
         await self.loop.run_in_executor(self.threadpool_executor, self.workers[ls_index]['worker'].input_queue.put, (task_id, timeout, method, args, kwargs))
 
