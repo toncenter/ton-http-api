@@ -368,6 +368,32 @@ async def get_masterchain_info():
     """
     return await tonlib.getMasterchainInfo()
 
+@app.get('/getMasterchainBlockSignatures', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
+@json_rpc('getMasterchainBlockSignatures')
+@wrap_result
+async def get_masterchain_block_signatures(
+    seqno: int
+    ):
+    """
+    Get up-to-date masterchain state.
+    """
+    return await tonlib.getMasterchainBlockSignatures(seqno)
+
+@app.get('/getShardBlockProof', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
+@json_rpc('getShardBlockProof')
+@wrap_result
+async def get_shard_block_proof(
+    workchain: int = Query(..., description="Block workchain id"),
+    shard: int = Query(..., description="Block shard id"), 
+    seqno: int = Query(..., description="Block seqno"),
+    # TODO: enable from_seqno after fix in tonlib
+    # from_seqno: Optional[int] = Query(None, description="Seqno of masterchain block to get proof from"),
+    ):
+    """
+    Get merkle proof of shardchain block.
+    """
+    return await tonlib.getShardBlockProof(workchain, shard, seqno, None)
+
 @app.get('/getConsensusBlock', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('getConsensusBlock')
 @wrap_result
