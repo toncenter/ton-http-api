@@ -386,13 +386,12 @@ async def get_shard_block_proof(
     workchain: int = Query(..., description="Block workchain id"),
     shard: int = Query(..., description="Block shard id"), 
     seqno: int = Query(..., description="Block seqno"),
-    # TODO: enable from_seqno after fix in tonlib
-    # from_seqno: Optional[int] = Query(None, description="Seqno of masterchain block to get proof from"),
+    from_seqno: Optional[int] = Query(None, description="Seqno of masterchain block starting from which proof is required. If not specified latest masterchain block is used."),
     ):
     """
     Get merkle proof of shardchain block.
     """
-    return await tonlib.getShardBlockProof(workchain, shard, seqno, None)
+    return await tonlib.getShardBlockProof(workchain, shard, seqno, from_seqno)
 
 @app.get('/getConsensusBlock', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('getConsensusBlock')
