@@ -25,6 +25,15 @@ class TonResponseJsonRPC(BaseModel):
     code: Optional[int] = None
 
 
+class DeprecatedTonResponseJsonRPC(BaseModel):
+    ok: bool
+    result: Optional[ResultT]
+    error: Optional[str] = None
+    code: Optional[int] = None
+    id: str
+    jsonrpc: str = "2.0"
+
+
 class TonRequestJsonRPC(BaseModel):
     method: str
     params: dict = {}

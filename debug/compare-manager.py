@@ -4,17 +4,19 @@ import traceback
 import random
 import queue
 
+from collections import defaultdict
 from collections.abc import Mapping
-from typing import Optional
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
 
-from pyTON.core.tonlib.worker import TonlibWorker
-from pyTON.core.tonlib.models import TonlibWorkerMsgType, TonlibClientResult, ConsensusBlock
-from pyTON.core.cache import CacheManager, DisabledCacheManager
-from pyTON.core.settings import TonlibSettings
-from pytonlib import TonlibError
+from pyTON.worker import TonlibWorker
+from pyTON.models import TonlibWorkerMsgType, TonlibClientResult, ConsensusBlock
+from pyTON.cache import CacheManager, DisabledCacheManager
+from pyTON.settings import TonlibSettings
+
+from typing import Optional, Dict, Any
+from dataclasses import dataclass
+from datetime import datetime
 
 from loguru import logger
 
@@ -37,7 +39,7 @@ class TonlibManager:
         # cache setup
         self.setup_cache()
 
-        self.threadpool_executor = ThreadPoolExecutor(max_workers=max(32, len(self.tonlib_settings.liteserver_config['liteservers']) * 4))
+        self.threadpool_executor = ThreadPoolExecutor(max_workers=len(self.tonlib_settings.liteserver_config['liteservers']) * 2)
 
         # workers spawn
         self.loop = loop or asyncio.get_running_loop()
@@ -76,7 +78,6 @@ class TonlibManager:
         self.raw_getBlockTransactions = self.cache_manager.cached(expire=600)(self.raw_getBlockTransactions)
         self.getBlockTransactions = self.cache_manager.cached(expire=600)(self.getBlockTransactions)
         self.getBlockHeader = self.cache_manager.cached(expire=600)(self.getBlockHeader)
-        self.get_config_param = self.cache_manager.cached(expire=5)(self.get_config_param)
         self.tryLocateTxByOutcomingMessage = self.cache_manager.cached(expire=600, check_error=False)(self.tryLocateTxByOutcomingMessage)
         self.tryLocateTxByIncomingMessage = self.cache_manager.cached(expire=600, check_error=False)(self.tryLocateTxByIncomingMessage)
 
@@ -173,7 +174,7 @@ class TonlibManager:
                         
                         self.log_liteserver_task(msg_content)
                     else:
-                        logger.warning("TonlibManager received result from TonlibWorker #{ls_index:03d} whose task '{task_id}' doesn't exist or is done.", ls_index=ls_index, task_id=task_id)
+                        logger.warning("Client #{ls_index:03d}, task '{task_id}' doesn't exist or is done.", ls_index=ls_index, task_id=task_id)
 
                 if msg_type == TonlibWorkerMsgType.LAST_BLOCK_UPDATE:
                     worker.last_block = msg_content
@@ -181,7 +182,7 @@ class TonlibManager:
                 if msg_type == TonlibWorkerMsgType.ARCHIVAL_UPDATE:
                     worker.is_archival = msg_content
             except asyncio.CancelledError:
-                logger.debug("Task read_results was cancelled")
+                logger.info("Task read_results was cancelled")
                 return
             except:
                 logger.error("read_results exception {format_exc}", format_exc=traceback.format_exc())
@@ -213,7 +214,7 @@ class TonlibManager:
 
                 await asyncio.sleep(1)
             except asyncio.CancelledError:
-                logger.debug('Task check_working was cancelled')
+                logger.info('Task check_working was cancelled')
                 return
             except:
                 logger.critical('Task check_working dead: {format_exc}', format_exc=traceback.format_exc())
@@ -229,11 +230,11 @@ class TonlibManager:
                         worker_info['time_to_alive'] = time.time() + 10 * 60
                         worker_info['restart_count'] = 0
                     if not worker_info['worker'].is_alive() and worker_info['is_enabled']:
-                        logger.debug("Client #{ls_index:03d} dead!!! Exit code: {exit_code}", ls_index=ls_index, exit_code=self.workers[ls_index]['worker'].exitcode)
+                        logger.error("Client #{ls_index:03d} dead!!! Exit code: {exit_code}", ls_index=ls_index, exit_code=self.workers[ls_index]['worker'].exitcode)
                         self.spawn_worker(ls_index, force_restart=True)
                 await asyncio.sleep(1)
             except asyncio.CancelledError:
-                logger.debug('Task check_children_alive was cancelled')
+                logger.info('Task check_children_alive was cancelled')
                 return
             except:
                 logger.critical('Task check_children_alive dead: {format_exc}', format_exc=traceback.format_exc())
@@ -271,7 +272,7 @@ class TonlibManager:
         timeout = time.time() + self.tonlib_settings.request_timeout
         self.workers[ls_index]['tasks_count'] += 1
 
-        logger.debug("Sending request method: {method}, task_id: {task_id}, ls_index: {ls_index}", 
+        logger.info("Sending request method: {method}, task_id: {task_id}, ls_index: {ls_index}", 
             method=method, task_id=task_id, ls_index=ls_index)
         await self.loop.run_in_executor(self.threadpool_executor, self.workers[ls_index]['worker'].input_queue.put, (task_id, timeout, method, args, kwargs))
 
@@ -301,7 +302,7 @@ class TonlibManager:
             return await self.dispatch_archival_request(method, account_address, from_transaction_lt, from_transaction_hash)
         else:
             return await self.dispatch_request(method, account_address, from_transaction_lt, from_transaction_hash)
-    
+
     async def get_transactions(self, account_address, from_transaction_lt=None, from_transaction_hash=None, to_transaction_lt=0, limit=10, decode_messages=True, archival=False):
         """
          Return all transactions between from_transaction_lt and to_transaction_lt
@@ -328,7 +329,7 @@ class TonlibManager:
     async def raw_run_method(self, address, method, stack_data, output_layout=None):
         return await self.dispatch_request('raw_run_method', address, method, stack_data, output_layout)
 
-    async def _send_message(self, serialized_boc, method):
+    async def raw_send_message(self, serialized_boc):
         ls_index_list = self.select_worker(count=4)
         result = None
         try:
@@ -336,7 +337,7 @@ class TonlibManager:
             for ls_index in ls_index_list:
                 task_id = "{}:{}".format(time.time(), random.random())
                 timeout = time.time() + self.tonlib_settings.request_timeout
-                await self.loop.run_in_executor(self.threadpool_executor, self.workers[ls_index]['worker'].input_queue.put, (task_id, timeout, method, [serialized_boc], {}))
+                await self.loop.run_in_executor(self.threadpool_executor, self.workers[ls_index]['worker'].input_queue.put, (task_id, timeout, 'raw_send_message', [serialized_boc], {}))
 
                 self.futures[task_id] = self.loop.create_future()
                 task_ids.append(task_id)
@@ -348,12 +349,6 @@ class TonlibManager:
                 self.futures.pop(task_id)
 
         return result
-
-    async def raw_send_message(self, serialized_boc):
-        return await self._send_message(serialized_boc, 'raw_send_message')
-
-    async def raw_send_message_return_hash(self, serialized_boc):
-        return await self._send_message(serialized_boc, 'raw_send_message_return_hash')
 
     async def _raw_create_query(self, destination, body, init_code=b'', init_data=b''):
         return await self.dispatch_request('_raw_create_query', destination, body, init_code, init_data)
@@ -405,14 +400,6 @@ class TonlibManager:
             return await self.dispatch_request(method, workchain, shard, seqno, root_hash, file_hash)
         else:
             return await self.dispatch_archival_request(method, workchain, shard, seqno, root_hash, file_hash)
-
-    async def get_config_param(self, config_id: int, seqno: Optional[int]):
-        seqno = seqno or self.consensus_block.seqno
-        method = 'get_config_param'
-        if self.consensus_block.seqno - seqno < 2000:
-            return await self.dispatch_request(method, config_id, seqno)
-        else:
-            return await self.dispatch_archival_request(method, config_id, seqno)
 
     async def tryLocateTxByOutcomingMessage(self, source, destination, creation_lt):
         return await self.dispatch_archival_request('try_locate_tx_by_outcoming_message',  source, destination, creation_lt)

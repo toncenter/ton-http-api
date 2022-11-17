@@ -39,7 +39,8 @@ class TonlibSettings:
     def from_environment(cls):
         verbosity_level = 0
         if os.environ.get('TON_API_LOGS_LEVEL') == 'DEBUG':
-            verbosity_level = 4
+            verbosity_level = 0
+            # verbosity_level = 4
         return TonlibSettings(parallel_requests_per_liteserver=int(os.environ.get('TON_API_TONLIB_PARALLEL_REQUESTS_PER_LITESERVER', '50')),
                               keystore=os.environ.get('TON_API_TONLIB_KEYSTORE', './ton_keystore/'),
                               liteserver_config_path=os.environ.get('TON_API_TONLIB_LITESERVER_CONFIG', 'https://ton.org/global-config.json'),
@@ -97,12 +98,14 @@ class WebServerSettings:
     api_root_path: str
     get_methods: bool
     json_rpc: bool
+    enable_v3: bool
 
     @classmethod
     def from_environment(cls):
-        return WebServerSettings(api_root_path=os.environ.get('TON_API_ROOT_PATH', '/'),
+        return WebServerSettings(api_root_path=os.environ.get('TON_API_ROOT_PATH', ''),
                                  get_methods=strtobool(os.environ.get('TON_API_GET_METHODS_ENABLED', '1')),
-                                 json_rpc=strtobool(os.environ.get('TON_API_JSON_RPC_ENABLED', '1')))
+                                 json_rpc=strtobool(os.environ.get('TON_API_JSON_RPC_ENABLED', '1')),
+                                 enable_v3=strtobool(os.environ.get('TON_API_API_V3_ENABLED', '1')))
 
 
 @dataclass

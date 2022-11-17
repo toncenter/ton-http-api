@@ -2,7 +2,8 @@ from .http import (
     TonRequestJsonRPC,
     TonResponse,
     TonResponseGeneric,
-    TonResponseJsonRPC
+    TonResponseJsonRPC,
+    DeprecatedTonResponseJsonRPC
 )
 from .ton import (
     BlockId,

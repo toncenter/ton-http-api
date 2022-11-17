@@ -14,6 +14,7 @@ def setup_environment(args):
     os.environ['TON_API_ROOT_PATH'] = args.root
     os.environ['TON_API_GET_METHODS_ENABLED'] = ('1' if args.get_methods else '0')
     os.environ['TON_API_JSON_RPC_ENABLED'] = ('1' if args.json_rpc else '0')
+    os.environ['TON_API_API_V3_ENABLED'] = ('1' if args.enable_v3 else '0')
     
     os.environ['TON_API_TONLIB_LITESERVER_CONFIG'] = args.liteserver_config
     os.environ['TON_API_TONLIB_KEYSTORE'] = args.tonlib_keystore
@@ -32,6 +33,7 @@ def main():
     webserver_args.add_argument('--root', type=str, default='/', help='HTTP API root, default: /')
     webserver_args.add_argument('--no-get-methods', action='store_false', default=True, dest='get_methods', help='Disable runGetMethod endpoint')
     webserver_args.add_argument('--no-json-rpc', action='store_false', default=True, dest='json_rpc', help='Disable jsonRPC endpoint')
+    webserver_args.add_argument('--enable_v3', action='store_true', default=False, dest='enable_v3', help='Enable API v3')
 
     tonlib_args = parser.add_argument_group('tonlib')
     tonlib_args.add_argument('--liteserver-config', type=str, default='https://ton.org/global-config.json', help='Liteserver config JSON path')

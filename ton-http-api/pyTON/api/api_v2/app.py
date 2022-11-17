@@ -1,6 +1,5 @@
-import sys
-import asyncio
 import pyTON
+import asyncio
 
 from fastapi import FastAPI, Depends, status as S
 from fastapi.responses import JSONResponse
@@ -9,9 +8,9 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from pyTON.schemas import TonResponse    
-from pyTON.api.deps.ton import settings_dep, cache_manager_dep, tonlib_dep
+from pyTON.api.deps.ton import settings_dep
 from pyTON.api.deps.apikey import api_key_dep
-from pyTON.api.api_v3.endpoints import common, status
+from pyTON.api.api_v2.endpoints import common, status
 
 from pytonlib import TonlibException
 
@@ -60,11 +59,14 @@ tags_metadata = [
     },
 ]
 
+settings = settings_dep()
+
 app = FastAPI(
-    title="TON HTTP API (v3)",
+    title="TON HTTP API",
     description=description,
     version=pyTON.__version__,
     docs_url='/',
+    root_path=settings.webserver.api_root_path if not settings.webserver.enable_v3 else "",
     responses={
         422: {'description': 'Validation Error'},
         504: {'description': 'Lite Server Timeout'}
@@ -105,4 +107,4 @@ async def fastapi_generic_exception_handler(request, exc):
     return JSONResponse(res.dict(exclude_none=True), status_code=S.HTTP_503_SERVICE_UNAVAILABLE)
 
 app.include_router(common.router)
-app.include_router(status.router, include_in_schema=True, tags=['system'])  # FIXME: remove from schema
+app.include_router(status.router, include_in_schema=False, tags=['system'])
