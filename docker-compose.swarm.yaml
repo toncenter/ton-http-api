@@ -1,0 +1,62 @@
+version: '3.7'
+services:
+  http-api-cache:
+    image: redis:latest
+    networks:
+      - main
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - "node.role==manager"
+          - "node.labels.environment==${TONCENTER_ENV}"
+          - "node.labels.toncenter==true"
+  http-api:
+    image: localhost:5000/ton-http-api:latest
+    build: 
+      context: ton-http-api
+      dockerfile: .docker/Dockerfile
+    environment:
+      TON_API_CACHE_ENABLED: 1
+      TON_API_CACHE_REDIS_ENDPOINT: http-api-cache
+      TON_API_CACHE_REDIS_PORT: 6379
+      TON_API_CACHE_REDIS_TIMEOUT: 1
+      TON_API_LOGS_JSONIFY: 1
+      TON_API_LOGS_LEVEL: INFO
+      TON_API_TONLIB_LITESERVER_CONFIG: /run/secrets/http-api-liteserver-config
+      TON_API_TONLIB_KEYSTORE: /tmp/ton-keystore
+      TON_API_TONLIB_PARALLEL_REQUESTS_PER_LITESERVER: ${TON_API_TONLIB_PARALLEL_REQUESTS_PER_LITESERVER}
+      TON_API_TONLIB_CDLL_PATH:
+      TON_API_TONLIB_REQUEST_TIMEOUT: ${TON_API_TONLIB_REQUEST_TIMEOUT}
+      TON_API_GET_METHODS_ENABLED: 1
+      TON_API_JSON_RPC_ENABLED: 1
+      TON_API_WEBSERVERS_WORKERS: ${TON_API_WEBSERVERS_WORKERS}
+      TON_API_V3_ENABLED: ${TON_API_V3_ENABLED}
+      TON_API_GUNICORN_FLAGS: ${TON_API_GUNICORN_FLAGS}
+    networks:
+      - main
+    secrets:
+      - http-api-liteserver-config
+    labels:
+      co.elastic.logs/enabled: "true"
+    healthcheck:
+      test: curl -sS http://127.0.0.1:8081/api/v2/healthcheck || echo 1
+      interval: 15s
+      timeout: 3s
+      retries: 12
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - "node.role==manager"
+          - "node.labels.environment==${TONCENTER_ENV}"
+          - "node.labels.toncenter==true"
+secrets:
+  http-api-liteserver-config:
+    file: ${TON_API_TONLIB_LITESERVER_CONFIG:-./private/mainnet.json}
+networks:
+  main:
+    attachable: true
+    external: false

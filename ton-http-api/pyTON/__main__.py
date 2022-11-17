@@ -14,7 +14,7 @@ def setup_environment(args):
     os.environ['TON_API_ROOT_PATH'] = args.root
     os.environ['TON_API_GET_METHODS_ENABLED'] = ('1' if args.get_methods else '0')
     os.environ['TON_API_JSON_RPC_ENABLED'] = ('1' if args.json_rpc else '0')
-    os.environ['TON_API_API_V3_ENABLED'] = ('1' if args.enable_v3 else '0')
+    os.environ['TON_API_V3_ENABLED'] = ('1' if args.enable_v3 else '0')
     
     os.environ['TON_API_TONLIB_LITESERVER_CONFIG'] = args.liteserver_config
     os.environ['TON_API_TONLIB_KEYSTORE'] = args.tonlib_keystore

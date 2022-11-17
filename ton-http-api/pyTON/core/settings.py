@@ -105,7 +105,7 @@ class WebServerSettings:
         return WebServerSettings(api_root_path=os.environ.get('TON_API_ROOT_PATH', ''),
                                  get_methods=strtobool(os.environ.get('TON_API_GET_METHODS_ENABLED', '1')),
                                  json_rpc=strtobool(os.environ.get('TON_API_JSON_RPC_ENABLED', '1')),
-                                 enable_v3=strtobool(os.environ.get('TON_API_API_V3_ENABLED', '1')))
+                                 enable_v3=strtobool(os.environ.get('TON_API_V3_ENABLED', '1')))
 
 
 @dataclass
