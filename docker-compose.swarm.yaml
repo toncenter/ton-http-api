@@ -9,9 +9,7 @@ services:
       replicas: 1
       placement:
         constraints:
-          - "node.role==manager"
-          - "node.labels.environment==${TONCENTER_ENV}"
-          - "node.labels.toncenter==true"
+          - "node.labels.${TONCENTER_ENV}.http-api==true"
   http-api:
     image: localhost:5000/ton-http-api:latest
     build: 
@@ -50,9 +48,7 @@ services:
       replicas: 1
       placement:
         constraints:
-          - "node.role==manager"
-          - "node.labels.environment==${TONCENTER_ENV}"
-          - "node.labels.toncenter==true"
+          - "node.labels.${TONCENTER_ENV}.http-api==true"
 secrets:
   http-api-liteserver-config:
     file: ${TON_API_TONLIB_LITESERVER_CONFIG:-./private/mainnet.json}
