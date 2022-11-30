@@ -83,6 +83,7 @@ class TonlibManager:
         self.getBlockTransactions = self.cache_manager.cached(expire=600)(self.getBlockTransactions)
         self.getBlockHeader = self.cache_manager.cached(expire=600)(self.getBlockHeader)
         self.get_config_param = self.cache_manager.cached(expire=5)(self.get_config_param)
+        self.get_token_data = self.cache_manager.cached(expire=15)(self.get_token_data)
         self.tryLocateTxByOutcomingMessage = self.cache_manager.cached(expire=600, check_error=False)(self.tryLocateTxByOutcomingMessage)
         self.tryLocateTxByIncomingMessage = self.cache_manager.cached(expire=600, check_error=False)(self.tryLocateTxByIncomingMessage)
 
@@ -330,6 +331,9 @@ class TonlibManager:
 
     async def generic_get_account_state(self, address: str):
         return await self.dispatch_request('generic_get_account_state', address)
+
+    async def get_token_data(self, address: str):
+        return await self.dispatch_request('get_token_data', address)
 
     async def raw_run_method(self, address, method, stack_data, output_layout=None):
         return await self.dispatch_request('raw_run_method', address, method, stack_data, output_layout)
