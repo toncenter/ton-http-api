@@ -138,14 +138,10 @@ class TonlibManager:
     def log_liteserver_task(self, task_result: TonlibClientResult):
         result_type = None
         if isinstance(task_result.result, Mapping):
-            result_type = task_result.result.get('@type', 'unknown') if task_result.result else 'error'
+            result_type = task_result.result.get('@type', 'unknown')
         else:
-            result_type = 'list'
+            result_type = type(task_result.result).__name__
         details = {}
-        if result_type == 'error' or result_type == 'unknown':
-            details['params'] = [str(p) for p in task_result.params]
-            details['result'] = task_result.result
-            details['exception'] = str(task_result.exception)
         
         rec = {
             'timestamp': datetime.utcnow(),
@@ -154,7 +150,7 @@ class TonlibManager:
             'method': task_result.method,
             'liteserver_info': task_result.liteserver_info,
             'result_type': result_type,
-            'details': details,
+            'exception': task_result.exception 
         }
 
         logger.info("Received result of type: {result_type}, method: {method}, task_id: {task_id}", **rec)
@@ -169,18 +165,16 @@ class TonlibManager:
                     continue
                 if msg_type == TonlibWorkerMsgType.TASK_RESULT:
                     task_id = msg_content.task_id
-                    result = msg_content.result
-                    exception = msg_content.exception
 
                     if task_id in self.futures and not self.futures[task_id].done():
                         if exception is not None:
-                            self.futures[task_id].set_exception(exception)
+                            self.futures[task_id].set_exception(msg_content.exception)
                         if result is not None:    
-                            self.futures[task_id].set_result(result)
-                        
-                        self.log_liteserver_task(msg_content)
+                            self.futures[task_id].set_result(msg_content.result)
                     else:
                         logger.warning("TonlibManager received result from TonlibWorker #{ls_index:03d} whose task '{task_id}' doesn't exist or is done.", ls_index=ls_index, task_id=task_id)
+
+                    self.log_liteserver_task(msg_content)
 
                 if msg_type == TonlibWorkerMsgType.LAST_BLOCK_UPDATE:
                     worker.last_block = msg_content
