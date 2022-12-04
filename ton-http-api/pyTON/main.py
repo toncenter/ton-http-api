@@ -473,6 +473,18 @@ async def get_config_param(
     """
     return await tonlib.get_config_param(config_id, seqno)
 
+@app.get('/getTokenData', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
+@json_rpc('getTokenData')
+@wrap_result
+async def get_config_param(
+    address: str = Query(..., description="Address of NFT collection/item or Jetton master/wallet smart contract")
+    ):
+    """
+    Get NFT or Jetton information.
+    """
+    address = prepare_address(address)
+    return await tonlib.get_token_data(address)
+
 @app.get('/tryLocateTx', response_model=TonResponse, response_model_exclude_none=True, tags=['transactions'])
 @json_rpc('tryLocateTx')
 @wrap_result
