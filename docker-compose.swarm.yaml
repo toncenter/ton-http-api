@@ -1,9 +1,9 @@
-version: '3.7'
+version: '3.9'
 services:
   http-api-cache:
     image: redis:latest
     networks:
-      - main
+      - internal
     deploy:
       mode: replicated
       replicas: 1
@@ -11,7 +11,7 @@ services:
         constraints:
           - "node.labels.${TONCENTER_ENV}.http-api==true"
   http-api:
-    image: localhost:5000/ton-http-api:latest
+    image: localhost:5000/ton-http-api:${TONCENTER_ENV}
     build: 
       context: ton-http-api
       dockerfile: .docker/Dockerfile
@@ -24,16 +24,17 @@ services:
       TON_API_LOGS_LEVEL: INFO
       TON_API_TONLIB_LITESERVER_CONFIG: /run/secrets/http-api-liteserver-config
       TON_API_TONLIB_KEYSTORE: /tmp/ton-keystore
-      TON_API_TONLIB_PARALLEL_REQUESTS_PER_LITESERVER: ${TON_API_TONLIB_PARALLEL_REQUESTS_PER_LITESERVER}
+      TON_API_TONLIB_PARALLEL_REQUESTS_PER_LITESERVER:
       TON_API_TONLIB_CDLL_PATH:
-      TON_API_TONLIB_REQUEST_TIMEOUT: ${TON_API_TONLIB_REQUEST_TIMEOUT}
-      TON_API_GET_METHODS_ENABLED: 1
-      TON_API_JSON_RPC_ENABLED: 1
-      TON_API_WEBSERVERS_WORKERS: ${TON_API_WEBSERVERS_WORKERS}
-      TON_API_V3_ENABLED: ${TON_API_V3_ENABLED}
-      TON_API_GUNICORN_FLAGS: ${TON_API_GUNICORN_FLAGS}
+      TON_API_TONLIB_REQUEST_TIMEOUT:
+      TON_API_GET_METHODS_ENABLED:
+      TON_API_JSON_RPC_ENABLED:
+      TON_API_WEBSERVERS_WORKERS:
+      TON_API_V3_ENABLED:
+      TON_API_GUNICORN_FLAGS:
+      TON_API_ROOT_PATH:
     networks:
-      - main
+      - internal
     secrets:
       - http-api-liteserver-config
     labels:
@@ -53,6 +54,6 @@ secrets:
   http-api-liteserver-config:
     file: ${TON_API_TONLIB_LITESERVER_CONFIG:-./private/mainnet.json}
 networks:
-  main:
+  internal:
     attachable: true
     external: false

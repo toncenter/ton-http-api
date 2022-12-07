@@ -66,7 +66,6 @@ app = FastAPI(
     description=description,
     version=pyTON.__version__,
     docs_url='/',
-    root_path=settings.webserver.api_root_path if not settings.webserver.enable_v3 else "",
     responses={
         422: {'description': 'Validation Error'},
         504: {'description': 'Lite Server Timeout'}
