@@ -167,9 +167,9 @@ class TonlibManager:
                     task_id = msg_content.task_id
 
                     if task_id in self.futures and not self.futures[task_id].done():
-                        if exception is not None:
+                        if msg_content.exception is not None:
                             self.futures[task_id].set_exception(msg_content.exception)
-                        if result is not None:    
+                        if msg_content.result is not None:    
                             self.futures[task_id].set_result(msg_content.result)
                     else:
                         logger.warning("TonlibManager received result from TonlibWorker #{ls_index:03d} whose task '{task_id}' doesn't exist or is done.", ls_index=ls_index, task_id=task_id)
