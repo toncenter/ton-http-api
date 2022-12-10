@@ -476,7 +476,7 @@ async def get_config_param(
 @app.get('/getTokenData', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
 @json_rpc('getTokenData')
 @wrap_result
-async def get_config_param(
+async def get_token_data(
     address: str = Query(..., description="Address of NFT collection/item or Jetton master/wallet smart contract")
     ):
     """
