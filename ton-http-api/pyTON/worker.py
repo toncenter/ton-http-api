@@ -1,13 +1,13 @@
 import asyncio
-import traceback
 import random
+import sys
 import time
 import queue
 import multiprocessing as mp
 
 from pyTON.settings import TonlibSettings
 from pyTON.models import TonlibWorkerMsgType, TonlibClientResult
-from pytonlib import TonlibClient, TonlibException
+from pytonlib import TonlibClient, TonlibException, BlockNotFound
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -61,22 +61,29 @@ class TonlibWorker(mp.Process):
                                    loop=self.loop,
                                    cdll_path=self.tonlib_settings.cdll_path,
                                    verbosity_level=self.tonlib_settings.verbosity_level)
-        self.loop.run_until_complete(self.tonlib.init())
+
+        try:
+            self.loop.run_until_complete(self.tonlib.init())
+            self.loop.run_until_complete(self.tonlib.sync_tonlib())
+        except Exception as e:
+            logger.error("TonlibWorker #{ls_index:03d} failed to init and sync tonlib: {exc}", ls_index=self.ls_index, exc=e)
+            self.shutdown(11)
 
         # creating tasks
         self.tasks['report_last_block'] = self.loop.create_task(self.report_last_block())
         self.tasks['report_archival'] = self.loop.create_task(self.report_archival())
         self.tasks['main_loop'] = self.loop.create_task(self.main_loop())
-        self.tasks['idle_loop'] = self.loop.create_task(self.idle_loop())
 
         finished, unfinished = self.loop.run_until_complete(asyncio.wait([
-            self.tasks['report_last_block'], self.tasks['report_archival'], self.tasks['main_loop'], self.tasks['idle_loop']], 
-            return_when=asyncio.FIRST_COMPLETED))
-        
+            self.tasks['report_last_block'], self.tasks['report_archival'], self.tasks['main_loop']], return_when=asyncio.FIRST_COMPLETED))
+
+        self.shutdown(0 if self.exit_event.is_set() else 12)
+
+    def shutdown(self, code):
         self.exit_event.set()        
         
-        for to_cancel in unfinished:
-            to_cancel.cancel()
+        for task in self.tasks.values():
+            task.cancel()
             try:
                 self.loop.run_until_complete(to_cancel)
             except:
@@ -88,6 +95,7 @@ class TonlibWorker(mp.Process):
         self.input_queue.cancel_join_thread()
         self.output_queue.close()
         self.input_queue.close()
+        sys.exit(code)
 
     @property
     def info(self):
@@ -119,13 +127,14 @@ class TonlibWorker(mp.Process):
 
     async def report_archival(self):
         while not self.exit_event.is_set():
-            is_archival = False
             try:
                 block_transactions = await self.tonlib.get_block_transactions(-1, -9223372036854775808, random.randint(2, 4096), count=10)
-                is_archival = block_transactions.get("@type", "") == "blocks.transactions"
+                self.is_archival = True
+            except BlockNotFound as e:
+                self.is_archival = False
             except TonlibException as e:
                 logger.error("TonlibWorker #{ls_index:03d} report_archival exception of type {exc_type}: {exc}", ls_index=self.ls_index, exc_type=type(e).__name__, exc=e)
-            self.is_archival = is_archival
+            
             await self.loop.run_in_executor(self.threadpool_executor, self.output_queue.put, (TonlibWorkerMsgType.ARCHIVAL_UPDATE, self.is_archival))
             await asyncio.sleep(600)
         
@@ -167,9 +176,3 @@ class TonlibWorker(mp.Process):
                                                 exception=exception,
                                                 liteserver_info=self.info)
         await self.loop.run_in_executor(self.threadpool_executor, self.output_queue.put, (TonlibWorkerMsgType.TASK_RESULT, tonlib_task_result))
-
-    async def idle_loop(self):
-        await self.tonlib.sync_tonlib()
-        
-        while not self.exit_event.is_set():
-            await asyncio.sleep(0.5)
