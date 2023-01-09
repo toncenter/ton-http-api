@@ -64,7 +64,6 @@ class TonlibWorker(mp.Process):
 
         try:
             self.loop.run_until_complete(self.tonlib.init())
-            self.loop.run_until_complete(self.tonlib.sync_tonlib())
         except Exception as e:
             logger.error("TonlibWorker #{ls_index:03d} failed to init and sync tonlib: {exc}", ls_index=self.ls_index, exc=e)
             self.shutdown(11)
@@ -73,14 +72,15 @@ class TonlibWorker(mp.Process):
         self.tasks['report_last_block'] = self.loop.create_task(self.report_last_block())
         self.tasks['report_archival'] = self.loop.create_task(self.report_archival())
         self.tasks['main_loop'] = self.loop.create_task(self.main_loop())
+        self.tasks['sync_tonlib'] = self.loop.create_task(self.sync_tonlib())
 
         finished, unfinished = self.loop.run_until_complete(asyncio.wait([
-            self.tasks['report_last_block'], self.tasks['report_archival'], self.tasks['main_loop']], return_when=asyncio.FIRST_COMPLETED))
+            self.tasks['report_last_block'], self.tasks['report_archival'], self.tasks['main_loop'], self.tasks['sync_tonlib']], return_when=asyncio.FIRST_COMPLETED))
 
         self.shutdown(0 if self.exit_event.is_set() else 12)
 
-    def shutdown(self, code):
-        self.exit_event.set()        
+    def shutdown(self, code: int):
+        self.exit_event.set()
         
         for task in self.tasks.values():
             task.cancel()
@@ -176,3 +176,9 @@ class TonlibWorker(mp.Process):
                                                 exception=exception,
                                                 liteserver_info=self.info)
         await self.loop.run_in_executor(self.threadpool_executor, self.output_queue.put, (TonlibWorkerMsgType.TASK_RESULT, tonlib_task_result))
+
+    async def sync_tonlib(self):
+        await self.tonlib.sync_tonlib()
+
+        while not self.exit_event.is_set():
+            await asyncio.sleep(1)
