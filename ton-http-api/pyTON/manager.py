@@ -62,8 +62,7 @@ class TonlibManager:
         self.tasks['check_children_alive'].cancel()
         await self.tasks['check_children_alive']
 
-        for i in self.workers:
-            await self.worker_control(i, enabled=False)
+        await asyncio.wait([self.worker_control(i, enabled=False) for i in self.workers])
 
         self.threadpool_executor.shutdown()
 
@@ -182,7 +181,7 @@ class TonlibManager:
                 if msg_type == TonlibWorkerMsgType.ARCHIVAL_UPDATE:
                     worker.is_archival = msg_content
             except asyncio.CancelledError:
-                logger.info("Task read_results was cancelled")
+                logger.info("Task read_results from TonlibWorker #{ls_index:03d} was cancelled", ls_index=ls_index)
                 return
             except:
                 logger.error("read_results exception {format_exc}", format_exc=traceback.format_exc())
@@ -230,7 +229,7 @@ class TonlibManager:
                         worker_info['time_to_alive'] = time.time() + 10 * 60
                         worker_info['restart_count'] = 0
                     if not worker_info['worker'].is_alive() and worker_info['is_enabled']:
-                        logger.error("Client #{ls_index:03d} dead!!! Exit code: {exit_code}", ls_index=ls_index, exit_code=self.workers[ls_index]['worker'].exitcode)
+                        logger.error("TonlibWorker #{ls_index:03d} is dead!!! Exit code: {exit_code}", ls_index=ls_index, exit_code=self.workers[ls_index]['worker'].exitcode)
                         self.spawn_worker(ls_index, force_restart=True)
                 await asyncio.sleep(1)
             except asyncio.CancelledError:
