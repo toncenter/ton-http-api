@@ -39,6 +39,7 @@ services:
       - http-api-liteserver-config
     labels:
       co.elastic.logs/enabled: "true"
+      ton_network: ${TONCENTER_ENV}
     healthcheck:
       test: curl -sS http://127.0.0.1:8081/api/v2/healthcheck || echo 1
       interval: 15s
