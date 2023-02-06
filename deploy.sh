@@ -25,9 +25,14 @@ fi
 if [[ "${TONCENTER_ENV}" == "testnet" ]]; then
     echo "Using testnet config"
     export TON_API_TONLIB_LITESERVER_CONFIG=private/testnet.json
-else
+elif [[ "${TONCENTER_ENV}" == "mainnet" || "${TONCENTER_ENV}" == "stage" ]]; then
     echo "Using mainnet config"
     export TON_API_TONLIB_LITESERVER_CONFIG=private/mainnet.json
+else
+    if [ -z "${TON_API_TONLIB_LITESERVER_CONFIG}" ]; then
+        echo "Using custom env. Please parse custom liteserver to TON_API_TONLIB_LITESERVER_CONFIG"
+        exit 1
+    fi
 fi
 
 # build image
@@ -36,11 +41,3 @@ docker compose -f docker-compose.swarm.yaml push
 
 # deploy stack
 docker stack deploy -c docker-compose.swarm.yaml ${STACK_NAME}
-
-# attach to global network
-GLOBAL_NET_NAME=$(docker network ls --format '{{.Name}}' --filter NAME=toncenter-global)
-
-if [ ! -z "$GLOBAL_NET_NAME" ]; then
-    echo "Found network: ${GLOBAL_NET_NAME}"
-    docker service update --detach --network-add name=${GLOBAL_NET_NAME},alias=${TONCENTER_ENV}-http-api ${STACK_NAME}_http-api
-fi

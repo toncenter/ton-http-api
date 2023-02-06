@@ -34,7 +34,10 @@ services:
       TON_API_GUNICORN_FLAGS:
       TON_API_ROOT_PATH:
     networks:
-      - internal
+      internal:
+      toncenter-global:
+        aliases:
+          - ${TONCENTER_ENV:?}-http-api
     secrets:
       - http-api-liteserver-config
     labels:
@@ -58,3 +61,5 @@ networks:
   internal:
     attachable: true
     external: false
+  toncenter-global:
+    external: true
