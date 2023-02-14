@@ -39,8 +39,7 @@ class TonlibSettings:
     def from_environment(cls):
         verbosity_level = 0
         if os.environ.get('TON_API_LOGS_LEVEL') == 'DEBUG':
-            verbosity_level = 0
-            # verbosity_level = 4
+            verbosity_level = 4
         return TonlibSettings(parallel_requests_per_liteserver=int(os.environ.get('TON_API_TONLIB_PARALLEL_REQUESTS_PER_LITESERVER', '50')),
                               keystore=os.environ.get('TON_API_TONLIB_KEYSTORE', './ton_keystore/'),
                               liteserver_config_path=os.environ.get('TON_API_TONLIB_LITESERVER_CONFIG', 'https://ton.org/global-config.json'),
