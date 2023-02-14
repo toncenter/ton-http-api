@@ -4,4 +4,4 @@ services:
     image: redis:latest
     restart: unless-stopped
     networks:
-      - internal
+      - main

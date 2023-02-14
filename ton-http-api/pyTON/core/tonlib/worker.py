@@ -5,16 +5,14 @@ import time
 import queue
 import multiprocessing as mp
 
-from pyTON.settings import TonlibSettings
-from pyTON.models import TonlibWorkerMsgType, TonlibClientResult
-from pytonlib import TonlibClient, TonlibException, BlockNotFound
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from typing import Optional
 
-from enum import Enum
-from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from pyTON.core.settings import TonlibSettings
+from pyTON.core.tonlib.models import TonlibWorkerMsgType, TonlibClientResult
+from pytonlib import TonlibClient, TonlibException, BlockNotFound
 
 from loguru import logger
 
@@ -85,7 +83,7 @@ class TonlibWorker(mp.Process):
         for task in self.tasks.values():
             task.cancel()
             try:
-                self.loop.run_until_complete(to_cancel)
+                self.loop.run_until_complete(task)
             except:
                 pass
 
@@ -115,7 +113,7 @@ class TonlibWorker(mp.Process):
                 last_block = masterchain_info["last"]["seqno"]
                 self.timeout_count = 0
             except TonlibException as e:
-                logger.error("TonlibWorker #{ls_index:03d} report_last_block exception of type {exc_type}: {exc}", ls_index=self.ls_index, exc_type=type(e).__name__, exc=e)
+                logger.debug("TonlibWorker #{ls_index:03d} report_last_block exception of type {exc_type}: {exc}", ls_index=self.ls_index, exc_type=type(e).__name__, exc=e)
                 self.timeout_count += 1
 
             if self.timeout_count >= 10:

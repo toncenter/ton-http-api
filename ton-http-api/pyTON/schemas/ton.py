@@ -1,71 +1,15 @@
-from typing import Optional, TypeVar, Union, Dict, Any, List, Literal
+
+from typing import List, Optional, Literal
 from pydantic import BaseModel
-from pydantic.generics import GenericModel, Generic
 
 from pytonlib.utils.wallet import wallets as known_wallets, sha256
 
-from enum import Enum
-from dataclasses import dataclass
-
-
-@dataclass
-class TonlibClientResult:
-    task_id: str
-    method: str
-    elapsed_time: float
-    params: Optional[Any] = None
-    result: Optional[Any] = None
-    exception: Optional[Exception] = None
-    liteserver_info: Optional[Any] = None
-
-
-class TonlibWorkerMsgType(Enum):
-    TASK_RESULT = 0
-    LAST_BLOCK_UPDATE = 1
-    ARCHIVAL_UPDATE = 2
-
-
-@dataclass
-class ConsensusBlock:
-    seqno: int = 0
-    timestamp: int = 0
-
-"""
-Util classes used to generate new response models.
-"""
-
-ResultT = TypeVar('ResultT')
-
-
-class TonResponseGeneric(GenericModel, Generic[ResultT]):
-    ok: bool
-    result: Optional[ResultT]
-    error: Optional[str] = None
-    code: Optional[int] = None
-
-class TonResponse(TonResponseGeneric[Union[str, list, dict, None]]):
-    pass
-
-
-
-class TonResponseJsonRPC(BaseModel):
-    id: str
-    jsonrpc: str = "2.0"
-    result: Optional[ResultT]
-    error: Optional[str] = None
-    code: Optional[int] = None
-
-
-class TonRequestJsonRPC(BaseModel):
-    method: str
-    params: dict = {}
-    id: Optional[str] = None
-    jsonrpc: Optional[str] = None
 
 def check_tonlib_type(tl_obj: dict, expected_type: str):
     tl_type = tl_obj.get('@type', '')
     if tl_type != expected_type:
         raise Exception(f"Unexpected TL object type {tl_type}")
+
 
 def address_state(account_info):
     if len(account_info.get("code", "")) == 0:
@@ -74,6 +18,7 @@ def address_state(account_info):
         else:
             return "frozen"
     return "active"
+
 
 class BlockId(BaseModel):
     workchain: int
@@ -92,6 +37,7 @@ class BlockId(BaseModel):
         file_hash = tl_obj['file_hash']
 
         return BlockId(workchain=workchain, shard=shard, seqno=seqno, root_hash=root_hash, file_hash=file_hash)
+
 
 class BlockHeader(BaseModel):
     id: BlockId
@@ -180,12 +126,14 @@ class SmartContract(BaseModel):
 
         return obj
 
+
 class AdressUserFriendly(BaseModel):
     b64: str
     b64url: str
 
     def build(raw: dict):
         return AdressUserFriendly(b64=raw['b64'], b64url=raw['b64url'])
+
 
 class AddressForms(BaseModel):
     raw_form: str
@@ -202,6 +150,7 @@ class AddressForms(BaseModel):
             test_only=raw['test_only']
         )
 
+
 class MasterchainInfo(BaseModel):
     last: BlockId
     state_root_hash: str
@@ -215,6 +164,7 @@ class MasterchainInfo(BaseModel):
             state_root_hash=tl_obj['state_root_hash']
         )
 
+
 class ExternalMessage(BaseModel):
     msg_hash: str
 
@@ -222,6 +172,7 @@ class ExternalMessage(BaseModel):
         check_tonlib_type(tl_obj, 'raw.extMessageInfo')
 
         return ExternalMessage(msg_hash=tl_obj['hash'])
+
 
 class SerializedBoc(BaseModel):
     boc: str
@@ -231,6 +182,7 @@ class SerializedBoc(BaseModel):
 
         return SerializedBoc(boc=tl_obj['config']['bytes'])
 
+
 class MsgDataRaw(BaseModel):
     body: str 
     init_state: str
@@ -239,6 +191,7 @@ class MsgDataRaw(BaseModel):
         check_tonlib_type(tl_obj, 'msg.dataRaw')
 
         return MsgDataRaw(body=tl_obj['body'], init_state=tl_obj['init_state'])    
+
 
 class Message(BaseModel):
     source: str
@@ -267,6 +220,7 @@ class Message(BaseModel):
             op=tl_obj.get('op'),
         )
 
+
 class TransactionId(BaseModel):
     lt: int
     hash: str
@@ -275,6 +229,7 @@ class TransactionId(BaseModel):
         check_tonlib_type(tl_obj, 'internal.transactionId')
 
         return TransactionId(lt=int(tl_obj['lt']), hash=tl_obj['hash'])
+
 
 class Transaction(BaseModel):
     utime: int
