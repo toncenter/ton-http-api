@@ -21,15 +21,17 @@ services:
       - TON_API_TONLIB_REQUEST_TIMEOUT
       - TON_API_GET_METHODS_ENABLED
       - TON_API_JSON_RPC_ENABLED
+      - TON_API_WEBSERVERS_WORKERS
+      - TON_API_V3_ENABLED
+      - TON_API_GUNICORN_FLAGS
       - TON_API_ROOT_PATH
     restart: unless-stopped
     networks:
-      - internal
+      - main
     secrets:
       - liteserver_config
     labels:
       co.elastic.logs/enabled: "true"
-    command: -c "gunicorn -k uvicorn.workers.UvicornWorker -w ${TON_API_WEBSERVERS_WORKERS} --bind 0.0.0.0:8081 ${TON_API_GUNICORN_FLAGS} pyTON.main:app"
     healthcheck:
       test: curl -sS http://127.0.0.1:8081${TON_API_ROOT_PATH}/healthcheck || echo 1
       interval: 15s
@@ -40,5 +42,3 @@ secrets:
     file: ${TON_API_TONLIB_LITESERVER_CONFIG:-./private/mainnet.json}
 networks:
   main:
-    attachable: true
-    external: false
