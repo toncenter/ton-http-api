@@ -11,7 +11,7 @@ services:
         constraints:
           - "node.labels.${TONCENTER_ENV}.http-api==true"
   http-api:
-    image: ${DOCKER_REGISTRY:-localhost:5000}/ton-http-api:${TONCENTER_ENV}
+    image: ${DOCKER_REGISTRY:-localhost:5000}/${DOCKER_REPO:-ton-http-api}:${TONCENTER_ENV}
     build: 
       context: ton-http-api
       dockerfile: .docker/Dockerfile

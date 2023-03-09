@@ -40,4 +40,4 @@ docker compose -f docker-compose.swarm.yaml build
 docker compose -f docker-compose.swarm.yaml push
 
 # deploy stack
-docker stack deploy -c docker-compose.swarm.yaml ${STACK_NAME}
+docker stack deploy --with-registry-auth -c docker-compose.swarm.yaml ${STACK_NAME}
