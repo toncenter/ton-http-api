@@ -127,7 +127,7 @@ The service supports the following environment variables:
 
 - `TON_API_CACHE_REDIS_TIMEOUT` *(default: 1)*
 
-  Redis cache service port.
+  Redis cache timeout.
 
 
 ## FAQ
