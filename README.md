@@ -33,29 +33,39 @@ There are two main ways to run TON HTTP API:
     - Run `ton-http-api --help` to show parameters list.
 
 ### Docker Compose
-  - (First time) Install required tools: `docker`, `docker-compose`, `curl`. 
-    - For Ubuntu: run `scripts/setup.sh` from the root of the repo.
+  - (First time) Install Docker and Compose v2:
+    - For Ubuntu: follow the [instruction](https://docs.docker.com/engine/install/ubuntu/) or use command `curl -fsSL https://get.docker.com | sudo sh`.
     - For MacOS and Windows: install [Docker Desktop](https://www.docker.com/products/docker-desktop/).
-    - **Note:** we recommend to use Docker Compose V2.
+    - **Note:** you may need to install curl and wget: `sudo apt install -y curl wget`.
   - Download TON configuration files to private folder:
     ```bash
     mkdir private
     curl -sL https://ton-blockchain.github.io/global.config.json > private/mainnet.json
     curl -sL https://ton-blockchain.github.io/testnet-global.config.json > private/testnet.json
     ```
-  - Run `./configure.py` to create `.env` file with necessary environment variables (see [Configuration](#Configuration) for details).
-  - Build services: `docker-compose build`.
-    - Or pull latest images: `docker-compose pull`.
-  - Run services: `docker-compose up -d`.
-  - Stop services: `docker-compose down`.
+  - Run `./configure.sh` to create `.env` file with necessary environment variables (see [Configuration](#Configuration) for details).
+  - Build services: `docker compose build`.
+    - Or pull latest images: `docker compose pull`.
+  - Run services: `docker compose up -d`.
+  - Stop services: `docker compose down`.
 
 ### Configuration
 
-You should specify environment parameters and run `./configure.py` to create `.env` file.
-    ```bash
-    export TON_API_LITESERVER_CONFIG=private/testnet.json
-    ./configure.py
-    ```
+You should specify environment parameters and run `./configure.sh` to create `.env` file. Examples of configuration:
+    
+```bash
+# mainnet configuration
+./configure.sh
+
+# testnet config
+./configure.sh testnet
+
+# set environment variables
+export TON_API_CACHE_ENABLED=1
+export TON_API_LITESERVER_CONFIG=private/custom.json
+export TON_API_HTTP_PORT=8081
+./configure.sh
+```
 
 The service supports the following environment variables:
 #### Webserver settings
@@ -78,6 +88,10 @@ The service supports the following environment variables:
 - `TON_API_JSON_RPC_ENABLED` *(default: 1)*
 
   Enables `jsonRPC` endpoint.
+
+- **(WIP)** `TON_API_V3_ENABLED` *(default: 0)*
+
+  Enables `/api/v3` methods.
 
 - `TON_API_LOGS_JSONIFY` *(default: 0)*
 
