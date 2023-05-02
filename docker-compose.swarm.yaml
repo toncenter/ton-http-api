@@ -11,10 +11,14 @@ services:
         constraints:
           - "node.labels.${TONCENTER_ENV}.http-api==true"
   http-api:
-    image: ${DOCKER_REGISTRY:-localhost:5000}/${DOCKER_REPO:-ton-http-api}:${TONCENTER_ENV}
+    image: ${DOCKER_REGISTRY:-localhost:5000}/${DOCKER_REPO:-ton-http-api}:${TONCENTER_ENV}${IMAGE_TAG}
     build: 
       context: ton-http-api
-      dockerfile: .docker/Dockerfile
+      dockerfile: .docker/${DOCKERFILE:-Dockerfile}
+      args:
+        TON_REPO:
+        TON_BRANCH:
+
     environment:
       TON_API_CACHE_ENABLED: 1
       TON_API_CACHE_REDIS_ENDPOINT: http-api-cache
