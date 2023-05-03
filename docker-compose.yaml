@@ -1,10 +1,13 @@
 version: '3.7'
 services:
   main:
-    image: toncenter/ton-http-api
+    image: ${DOCKER_REGISTRY:-toncenter}/${DOCKER_REPO:-ton-http-api}:${IMAGE_TAG:-latest}
     build: 
       context: ton-http-api
-      dockerfile: .docker/Dockerfile
+      dockerfile: .docker/${DOCKERFILE:-Dockerfile}
+      args:
+        TON_REPO:
+        TON_BRANCH:
     ports:
       - ${TON_API_HTTP_PORT:-8081}:8081
     environment:
@@ -39,6 +42,6 @@ services:
       retries: 12
 secrets:
   liteserver_config:
-    file: ${TON_API_TONLIB_LITESERVER_CONFIG:-./private/mainnet.json}
+    file: ${TON_API_TONLIB_LITESERVER_CONFIG}
 networks:
   main:
