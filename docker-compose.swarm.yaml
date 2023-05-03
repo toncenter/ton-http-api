@@ -11,7 +11,7 @@ services:
         constraints:
           - "node.labels.${TONCENTER_ENV}.http-api==true"
   http-api:
-    image: ${DOCKER_REGISTRY:-localhost:5000}/${DOCKER_REPO:-ton-http-api}:${TONCENTER_ENV}${IMAGE_TAG}
+    image: ${DOCKER_REGISTRY:-docker.io/toncenter}/${DOCKER_REPO:-ton-http-api}:${TONCENTER_ENV}${IMAGE_TAG}
     build: 
       context: ton-http-api
       dockerfile: .docker/${DOCKERFILE:-Dockerfile}
@@ -60,7 +60,7 @@ services:
           - "node.labels.${TONCENTER_ENV}.http-api==true"
 secrets:
   http-api-liteserver-config:
-    file: ${TON_API_TONLIB_LITESERVER_CONFIG:-./private/mainnet.json}
+    file: ${TON_API_TONLIB_LITESERVER_CONFIG}
 networks:
   internal:
     attachable: true
