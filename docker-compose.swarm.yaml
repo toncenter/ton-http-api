@@ -11,7 +11,7 @@ services:
         constraints:
           - "node.labels.${TONCENTER_ENV}.http-api==true"
   http-api:
-    image: ${DOCKER_REGISTRY:-docker.io/toncenter}/${DOCKER_REPO:-ton-http-api}:${TONCENTER_ENV}${IMAGE_TAG}
+    image: ${DOCKER_REGISTRY:-docker.io/toncenter}/${DOCKER_REPO:-ton-http-api}:${IMAGE_TAG:?Please specify image tag!}
     build: 
       context: ton-http-api
       dockerfile: .docker/${DOCKERFILE:-Dockerfile}
@@ -24,8 +24,8 @@ services:
       TON_API_CACHE_REDIS_ENDPOINT: http-api-cache
       TON_API_CACHE_REDIS_PORT: 6379
       TON_API_CACHE_REDIS_TIMEOUT: 1
-      TON_API_LOGS_JSONIFY: 1
-      TON_API_LOGS_LEVEL: INFO
+      TON_API_LOGS_JSONIFY:
+      TON_API_LOGS_LEVEL:
       TON_API_TONLIB_LITESERVER_CONFIG: /run/secrets/http-api-liteserver-config
       TON_API_TONLIB_KEYSTORE: /tmp/ton-keystore
       TON_API_TONLIB_PARALLEL_REQUESTS_PER_LITESERVER:
@@ -60,7 +60,7 @@ services:
           - "node.labels.${TONCENTER_ENV}.http-api==true"
 secrets:
   http-api-liteserver-config:
-    file: ${TON_API_TONLIB_LITESERVER_CONFIG}
+    file: ${TON_API_TONLIB_LITESERVER_CONFIG:?Liteserver config path is required}
 networks:
   internal:
     attachable: true
