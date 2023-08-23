@@ -17,6 +17,7 @@ from pyTON.schemas import (
 )
 from pyTON.core.tonlib.manager import TonlibManager
 from pyTON.api.deps.ton import tonlib_dep, settings_dep
+from pyTON.core.suspended_accounts import suspended_accounts
 
 from tvm_valuetypes.cell import deserialize_cell_from_object
 
@@ -111,6 +112,8 @@ async def get_address_information(
     result["state"] = address_state(result)
     if "balance" in result and int(result["balance"]) < 0:
         result["balance"] = 0
+    if result["sync_utime"] < 1803189600 and _detect_address(address)["raw_form"] in suspended_accounts:
+        result["suspended"] = True
     return result
 
 @router.get('/getExtendedAddressInformation', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
