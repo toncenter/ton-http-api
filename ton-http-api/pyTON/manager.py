@@ -62,7 +62,7 @@ class TonlibManager:
         self.tasks['check_children_alive'].cancel()
         await self.tasks['check_children_alive']
 
-        await asyncio.wait([self.worker_control(i, enabled=False) for i in self.workers])
+        await asyncio.wait([self.loop.create_task(self.worker_control(i, enabled=False)) for i in self.workers])
 
         self.threadpool_executor.shutdown()
 
