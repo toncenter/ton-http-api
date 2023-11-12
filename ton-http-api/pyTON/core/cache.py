@@ -1,4 +1,4 @@
-import aioredis
+import redis.asyncio
 import ring
 
 from ring.func.asyncio import Aioredis2Storage
@@ -29,7 +29,7 @@ class DisabledCacheManager:
 class RedisCacheManager:
     def __init__(self, cache_settings: RedisCacheSettings):
         self.cache_settings = cache_settings
-        self.cache_redis = aioredis.from_url(f"redis://{cache_settings.redis.endpoint}:{cache_settings.redis.port}")
+        self.cache_redis = redis.asyncio.from_url(f"redis://{cache_settings.redis.endpoint}:{cache_settings.redis.port}")
 
     def cached(self, expire=0, check_error=True):
         storage_class = TonlibResultRedisStorage if check_error else Aioredis2Storage

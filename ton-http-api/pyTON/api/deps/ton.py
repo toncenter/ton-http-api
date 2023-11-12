@@ -1,6 +1,5 @@
 from pyTON.core.tonlib.manager import TonlibManager
-from pyTON.core.cache import DisabledCacheManager
-from pyTON.core.cache import CacheManager, RedisCacheManager
+from pyTON.core.cache import CacheManager, DisabledCacheManager, RedisCacheManager
 from pyTON.core.settings import RedisCacheSettings, Settings
 
 from fastapi import Depends
