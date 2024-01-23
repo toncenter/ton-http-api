@@ -17,15 +17,15 @@ setup(
     packages=find_packages('.', exclude=['tests']),
     install_requires=[
         'redis==5.0.1',
-        'loguru>=0.6.0',
-        'fastapi>=0.78.0',
-        'pydantic>=1.9.1',
-        'requests>=2.28.0',
+        'loguru==0.6.0',
+        'fastapi==0.99.1',
+        'pydantic==1.10.14',
+        'requests==2.28.0',
         'ring==0.10.1',
-        'uvicorn>=0.17.6',
-        'gunicorn>=20.1.0',
-        'pytonlib==0.0.43',
-        'inject>=4.3.1'
+        'uvicorn==0.17.6',
+        'gunicorn==20.1.0',
+        'pytonlib==0.0.53',
+        'inject==4.3.1'
     ],
     package_data={},
     zip_safe=True,

@@ -2,7 +2,7 @@ FROM ubuntu:20.04
 
 RUN apt-get update
 RUN DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get -y install tzdata
-RUN apt-get install -y git cmake wget python3 python3-pip
+RUN apt-get install -y git cmake wget python3 python3-pip libsecp256k1-dev libsodium-dev
 
 # python requirements
 ADD ./requirements.txt /tmp/requirements.txt
