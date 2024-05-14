@@ -97,13 +97,15 @@ class WebServerSettings:
     get_methods: bool
     json_rpc: bool
     enable_v3: bool
+    boc_endpoint: Optional[str]
 
     @classmethod
     def from_environment(cls):
         return WebServerSettings(api_root_path=os.environ.get('TON_API_ROOT_PATH', ''),
                                  get_methods=strtobool(os.environ.get('TON_API_GET_METHODS_ENABLED', '1')),
                                  json_rpc=strtobool(os.environ.get('TON_API_JSON_RPC_ENABLED', '1')),
-                                 enable_v3=strtobool(os.environ.get('TON_API_V3_ENABLED', '1')))
+                                 enable_v3=strtobool(os.environ.get('TON_API_V3_ENABLED', '1')),
+                                 boc_endpoint=os.environ.get('TON_API_BOC_ENDPOINT', None))
 
 
 @dataclass

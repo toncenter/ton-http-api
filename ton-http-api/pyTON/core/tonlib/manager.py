@@ -205,7 +205,7 @@ class TonlibManager:
                     self.consensus_block.seqno = consensus_block_seqno
                     self.consensus_block.timestamp = datetime.utcnow().timestamp()
                 for ls_index in self.workers:
-                    self.workers[ls_index]['is_working'] = last_blocks[ls_index] >= self.consensus_block.seqno
+                    self.workers[ls_index]['is_working'] = last_blocks[ls_index] >= self.consensus_block.seqno - 3
 
                 await asyncio.sleep(1)
             except asyncio.CancelledError:
@@ -278,10 +278,6 @@ class TonlibManager:
         finally:
             self.futures.pop(task_id)
 
-    def dispatch_request(self, method, *args, **kwargs):
-        ls_index = self.select_worker()
-        return self.dispatch_request_to_worker(method, ls_index, *args, **kwargs)
-
     def dispatch_archival_request(self, method, *args, **kwargs):
         ls_index = None
         try:
@@ -289,6 +285,14 @@ class TonlibManager:
         except RuntimeError as ee:
             logger.warning(f'Method {method} failed to execute on archival node: {ee}')
             ls_index = self.select_worker(archival=False)
+        return self.dispatch_request_to_worker(method, ls_index, *args, **kwargs)
+    
+    def dispatch_nonarchival_request(self, method, *args, **kwargs):
+        ls_index = self.select_worker(archival=False)
+        return self.dispatch_request_to_worker(method, ls_index, *args, **kwargs)
+
+    def dispatch_request(self, method, *args, **kwargs):
+        ls_index = self.select_worker(archival=False)  # FIXME: now dispatching all requests to nonarchival workers
         return self.dispatch_request_to_worker(method, ls_index, *args, **kwargs)
 
     async def raw_get_transactions(self, account_address: str, from_transaction_lt: str, from_transaction_hash: str, archival: bool):

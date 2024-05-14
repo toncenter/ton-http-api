@@ -19,6 +19,9 @@ if [ ! -z "${ENV_FILE}" ]; then
     set -a; source ${ENV_FILE}; set +a
 fi
 
+# set config secret md5
+export TON_API_TONLIB_LITESERVER_CONFIG_MD5=$(md5sum ${TON_API_TONLIB_LITESERVER_CONFIG} | tr ' ' '\n' | head -1)
+
 # check global network
 NETWORK_ID=$(docker network ls -f "name=toncenter-global" -q)
 

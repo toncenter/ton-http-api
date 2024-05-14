@@ -28,6 +28,7 @@ services:
       - TON_API_V3_ENABLED
       - TON_API_GUNICORN_FLAGS
       - TON_API_ROOT_PATH
+      - TON_API_BOC_ENDPOINT
     restart: unless-stopped
     networks:
       - main

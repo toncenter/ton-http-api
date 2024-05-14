@@ -37,33 +37,46 @@ services:
       TON_API_V3_ENABLED:
       TON_API_GUNICORN_FLAGS:
       TON_API_ROOT_PATH:
+      TON_API_BOC_ENDPOINT:
     networks:
       internal:
       toncenter-global:
         aliases:
           - ${TONCENTER_ENV:?}-http-api
+    ports:
+      - ${TON_API_PUBLISH_PORT:-8081}:8081
     secrets:
-      - http-api-liteserver-config
+      - source: http-api-liteserver-config
+        target: /run/secrets/http-api-liteserver-config
     labels:
       co.elastic.logs/enabled: "true"
       ton_network: ${TONCENTER_ENV}
     healthcheck:
-      test: curl -sS http://127.0.0.1:8081/api/v2/healthcheck || echo 1
+      test: curl --fail http://127.0.0.1:8081/api/v2/getMasterchainInfo
       interval: 15s
       timeout: 3s
       retries: 12
     deploy:
       mode: replicated
-      replicas: 1
+      replicas: ${SWARM_REPLICAS:-1}
+      update_config:
+        parallelism: 6
+        delay: 30s
+        monitor: 60s
+        failure_action: pause
+        order: start-first
       placement:
         constraints:
           - "node.labels.${TONCENTER_ENV}.http-api==true"
 secrets:
   http-api-liteserver-config:
     file: ${TON_API_TONLIB_LITESERVER_CONFIG:?Liteserver config path is required}
+    name: ls-config-${TON_API_TONLIB_LITESERVER_CONFIG_MD5:?Liteserver config hash variable is required}
 networks:
   internal:
     attachable: true
     external: false
+    driver_opts:
+      com.docker.network.driver.mtu: 1350
   toncenter-global:
     external: true

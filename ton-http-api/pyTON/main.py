@@ -1,4 +1,6 @@
 import sys
+sys.setrecursionlimit(2048)
+
 import pyTON
 
 from fastapi import FastAPI

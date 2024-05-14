@@ -2,8 +2,11 @@ import asyncio
 import inspect
 import base64
 import codecs
+import random
+import requests
 
 from functools import wraps
+from datetime import datetime
 from typing import Optional, List, Any, Union, Dict
 
 from fastapi import APIRouter, Depends, Request, Response, BackgroundTasks, status
@@ -414,23 +417,45 @@ async def detect_address(
     """
     return _detect_address(address)
 
+
+def send_boc_to_external_endpoint(boc):
+    try:
+        endpoint = settings.webserver.boc_endpoint
+        logger.info(f'BOC is: "{boc}"')
+        res = requests.post(endpoint, json={'boc': boc})
+        logger.info(f"Boc sent to external endpoint: {res}")
+        return res.get('ok', False)
+    except Exception as ee:
+        logger.warning(f'Failed to sent a message to external endpoint: {ee}')
+    except:
+        logger.warning(f'Failed to sent a message to external endpoint: unknown')
+    return False
+
+
 @router.post('/sendBoc', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
 @json_rpc('sendBoc')
 @wrap_result
 async def send_boc(
+    background_tasks: BackgroundTasks,
     boc: str = Body(..., embed=True, description="b64 encoded bag of cells"),
-    tonlib: TonlibManager = Depends(tonlib_dep)
+    tonlib: TonlibManager = Depends(tonlib_dep),
     ):
     """
     Send serialized boc file: fully packed and serialized external message to blockchain.
     """
     boc = base64.b64decode(boc)
-    return await tonlib.raw_send_message(boc)
+    res = await tonlib.raw_send_message(boc)
+    if res.get('@type') == 'ok':
+        logger.debug("External message accepted in sendBoc")
+        if settings.webserver.boc_endpoint is not None:
+            background_tasks.add_task(send_boc_to_external_endpoint, base64.b64encode(boc).decode('utf8'))
+    return res
 
 @router.post('/sendBocReturnHash', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
 @json_rpc('sendBocReturnHash')
 @wrap_result
 async def send_boc_return_hash(
+    background_tasks: BackgroundTasks,
     boc: str = Body(..., embed=True, description="b64 encoded bag of cells"),
     tonlib: TonlibManager = Depends(tonlib_dep)
     ):
@@ -438,14 +463,23 @@ async def send_boc_return_hash(
     Send serialized boc file: fully packed and serialized external message to blockchain. The method returns message hash.
     """
     boc = base64.b64decode(boc)
-    return await tonlib.raw_send_message_return_hash(boc)
+    res = await tonlib.raw_send_message_return_hash(boc)
+    if res.get('@type') == 'raw.extMessageInfo':
+        logger.info("External message accepted: {hash}", hash=res.get('hash'))
+        if settings.webserver.boc_endpoint is not None:
+            background_tasks.add_task(send_boc_to_external_endpoint, base64.b64encode(boc).decode('utf8'))
+    return res
 
 async def send_boc_unsafe_task(boc_bytes: bytes, tonlib: TonlibManager):
     send_interval = 5
     send_duration = 60
     for i in range(int(send_duration / send_interval)):
         try:
-            await tonlib.raw_send_message(boc_bytes)
+            res = await tonlib.raw_send_message(boc_bytes)
+            if res.get('@type') == 'ok':
+                logger.debug('External message accepted in sendBocUnsafe')
+                if settings.webserver.boc_endpoint is not None:
+                    send_boc_to_external_endpoint(base64.b64encode(boc_bytes).decode('utf8'))
         except:
             pass
         await asyncio.sleep(send_interval)
