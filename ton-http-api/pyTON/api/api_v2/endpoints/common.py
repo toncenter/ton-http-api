@@ -374,7 +374,7 @@ async def get_try_locate_tx(
     tonlib: TonlibManager = Depends(tonlib_dep)
     ):
     """
-    Locate outcoming transaction of *destination* address by incoming message.
+    Locate `incoming` transaction by `outgoing` message.
     """
     return await tonlib.tryLocateTxByIncomingMessage(source, destination, created_lt)
 
@@ -388,7 +388,7 @@ async def get_try_locate_result_tx(
     tonlib: TonlibManager = Depends(tonlib_dep)
     ):
     """
-    Same as previous. Locate outcoming transaction of *destination* address by incoming message
+    Same as previous. Locate `incoming` transaction by `outgoing` message.
     """
     return await tonlib.tryLocateTxByIncomingMessage(source, destination, created_lt)
 
@@ -402,7 +402,7 @@ async def get_try_locate_source_tx(
     tonlib: TonlibManager = Depends(tonlib_dep)
     ):
     """
-    Locate incoming transaction of *source* address by outcoming message.
+    Locate `outgoing` transaction by `incoming` message.
     """
     return await tonlib.tryLocateTxByOutcomingMessage(source, destination, created_lt)
 
