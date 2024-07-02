@@ -18,7 +18,8 @@ from pyTON.schemas import (
     DeprecatedTonResponseJsonRPC,
     TonRequestJsonRPC,
     TonResponseGetBlockTransactions,
-    TonResponseGetTransactions
+    TonResponseGetTransactions,
+    TonTryLocateTx
 )
 from pyTON.core.tonlib.manager import TonlibManager
 from pyTON.api.deps.ton import tonlib_dep, settings_dep
@@ -366,7 +367,7 @@ async def get_token_data(
     address = prepare_address(address)
     return await tonlib.get_token_data(address)
 
-@router.get('/tryLocateTx', response_model=TonResponse, response_model_exclude_none=True, tags=['transactions'])
+@router.get('/tryLocateTx', response_model=TonTryLocateTx, response_model_exclude_none=True, tags=['transactions'])
 @json_rpc('tryLocateTx')
 @wrap_result
 async def get_try_locate_tx(
@@ -376,11 +377,11 @@ async def get_try_locate_tx(
     tonlib: TonlibManager = Depends(tonlib_dep)
     ):
     """
-    Locate `incoming` transaction by `outgoing` message.
+    Locate transaction for destination address by incoming message.
     """
     return await tonlib.tryLocateTxByIncomingMessage(source, destination, created_lt)
 
-@router.get('/tryLocateResultTx', response_model=TonResponse, response_model_exclude_none=True, tags=['transactions'])
+@router.get('/tryLocateResultTx', response_model=TonTryLocateTx, response_model_exclude_none=True, tags=['transactions'])
 @json_rpc('tryLocateResultTx')
 @wrap_result
 async def get_try_locate_result_tx(
@@ -390,11 +391,11 @@ async def get_try_locate_result_tx(
     tonlib: TonlibManager = Depends(tonlib_dep)
     ):
     """
-    Same as previous. Locate `incoming` transaction by `outgoing` message.
+    Same as previous. Locate transaction for destination address by incoming message.
     """
     return await tonlib.tryLocateTxByIncomingMessage(source, destination, created_lt)
 
-@router.get('/tryLocateSourceTx', response_model=TonResponse, response_model_exclude_none=True, tags=['transactions'])
+@router.get('/tryLocateSourceTx', response_model=TonTryLocateTx, response_model_exclude_none=True, tags=['transactions'])
 @json_rpc('tryLocateSourceTx')
 @wrap_result
 async def get_try_locate_source_tx(
@@ -404,7 +405,7 @@ async def get_try_locate_source_tx(
     tonlib: TonlibManager = Depends(tonlib_dep)
     ):
     """
-    Locate `outgoing` transaction by `incoming` message.
+    Locate transaction for source address by outcoming message.
     """
     return await tonlib.tryLocateTxByOutcomingMessage(source, destination, created_lt)
 

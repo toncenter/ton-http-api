@@ -51,7 +51,7 @@ class Address(BaseModel):
 
 class TransactionId(BaseModel):
     type: Literal['internal.transactionId'] = Field(alias="@type")
-    account_address: str
+    account_address: Optional[str]
     lt: str
     hash: str
 
@@ -94,7 +94,7 @@ class TonResponseGetTransactions(BaseModel):
 
 class TonTryLocateTx(BaseModel):
     ok: bool
-    result: Optional[List[ResponseAddressTransaction]]
+    result: Optional[ResponseAddressTransaction]
     error: Optional[str] = None
     code: Optional[int] = None
 
@@ -104,7 +104,6 @@ class TonResponseJsonRPC(BaseModel):
     result: Optional[ResultT]
     error: Optional[str] = None
     code: Optional[int] = None
-
 
 class DeprecatedTonResponseJsonRPC(BaseModel):
     ok: bool
