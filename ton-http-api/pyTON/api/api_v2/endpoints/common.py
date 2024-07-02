@@ -16,7 +16,8 @@ from fastapi.exceptions import HTTPException
 from pyTON.schemas import (
     TonResponse, 
     DeprecatedTonResponseJsonRPC,
-    TonRequestJsonRPC
+    TonRequestJsonRPC,
+    TonResponseGetBlockTransactions,
 )
 from pyTON.core.tonlib.manager import TonlibManager
 from pyTON.api.deps.ton import tonlib_dep, settings_dep
@@ -303,7 +304,7 @@ async def get_shards(
     """
     return await tonlib.getShards(seqno)
 
-@router.get('/getBlockTransactions', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks','transactions'])
+@router.get('/getBlockTransactions', response_model=TonResponseGetBlockTransactions, response_model_exclude_none=True, tags=['blocks','transactions'])
 @json_rpc('getBlockTransactions')
 @wrap_result
 async def get_block_transactions(
@@ -318,7 +319,7 @@ async def get_block_transactions(
     tonlib: TonlibManager = Depends(tonlib_dep)
     ):
     """
-    Get transactions of the given block.
+    Get transactions descriptions of the given block.
     """
     return await tonlib.getBlockTransactions(workchain, shard, seqno, count, root_hash, file_hash, after_lt, after_hash)
 

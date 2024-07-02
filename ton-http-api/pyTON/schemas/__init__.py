@@ -3,7 +3,8 @@ from .http import (
     TonResponse,
     TonResponseGeneric,
     TonResponseJsonRPC,
-    DeprecatedTonResponseJsonRPC
+    DeprecatedTonResponseJsonRPC,
+    TonResponseGetBlockTransactions
 )
 from .ton import (
     BlockId,
