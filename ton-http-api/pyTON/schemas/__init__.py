@@ -3,7 +3,10 @@ from .http import (
     TonResponse,
     TonResponseGeneric,
     TonResponseJsonRPC,
-    DeprecatedTonResponseJsonRPC
+    DeprecatedTonResponseJsonRPC,
+    OkResponse,
+    SendBocReturnHashResponse,
+    EstimateFeeResponse
 )
 from .ton import (
     BlockId,

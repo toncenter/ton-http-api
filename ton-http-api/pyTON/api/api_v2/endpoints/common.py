@@ -16,7 +16,10 @@ from fastapi.exceptions import HTTPException
 from pyTON.schemas import (
     TonResponse, 
     DeprecatedTonResponseJsonRPC,
-    TonRequestJsonRPC
+    TonRequestJsonRPC,
+    SendBocReturnHashResponse,
+    EstimateFeeResponse,
+    OkResponse
 )
 from pyTON.core.tonlib.manager import TonlibManager
 from pyTON.api.deps.ton import tonlib_dep, settings_dep
@@ -432,7 +435,7 @@ def send_boc_to_external_endpoint(boc):
     return False
 
 
-@router.post('/sendBoc', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
+@router.post('/sendBoc', response_model=OkResponse, response_model_exclude_none=True, tags=['send'])
 @json_rpc('sendBoc')
 @wrap_result
 async def send_boc(
@@ -451,7 +454,7 @@ async def send_boc(
             background_tasks.add_task(send_boc_to_external_endpoint, base64.b64encode(boc).decode('utf8'))
     return res
 
-@router.post('/sendBocReturnHash', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
+@router.post('/sendBocReturnHash', response_model=SendBocReturnHashResponse, response_model_exclude_none=True, tags=['send'])
 @json_rpc('sendBocReturnHash')
 @wrap_result
 async def send_boc_return_hash(
@@ -517,12 +520,12 @@ async def send_cell(
         raise HTTPException(status_code=400, detail="Error while parsing cell")
     return await tonlib.raw_send_message(boc)
 
-@router.post('/sendQuery', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
+@router.post('/sendQuery', response_model=OkResponse, response_model_exclude_none=True, tags=['send'])
 @json_rpc('sendQuery')
 @wrap_result
 async def send_query(
-    address: str = Body(..., description="Address in any format"), 
-    body: str = Body(..., description="b64-encoded boc-serialized cell with message body"), 
+    address: str = Body(..., description="Address in any format", examples=[ADDRESS_EXAMPLE]),
+    body: str = Body(..., description="b64-encoded boc-serialized cell with message body", examples=[ADDRESS_EXAMPLE]),
     init_code: str = Body(default='', description="b64-encoded boc-serialized cell with init-code"), 
     init_data: str = Body(default='', description="b64-encoded boc-serialized cell with init-data"),
     tonlib: TonlibManager = Depends(tonlib_dep)
@@ -561,7 +564,7 @@ async def send_query_cell(
         raise HTTPException(status_code=400, detail="Error while parsing cell object")
     return await tonlib.raw_create_and_send_query(address, body, init_code=qcode, init_data=qdata)
 
-@router.post('/estimateFee', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
+@router.post('/estimateFee', response_model=EstimateFeeResponse, response_model_exclude_none=True, tags=['send'])
 @json_rpc('estimateFee')
 @wrap_result
 async def estimate_fee(
