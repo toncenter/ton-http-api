@@ -18,6 +18,7 @@ from pyTON.schemas import (
     DeprecatedTonResponseJsonRPC,
     TonRequestJsonRPC,
     TonResponseGetBlockTransactions,
+    TonResponseGetTransactions
 )
 from pyTON.core.tonlib.manager import TonlibManager
 from pyTON.api.deps.ton import tonlib_dep, settings_dep
@@ -159,7 +160,7 @@ async def get_wallet_information(
         wallet_handler["data_extractor"](res, result)
     return res
 
-@router.get('/getTransactions', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts', 'transactions'])
+@router.get('/getTransactions', response_model=TonResponseGetTransactions, response_model_exclude_none=True, tags=['accounts', 'transactions'])
 @json_rpc('getTransactions')
 @wrap_result
 async def get_transactions(

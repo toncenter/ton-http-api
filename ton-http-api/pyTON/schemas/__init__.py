@@ -4,7 +4,8 @@ from .http import (
     TonResponseGeneric,
     TonResponseJsonRPC,
     DeprecatedTonResponseJsonRPC,
-    TonResponseGetBlockTransactions
+    TonResponseGetBlockTransactions,
+    TonResponseGetTransactions
 )
 from .ton import (
     BlockId,
