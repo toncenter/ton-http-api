@@ -16,7 +16,8 @@ from fastapi.exceptions import HTTPException
 from pyTON.schemas import (
     TonResponse, 
     DeprecatedTonResponseJsonRPC,
-    TonRequestJsonRPC
+    TonRequestJsonRPC,
+    RunGetMethodResponse
 )
 from pyTON.core.tonlib.manager import TonlibManager
 from pyTON.api.deps.ton import tonlib_dep, settings_dep
@@ -609,12 +610,12 @@ async def estimate_fee_cell(
 
 
 if settings.webserver.get_methods:
-    @router.post('/runGetMethod', response_model=TonResponse, response_model_exclude_none=True, tags=["run method"])
+    @router.post('/runGetMethod', response_model=RunGetMethodResponse, response_model_exclude_none=True, tags=["run method"])
     @json_rpc('runGetMethod')
     @wrap_result
     async def run_get_method(
-        address: str = Body(..., description='Contract address'), 
-        method: Union[str, int] = Body(..., description='Method name or method id'), 
+        address: str = Body(..., description='Contract address'),
+        method: Union[str, int] = Body(..., description='Method name or method id'),
         stack: List[List[Any]] = Body(..., description="Array of stack elements: `[['num',3], ['cell', cell_object], ['slice', slice_object]]`"),
         tonlib: TonlibManager = Depends(tonlib_dep)
         ):
