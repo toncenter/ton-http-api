@@ -1,6 +1,6 @@
-from typing import Optional, TypeVar, Union
+from typing import Optional, TypeVar, Union, Literal
 from pydantic.generics import GenericModel, Generic
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 ResultT = TypeVar('ResultT')
@@ -31,11 +31,11 @@ class DeprecatedTonResponseJsonRPC(BaseModel):
     error: Optional[str] = None
     code: Optional[int] = None
     id: str
-    jsonrpc: str = "2.0"
+    jsonrpc: Literal['2.0'] = "2.0"
 
 
 class TonRequestJsonRPC(BaseModel):
-    method: str
-    params: dict = {}
+    method: str = Field(example='runGetMethod')
+    params: dict = Field({}, example={"address": "kQAl8r8c6Pg-0MD9c-onqsdwk83PkAx1Cwcd9_sCiOAZsoUE", "method": "get_jetton_data", "stack": [] } )
     id: Optional[str] = None
     jsonrpc: Optional[str] = None
