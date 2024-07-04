@@ -2,6 +2,7 @@ from .http import (
     TonRequestJsonRPC,
     TonResponse,
     TonResponseGeneric,
+    # TonResponseGenericExtra,
     TonResponseJsonRPC,
     DeprecatedTonResponseJsonRPC
 )
@@ -18,6 +19,11 @@ from .ton import (
     Message,
     TransactionId,
     Transaction,
+    MasterchainSignatures,
+    ShardBlockProof,
+    ConsensusBlock,
+    Shards,
+    ShortTransactions,
     check_tonlib_type,
     address_state
 )
