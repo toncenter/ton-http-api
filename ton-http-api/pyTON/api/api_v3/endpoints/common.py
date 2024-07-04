@@ -22,7 +22,8 @@ from pyTON.schemas import (
     BlockHeader, 
     check_tonlib_type, 
     SerializedBoc, 
-    Transaction
+    Transaction,
+    TransactionWAddressId
 )
 from pyTON.core.tonlib.manager import TonlibManager
 from pyTON.api.deps.ton import tonlib_dep, settings_dep
@@ -166,7 +167,7 @@ async def get_contract_information(
 #         wallet_handler["data_extractor"](res, result)
 #     return res
 
-@router.get('/getTransactions', response_model=List[Transaction], response_model_exclude_none=True, tags=['accounts', 'transactions'])
+@router.get('/getTransactions', response_model=List[Transaction[TransactionWAddressId]], response_model_exclude_none=True, tags=['accounts', 'transactions'])
 @json_rpc('getTransactions')
 async def get_transactions(
     address: str = Query(..., description="Identifier of target TON account in any form."), 

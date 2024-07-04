@@ -1,9 +1,11 @@
 
-from typing import List, Optional, Literal
-from pydantic import BaseModel
+from typing import List, Optional, Literal, TypeVar
+from pydantic import BaseModel, Field
+from pydantic.generics import GenericModel, Generic
 
 from pytonlib.utils.wallet import wallets as known_wallets, sha256
 
+ResultT = TypeVar('ResultT')
 
 def check_tonlib_type(tl_obj: dict, expected_type: str):
     tl_type = tl_obj.get('@type', '')
@@ -21,6 +23,7 @@ def address_state(account_info):
 
 
 class BlockId(BaseModel):
+    type: Literal['ton.blockIdExt'] = Field(alias="@type")
     workchain: int
     shard: str
     seqno: int
@@ -184,6 +187,7 @@ class SerializedBoc(BaseModel):
 
 
 class MsgDataRaw(BaseModel):
+    type: Literal['msg.dataRaw'] = Field(alias="@type")
     body: str 
     init_state: str
 
@@ -194,6 +198,7 @@ class MsgDataRaw(BaseModel):
 
 
 class Message(BaseModel):
+    type: Literal['raw.message'] = Field(alias="@type")
     source: str
     destination: str
     value: int
@@ -219,9 +224,9 @@ class Message(BaseModel):
             comment=tl_obj.get('comment'),
             op=tl_obj.get('op'),
         )
-
-
+    
 class TransactionId(BaseModel):
+    type: Literal['internal.transactionId'] = Field(alias="@type")
     lt: int
     hash: str
 
@@ -230,12 +235,19 @@ class TransactionId(BaseModel):
 
         return TransactionId(lt=int(tl_obj['lt']), hash=tl_obj['hash'])
 
+class TransactionWAddressId(TransactionId):
+    account_address: str
 
-class Transaction(BaseModel):
+class Address(BaseModel):
+    type: Literal['accountAddress'] = Field(alias="@type")
+    account_address: str
+
+class Transaction(GenericModel, Generic[ResultT]):
+    type: Literal['raw.transaction'] = Field(alias="@type")
+    address: Address
     utime: int
     data: str
-    hash: str
-    lt: str
+    transaction_id: ResultT
     fee: int
     storage_fee: int
     other_fee: int
@@ -247,11 +259,24 @@ class Transaction(BaseModel):
 
         return Transaction(utime=int(tl_obj['utime']),
             data=tl_obj['data'],
-            hash=tl_obj['transaction_id']['hash'],
-            lt=tl_obj['transaction_id']['lt'],
+            transaction_id=tl_obj['transaction_id'],
             fee=int(tl_obj['fee']),
             storage_fee=int(tl_obj['storage_fee']),
             other_fee=int(tl_obj['other_fee']),
             in_msg=Message.build(tl_obj.get('in_msg')) if tl_obj.get('in_msg') else None,
             out_msgs=[Message.build(m) for m in tl_obj['out_msgs']]
         )
+
+class ShortTransaction(BaseModel):
+    type: Literal['blocks.shortTxId'] = Field(alias="@type")
+    mode: int
+    account: str
+    lt: str
+    hash: str
+
+class ShortTransactions(BaseModel):
+    type: Literal['blocks.transactions'] = Field(alias="@type")
+    id: BlockId
+    req_count: int
+    incomplete: bool
+    transactions: List[ShortTransaction]

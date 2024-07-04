@@ -3,10 +3,7 @@ from .http import (
     TonResponse,
     TonResponseGeneric,
     TonResponseJsonRPC,
-    DeprecatedTonResponseJsonRPC,
-    TonResponseGetBlockTransactions,
-    TonResponseGetTransactions,
-    TonTryLocateTx
+    DeprecatedTonResponseJsonRPC
 )
 from .ton import (
     BlockId,
@@ -21,6 +18,8 @@ from .ton import (
     Message,
     TransactionId,
     Transaction,
+    ShortTransactions,
+    TransactionWAddressId,
     check_tonlib_type,
     address_state
 )

@@ -14,12 +14,14 @@ from fastapi.params import Body, Param, Query
 from fastapi.exceptions import HTTPException
 
 from pyTON.schemas import (
-    TonResponse, 
+    TonResponse,
+    TonResponseGeneric,
     DeprecatedTonResponseJsonRPC,
     TonRequestJsonRPC,
-    TonResponseGetBlockTransactions,
-    TonResponseGetTransactions,
-    TonTryLocateTx
+    ShortTransactions,
+    TransactionWAddressId,
+    TransactionId,
+    Transaction
 )
 from pyTON.core.tonlib.manager import TonlibManager
 from pyTON.api.deps.ton import tonlib_dep, settings_dep
@@ -161,7 +163,7 @@ async def get_wallet_information(
         wallet_handler["data_extractor"](res, result)
     return res
 
-@router.get('/getTransactions', response_model=TonResponseGetTransactions, response_model_exclude_none=True, tags=['accounts', 'transactions'])
+@router.get('/getTransactions', response_model=TonResponseGeneric[List[Transaction[TransactionWAddressId]]], response_model_exclude_none=True, tags=['accounts', 'transactions'])
 @json_rpc('getTransactions')
 @wrap_result
 async def get_transactions(
@@ -306,7 +308,7 @@ async def get_shards(
     """
     return await tonlib.getShards(seqno)
 
-@router.get('/getBlockTransactions', response_model=TonResponseGetBlockTransactions, response_model_exclude_none=True, tags=['blocks','transactions'])
+@router.get('/getBlockTransactions', response_model=TonResponseGeneric[ShortTransactions], response_model_exclude_none=True, tags=['blocks','transactions'])
 @json_rpc('getBlockTransactions')
 @wrap_result
 async def get_block_transactions(
@@ -367,7 +369,7 @@ async def get_token_data(
     address = prepare_address(address)
     return await tonlib.get_token_data(address)
 
-@router.get('/tryLocateTx', response_model=TonTryLocateTx, response_model_exclude_none=True, tags=['transactions'])
+@router.get('/tryLocateTx', response_model=TonResponseGeneric[Transaction[TransactionId]], response_model_exclude_none=True, tags=['transactions'])
 @json_rpc('tryLocateTx')
 @wrap_result
 async def get_try_locate_tx(
@@ -381,7 +383,7 @@ async def get_try_locate_tx(
     """
     return await tonlib.tryLocateTxByIncomingMessage(source, destination, created_lt)
 
-@router.get('/tryLocateResultTx', response_model=TonTryLocateTx, response_model_exclude_none=True, tags=['transactions'])
+@router.get('/tryLocateResultTx', response_model=TonResponseGeneric[Transaction[TransactionId]], response_model_exclude_none=True, tags=['transactions'])
 @json_rpc('tryLocateResultTx')
 @wrap_result
 async def get_try_locate_result_tx(
@@ -395,7 +397,7 @@ async def get_try_locate_result_tx(
     """
     return await tonlib.tryLocateTxByIncomingMessage(source, destination, created_lt)
 
-@router.get('/tryLocateSourceTx', response_model=TonTryLocateTx, response_model_exclude_none=True, tags=['transactions'])
+@router.get('/tryLocateSourceTx', response_model=TonResponseGeneric[Transaction[TransactionId]], response_model_exclude_none=True, tags=['transactions'])
 @json_rpc('tryLocateSourceTx')
 @wrap_result
 async def get_try_locate_source_tx(
