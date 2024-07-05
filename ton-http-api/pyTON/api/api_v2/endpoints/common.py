@@ -16,7 +16,8 @@ from fastapi.exceptions import HTTPException
 from pyTON.schemas import (
     TonResponse, 
     DeprecatedTonResponseJsonRPC,
-    TonRequestJsonRPC
+    TonRequestJsonRPC,
+    GetConfigParamResponse,
 )
 from pyTON.core.tonlib.manager import TonlibManager
 from pyTON.api.deps.ton import tonlib_dep, settings_dep
@@ -338,7 +339,7 @@ async def get_block_header(
     """
     return await tonlib.getBlockHeader(workchain, shard, seqno, root_hash, file_hash)
 
-@router.get('/getConfigParam', response_model=TonResponse, response_model_exclude_none=True, tags=['get config'])
+@router.get('/getConfigParam', response_model=GetConfigParamResponse, response_model_exclude_none=True, tags=['get config'])
 @json_rpc('getConfigParam')
 @wrap_result
 async def get_config_param(
@@ -348,6 +349,7 @@ async def get_config_param(
     ):
     """
     Get config by id.
+    Information about cell content can be found [in TL-B definitions](https://github.com/ton-blockchain/ton/blob/5c392e0f2d946877bb79a09ed35068f7b0bd333a/crypto/block/block.tlb#L593).
     """
     return await tonlib.get_config_param(config_id, seqno)
 
