@@ -1,7 +1,8 @@
 from typing import Optional, TypeVar, Union, List
 from pydantic.generics import GenericModel, Generic
-from pydantic import BaseModel
 from pydantic import BaseModel, Field
+
+from .ton import ConfigInfo
 
 ResultT = TypeVar('ResultT')
 
@@ -251,3 +252,7 @@ class TonRequestJsonRPC(BaseModel):
     params: dict = {}
     id: Optional[str] = None
     jsonrpc: Optional[str] = None
+
+
+class GetConfigParamResponse(TonResponseGeneric[ConfigInfo]):
+    pass

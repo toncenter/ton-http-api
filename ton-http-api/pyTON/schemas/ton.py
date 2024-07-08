@@ -1,6 +1,6 @@
 
 from typing import List, Optional, Literal
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from pytonlib.utils.wallet import wallets as known_wallets, sha256
 
@@ -255,3 +255,14 @@ class Transaction(BaseModel):
             in_msg=Message.build(tl_obj.get('in_msg')) if tl_obj.get('in_msg') else None,
             out_msgs=[Message.build(m) for m in tl_obj['out_msgs']]
         )
+
+
+class TVMCell(BaseModel):
+    type: Literal['tvm.cell'] = Field(alias='@type')
+    bytes: str
+
+
+class ConfigInfo(BaseModel):
+    type: Literal['configInfo'] = Field(alias='@type')
+    config: TVMCell
+    extra: str = Field(alias='@extra')
