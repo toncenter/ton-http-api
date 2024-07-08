@@ -27,7 +27,8 @@ from pyTON.schemas import (
     PackAddressResponse,
     UnpackAddressResponse,
     GetTokenDataResponse,
-    DetectAddressResponse
+    DetectAddressResponse,
+    TonResponse200Generic
 )
 from pyTON.core.tonlib.manager import TonlibManager
 from pyTON.api.deps.ton import tonlib_dep, settings_dep
@@ -114,7 +115,7 @@ def json_rpc(method):
 
 
 @router.get('/getAddressInformation',
-            response_model=GetAddressInformationResponse,
+            response_model=TonResponse200Generic[GetAddressInformationResponse],
             responses=get_get_address_information_error_responses(),
             response_model_exclude_none=True,
             tags=['accounts'])
@@ -138,7 +139,7 @@ async def get_address_information(
 
 
 @router.get('/getExtendedAddressInformation',
-            response_model=GetExtendedAddressInformationResponse,
+            response_model=TonResponse200Generic[GetExtendedAddressInformationResponse],
             responses=get_get_address_information_error_responses(),
             response_model_exclude_none=True,
             tags=['accounts'])
@@ -157,7 +158,7 @@ async def get_extended_address_information(
 
 
 @router.get('/getWalletInformation',
-            response_model=GetWalletInformationResponse,
+            response_model=TonResponse200Generic[GetWalletInformationResponse],
             responses=get_get_address_information_error_responses(),
             response_model_exclude_none=True,
             tags=['accounts'])
@@ -187,7 +188,7 @@ async def get_wallet_information(
 
 
 @router.get('/getTransactions',
-            response_model=GetTransactionsResponse,
+            response_model=TonResponse200Generic[List[GetTransactionsResponse]],
             responses=get_get_address_information_error_responses(),
             response_model_exclude_none=True,
             tags=['accounts', 'transactions'])
@@ -216,7 +217,7 @@ async def get_transactions(
 
 
 @router.get('/getAddressBalance',
-            response_model=GetAddressBalanceResponse,
+            response_model=TonResponse200Generic[GetAddressBalanceResponse],
             responses=get_get_address_information_error_responses(),
             response_model_exclude_none=True,
             tags=['accounts'])
@@ -237,7 +238,7 @@ async def get_address_balance(
 
 
 @router.get('/getAddressState',
-            response_model=GetAddressStateResponse,
+            response_model=TonResponse200Generic[GetAddressStateResponse],
             responses=get_get_address_information_error_responses(),
             response_model_exclude_none=True,
             tags=['accounts'])
@@ -256,7 +257,7 @@ async def get_address(
 
 
 @router.get('/packAddress',
-            response_model=PackAddressResponse,
+            response_model=TonResponse200Generic[PackAddressResponse],
             responses=get_get_address_information_error_responses(),
             response_model_exclude_none=True,
             tags=['accounts'])
@@ -274,7 +275,7 @@ async def pack_address(
 
 
 @router.get('/unpackAddress',
-            response_model=UnpackAddressResponse,
+            response_model=TonResponse200Generic[UnpackAddressResponse],
             responses=get_get_address_information_error_responses(),
             response_model_exclude_none=True,
             tags=['accounts'])
@@ -425,7 +426,7 @@ async def get_config_param(
 
 
 @router.get('/getTokenData',
-            response_model=GetTokenDataResponse,
+            response_model=TonResponse200Generic[GetTokenDataResponse],
             responses=get_get_address_information_error_responses(),
             response_model_exclude_none=True,
             tags=['accounts'])
@@ -488,7 +489,7 @@ async def get_try_locate_source_tx(
 
 
 @router.get('/detectAddress',
-            response_model=DetectAddressResponse,
+            response_model=TonResponse200Generic[DetectAddressResponse],
             responses=get_get_address_information_error_responses(),
             response_model_exclude_none=True,
             tags=['accounts'])

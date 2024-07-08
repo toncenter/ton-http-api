@@ -14,7 +14,8 @@ from .http import (
     PackAddressResponse,
     UnpackAddressResponse,
     GetTokenDataResponse,
-    DetectAddressResponse
+    DetectAddressResponse,
+    TonResponse200Generic
 )
 from .ton import (
     BlockId,

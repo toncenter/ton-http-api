@@ -13,6 +13,11 @@ class TonResponseGeneric(GenericModel, Generic[ResultT]):
     code: Optional[int] = None
 
 
+class TonResponse200Generic(GenericModel, Generic[ResultT]):
+    ok: bool = Field(True)
+    result: Optional[ResultT]
+
+
 class TonResponse(TonResponseGeneric[Union[str, list, dict, None]]):
     pass
 
@@ -44,145 +49,126 @@ def get_get_address_information_error_responses():
 
 
 class GetAddressInformationResponse(BaseModel):
-    ok: bool = Field(True, description='Always true if there is no error')
+    type: str = Field(alias="@type")
+    balance: str
+    code: str
+    data: str
 
-    class AddressResult(BaseModel):
+    class LastTransactionId(BaseModel):
         type: str = Field(alias="@type")
-        balance: str
-        code: str
-        data: str
+        lt: str
+        hash: str
 
-        class LastTransactionId(BaseModel):
-            type: str = Field(alias="@type")
-            lt: str
-            hash: str
+    last_transaction_id: LastTransactionId
 
-        last_transaction_id: LastTransactionId
+    class BlockId(BaseModel):
+        type: str = Field(alias="@type")
+        workchain: int
+        shard: str
+        seqno: int
+        root_hash: str
+        file_hash: str
 
-        class BlockId(BaseModel):
-            type: str = Field(alias="@type")
-            workchain: int
-            shard: str
-            seqno: int
-            root_hash: str
-            file_hash: str
-
-        block_id: BlockId
-        frozen_hash: str
-        sync_utime: int
-        extra: str = Field(alias="@extra")
-        state: str
-
-    result: AddressResult
+    block_id: BlockId
+    frozen_hash: str
+    sync_utime: int
+    extra: str = Field(alias="@extra")
+    state: str
 
 
 class GetExtendedAddressInformationResponse(BaseModel):
-    ok: bool = Field(True, description='Hello')
+    type: str = Field(alias="@type")
 
-    class Result(BaseModel):
+    class Address(BaseModel):
         type: str = Field(alias="@type")
+        account_address: str
 
-        class Address(BaseModel):
-            type: str = Field(alias="@type")
-            account_address: str
+    address: Address
+    balance: str
 
-        address: Address
-        balance: str
+    class LastTransactionId(BaseModel):
+        type: str = Field(alias="@type")
+        lt: str
+        hash: str
 
-        class LastTransactionId(BaseModel):
-            type: str = Field(alias="@type")
-            lt: str
-            hash: str
+    last_transaction_id: LastTransactionId
 
-        last_transaction_id: LastTransactionId
+    class BlockId(BaseModel):
+        type: str = Field(alias="@type")
+        workchain: int
+        shard: str
+        seqno: int
+        root_hash: str
+        file_hash: str
 
-        class BlockId(BaseModel):
-            type: str = Field(alias="@type")
-            workchain: int
-            shard: str
-            seqno: int
-            root_hash: str
-            file_hash: str
+    block_id: BlockId
 
-        block_id: BlockId
+    sync_utime: int
 
-        sync_utime: int
+    class AccountState(BaseModel):
+        type: str = Field(alias="@type")
+        wallet_id: str
+        seqno: int
 
-        class AccountState(BaseModel):
-            type: str = Field(alias="@type")
-            wallet_id: str
-            seqno: int
+    account_state: AccountState
 
-        account_state: AccountState
-
-        revision: int
-        extra: str = Field(alias="@extra")
-
-    result: Result
+    revision: int
+    extra: str = Field(alias="@extra")
 
 
 class GetWalletInformationResponse(BaseModel):
-    ok: bool = Field(True)
+    wallet: bool
+    balance: str
+    account_state: str
+    wallet_type: str
+    seqno: int
 
-    class Result(BaseModel):
-        wallet: bool
-        balance: str
-        account_state: str
-        wallet_type: str
-        seqno: int
-
-        class LastTransactionId(BaseModel):
-            type: str = Field(alias="@type")
-            lt: str
-            hash: str
-
-        last_transaction_id: LastTransactionId
-        wallet_id: int
-
-    result: Result
-
-
-class GetTransactionsResponse(BaseModel):
-    ok: bool = Field(True)
-
-    class Transaction(BaseModel):
+    class LastTransactionId(BaseModel):
         type: str = Field(alias="@type")
-        address: dict
-        utime: int
-        data: str
+        lt: str
+        hash: str
 
-        class TransactionId(BaseModel):
+    last_transaction_id: LastTransactionId
+    wallet_id: int
+
+
+# should be list
+class GetTransactionsResponse(BaseModel):
+    type: str = Field(alias="@type")
+    address: dict
+    utime: int
+    data: str
+
+    class TransactionId(BaseModel):
+        type: str = Field(alias="@type")
+        lt: str
+        hash: str
+
+    transaction_id: TransactionId
+    fee: str
+    storage_fee: str
+    other_fee: str
+
+    class Message(BaseModel):
+        type: str = Field(alias="@type")
+        source: str
+        destination: str
+        value: str
+        fwd_fee: str
+        ihr_fee: str
+        created_lt: str
+        body_hash: str
+
+        class MessageData(BaseModel):
             type: str = Field(alias="@type")
-            lt: str
-            hash: str
+            body: str
+            init_state: Optional[str] = None
 
-        transaction_id: TransactionId
-        fee: str
-        storage_fee: str
-        other_fee: str
+        msg_data: MessageData
+        message: Optional[str] = None
 
-        class Message(BaseModel):
-            type: str = Field(alias="@type")
-            source: str
-            destination: str
-            value: str
-            fwd_fee: str
-            ihr_fee: str
-            created_lt: str
-            body_hash: str
-
-            class MessageData(BaseModel):
-                type: str = Field(alias="@type")
-                body: str
-                init_state: Optional[str] = None
-
-            msg_data: MessageData
-            message: Optional[str] = None
-
-        in_msg: Message
-        out_msgs: List[Message]
-
-    result: List[Transaction]
+    in_msg: Message
+    out_msgs: List[Message]
 
 
 class GetAddressBalanceResponse(BaseModel):
@@ -208,49 +194,39 @@ class UnpackAddressResponse(BaseModel):
 
 
 class GetTokenDataResponse(BaseModel):
-    ok: bool = Field(True)
+    total_supply: int
+    mintable: bool
+    admin_address: str
 
-    class Result(BaseModel):
-        total_supply: int
-        mintable: bool
-        admin_address: str
+    class JettonContent(BaseModel):
+        type: str = Field(alias="@type")
 
-        class JettonContent(BaseModel):
-            type: str = Field(alias="@type")
+        class Data(BaseModel):
+            image: str
+            name: str
+            symbol: str
+            description: str
+            decimals: str
 
-            class Data(BaseModel):
-                image: str
-                name: str
-                symbol: str
-                description: str
-                decimals: str
+        data: Data
 
-            data: Data
+    jetton_content: JettonContent
 
-        jetton_content: JettonContent
-
-        jetton_wallet_code: str
-        contract_type: str
-
-    result: Result
+    jetton_wallet_code: str
+    contract_type: str
 
 
 class DetectAddressResponse(BaseModel):
-    ok: bool = Field(True)
+    raw_form: str
 
-    class Result(BaseModel):
-        raw_form: str
+    class Bouncable(BaseModel):
+        b64: str
+        b64url: str
 
-        class Bouncable(BaseModel):
-            b64: str
-            b64url: str
-
-        bounceable: Bouncable
-        non_bounceable: Bouncable
-        given_type: str
-        test_only: bool
-
-    result: Result
+    bounceable: Bouncable
+    non_bounceable: Bouncable
+    given_type: str
+    test_only: bool
 
 
 class TonResponseJsonRPC(BaseModel):
