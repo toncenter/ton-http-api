@@ -3,7 +3,18 @@ from .http import (
     TonResponse,
     TonResponseGeneric,
     TonResponseJsonRPC,
-    DeprecatedTonResponseJsonRPC
+    DeprecatedTonResponseJsonRPC,
+    get_get_address_information_error_responses,
+    GetAddressInformationResponse,
+    GetExtendedAddressInformationResponse,
+    GetWalletInformationResponse,
+    GetTransactionsResponse,
+    GetAddressBalanceResponse,
+    GetAddressStateResponse,
+    PackAddressResponse,
+    UnpackAddressResponse,
+    GetTokenDataResponse,
+    DetectAddressResponse
 )
 from .ton import (
     BlockId,
