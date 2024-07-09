@@ -2,7 +2,6 @@ from .http import (
     TonRequestJsonRPC,
     TonResponse,
     TonResponseGeneric,
-    # TonResponseGenericExtra,
     TonResponseJsonRPC,
     DeprecatedTonResponseJsonRPC,
     get_get_address_information_error_responses,
@@ -15,9 +14,9 @@ from .http import (
     PackAddressResponse,
     UnpackAddressResponse,
     GetTokenDataResponse,
-    DetectAddressResponse,
     TonResponse200Generic,
-    GetConfigParamResponse
+    GetConfigParamResponse,
+    RunGetMethodResponse,
 )
 from .ton import (
     BlockId,
