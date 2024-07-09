@@ -17,6 +17,10 @@ from .http import (
     TonResponse200Generic,
     GetConfigParamResponse,
     RunGetMethodResponse,
+    DeprecatedTonResponseJsonRPC,
+    OkResponse,
+    SendBocReturnHashResponse,
+    EstimateFeeResponse
 )
 from .ton import (
     BlockId,

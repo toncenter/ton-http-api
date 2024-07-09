@@ -40,6 +40,10 @@ from pyTON.schemas import (
     BlockHeader,
     RunGetMethodResponse,
     AddressForms,
+    TonRequestJsonRPC,
+    SendBocReturnHashResponse,
+    EstimateFeeResponse,
+    OkResponse,
 )
 from pyTON.core.tonlib.manager import TonlibManager
 from pyTON.api.deps.ton import tonlib_dep, settings_dep
@@ -677,7 +681,7 @@ def send_boc_to_external_endpoint(boc):
 
 @router.post(
     "/sendBoc",
-    response_model=TonResponse,
+    response_model=OkResponse,
     response_model_exclude_none=True,
     tags=["send"],
 )
@@ -704,7 +708,7 @@ async def send_boc(
 
 @router.post(
     "/sendBocReturnHash",
-    response_model=TonResponse,
+    response_model=SendBocReturnHashResponse,
     response_model_exclude_none=True,
     tags=["send"],
 )
@@ -797,7 +801,7 @@ async def send_cell(
 
 @router.post(
     "/sendQuery",
-    response_model=TonResponse,
+    response_model=OkResponse,
     response_model_exclude_none=True,
     tags=["send"],
 )
@@ -806,7 +810,8 @@ async def send_cell(
 async def send_query(
     address: str = Body(..., description="Address in any format"),
     body: str = Body(
-        ..., description="b64-encoded boc-serialized cell with message body"
+        ...,
+        description="b64-encoded boc-serialized cell with message body",
     ),
     init_code: str = Body(
         default="", description="b64-encoded boc-serialized cell with init-code"
@@ -873,7 +878,7 @@ async def send_query_cell(
 
 @router.post(
     "/estimateFee",
-    response_model=TonResponse,
+    response_model=EstimateFeeResponse,
     response_model_exclude_none=True,
     tags=["send"],
 )

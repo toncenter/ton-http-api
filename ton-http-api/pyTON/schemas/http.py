@@ -30,6 +30,14 @@ class TonResponse200Generic(GenericModel, Generic[ResultT]):
     result: Optional[ResultT]
 
 
+ResultTypeT = TypeVar("ResultTypeT")
+
+
+class TonResponseResultGeneric(GenericModel, Generic[ResultTypeT]):
+    type: ResultTypeT = Field(alias="@type")
+    extra: str = Field(alias="@extra")
+
+
 class TonResponse(TonResponseGeneric[Union[str, list, dict, None]]):
     pass
 
@@ -196,4 +204,35 @@ class RunGetMethodResult(BaseModel):
 
 
 class RunGetMethodResponse(TonResponseGeneric[RunGetMethodResult]):
+    pass
+
+
+class OkResponse(TonResponseGeneric[TonResponseResultGeneric[Literal["ok"]]]):
+    pass
+
+
+class SendBocReturnHashResult(TonResponseResultGeneric[Literal["raw.extMessageInfo"]]):
+    hash: str = Field(example="65+BlkfroywqXyM+POVpMpFiC6XYMQyBvHXw12XiFzc=")
+
+
+class SendBocReturnHashResponse(TonResponseGeneric[SendBocReturnHashResult]):
+    pass
+
+
+class Fees(BaseModel):
+    type: Literal["fees"] = Field(alias="@type")
+    in_fwd_fee: int
+    storage_fee: int
+    gas_fee: int
+    fwd_fee: int
+
+
+class EstimateFeeResponseResult(BaseModel):
+    type: Literal["query.fees"] = Field(alias="@type")
+    source_fees: Fees
+    destination_fees: List[Fees]
+    extra: str = Field(alias="@extra")
+
+
+class EstimateFeeResponse(TonResponseGeneric[EstimateFeeResponseResult]):
     pass
