@@ -1,7 +1,6 @@
 
 from typing import List, Optional, Literal
 from pydantic import BaseModel, Field
-
 from pytonlib.utils.wallet import wallets as known_wallets, sha256
 
 
@@ -21,6 +20,7 @@ def address_state(account_info):
 
 
 class BlockId(BaseModel):
+    type: Literal['ton.blockIdExt'] = Field(alias="@type")
     workchain: int
     shard: str
     seqno: int
@@ -40,6 +40,7 @@ class BlockId(BaseModel):
 
 
 class BlockHeader(BaseModel):
+    type: Literal['blocks.header'] = Field(alias="@type")
     id: BlockId
     global_id: int
     version: int
@@ -152,6 +153,7 @@ class AddressForms(BaseModel):
 
 
 class MasterchainInfo(BaseModel):
+    type: Literal['blocks.masterchainInfo'] = Field(alias="@type")
     last: BlockId
     state_root_hash: str
     init: BlockId
@@ -164,6 +166,53 @@ class MasterchainInfo(BaseModel):
             state_root_hash=tl_obj['state_root_hash']
         )
 
+class BlockSignature(BaseModel):
+    type: Literal['blocks.signature'] = Field(alias="@type")
+    node_id_short: str
+    signature: str
+
+class MasterchainSignatures(BaseModel):
+    type: Literal['blocks.blockSignatures'] = Field(alias="@type")
+    id: BlockId
+    signatures: List[BlockSignature]
+
+class Proof(BaseModel):
+    type: Literal['blocks.blockLinkBack'] = Field(alias="@type")
+    to_key_block: bool
+    from_id: BlockId = Field(alias="from")
+    to: BlockId
+    dest_proof: str
+    proof: str
+    state_proof: str
+
+class ShardBlockProof(BaseModel):
+    type: Literal['blocks.blockSignatures'] = Field(alias="@type")
+    from_id: BlockId = Field(alias="from")
+    mc_id: BlockId
+    links: List[str]
+    mc_proof: List[Proof]
+
+class Shards(BaseModel):
+    type: Literal['blocks.shards'] = Field(alias="@type")
+    shards: List[BlockId]
+
+class ConsensusBlock(BaseModel):
+    consensus_block: int
+    timestamp: int
+
+class ShortTransaction(BaseModel):
+    type: Literal['blocks.shortTxId'] = Field(alias="@type")
+    mode: int
+    account: str
+    lt: str
+    hash: str
+
+class ShortTransactions(BaseModel):
+    type: Literal['blocks.transactions'] = Field(alias="@type")
+    id: BlockId
+    req_count: int
+    incomplete: bool
+    transactions: List[ShortTransaction]
 
 class ExternalMessage(BaseModel):
     msg_hash: str

@@ -30,6 +30,16 @@ from pyTON.schemas import (
     DetectAddressResponse,
     TonResponse200Generic,
     GetConfigParamResponse,
+    TonRequestJsonRPC,
+    TonResponseGeneric,
+    MasterchainInfo,
+    MasterchainSignatures,
+    ShardBlockProof,
+    BlockId,
+    ConsensusBlock,
+    Shards,
+    ShortTransactions,
+    BlockHeader
 )
 from pyTON.core.tonlib.manager import TonlibManager
 from pyTON.api.deps.ton import tonlib_dep, settings_dep
@@ -292,7 +302,7 @@ async def unpack_address(
     return _detect_address(address)["raw_form"]
 
 
-@router.get('/getMasterchainInfo', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
+@router.get('/getMasterchainInfo', response_model=TonResponseGeneric[MasterchainInfo], response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('getMasterchainInfo')
 @wrap_result
 async def get_masterchain_info(tonlib: TonlibManager = Depends(tonlib_dep)):
@@ -302,8 +312,7 @@ async def get_masterchain_info(tonlib: TonlibManager = Depends(tonlib_dep)):
     return await tonlib.getMasterchainInfo()
 
 
-@router.get('/getMasterchainBlockSignatures', response_model=TonResponse, response_model_exclude_none=True,
-            tags=['blocks'])
+@router.get('/getMasterchainBlockSignatures', response_model=TonResponseGeneric[MasterchainSignatures], response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('getMasterchainBlockSignatures')
 @wrap_result
 async def get_masterchain_block_signatures(
@@ -315,8 +324,7 @@ async def get_masterchain_block_signatures(
     """
     return await tonlib.getMasterchainBlockSignatures(seqno)
 
-
-@router.get('/getShardBlockProof', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
+@router.get('/getShardBlockProof', response_model=TonResponseGeneric[ShardBlockProof], response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('getShardBlockProof')
 @wrap_result
 async def get_shard_block_proof(
@@ -333,17 +341,17 @@ async def get_shard_block_proof(
     return await tonlib.getShardBlockProof(workchain, shard, seqno, from_seqno)
 
 
-@router.get('/getConsensusBlock', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
+@router.get('/getConsensusBlock', response_model=TonResponseGeneric[ConsensusBlock], response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('getConsensusBlock')
 @wrap_result
-async def get_consensus_block(tonlib: TonlibManager = Depends(tonlib_dep)):
+async def get_consensus_block(tonlib: TonlibManager=Depends(tonlib_dep)):
     """
     Get consensus block and its update timestamp.
     """
     return await tonlib.getConsensusBlock()
 
 
-@router.get('/lookupBlock', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
+@router.get('/lookupBlock', response_model=TonResponseGeneric[BlockId], response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('lookupBlock')
 @wrap_result
 async def lookup_block(
@@ -359,8 +367,7 @@ async def lookup_block(
     """
     return await tonlib.lookupBlock(workchain, shard, seqno, lt, unixtime)
 
-
-@router.get('/shards', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
+@router.get('/shards', response_model=TonResponseGeneric[Shards], response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('shards')
 @wrap_result
 async def get_shards(
@@ -372,9 +379,7 @@ async def get_shards(
     """
     return await tonlib.getShards(seqno)
 
-
-@router.get('/getBlockTransactions', response_model=TonResponse, response_model_exclude_none=True,
-            tags=['blocks', 'transactions'])
+@router.get('/getBlockTransactions', response_model=TonResponseGeneric[ShortTransactions], response_model_exclude_none=True, tags=['blocks','transactions'])
 @json_rpc('getBlockTransactions')
 @wrap_result
 async def get_block_transactions(
@@ -389,12 +394,11 @@ async def get_block_transactions(
         tonlib: TonlibManager = Depends(tonlib_dep)
 ):
     """
-    Get transactions of the given block.
+    Get transactions metadata of the given block.
     """
     return await tonlib.getBlockTransactions(workchain, shard, seqno, count, root_hash, file_hash, after_lt, after_hash)
 
-
-@router.get('/getBlockHeader', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
+@router.get('/getBlockHeader', response_model=TonResponseGeneric[BlockHeader], response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('getBlockHeader')
 @wrap_result
 async def get_block_header(
@@ -406,7 +410,7 @@ async def get_block_header(
         tonlib: TonlibManager = Depends(tonlib_dep)
 ):
     """
-    Get metadata of a given block.
+    Get metadata of the given block.
     """
     return await tonlib.getBlockHeader(workchain, shard, seqno, root_hash, file_hash)
 
