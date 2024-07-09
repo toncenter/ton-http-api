@@ -613,7 +613,8 @@ if settings.webserver.json_rpc:
                               background_tasks: BackgroundTasks,
                               tonlib: TonlibManager = Depends(tonlib_dep)):
         """
-        All methods in the API are available through JSON-RPC protocol ([spec](https://www.jsonrpc.org/specification)). 
+        All methods in the API are available through JSON-RPC protocol ([spec](https://www.jsonrpc.org/specification)).
+        The type of the "result" field is the same as `result` field in original method.
         """
         params = json_rpc.params
         method = json_rpc.method
