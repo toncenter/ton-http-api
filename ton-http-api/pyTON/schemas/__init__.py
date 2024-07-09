@@ -8,7 +8,6 @@ from .http import (
     GetAddressInformationResponse,
     GetExtendedAddressInformationResponse,
     GetWalletInformationResponse,
-    GetTransactionsResponse,
     GetAddressBalanceResponse,
     GetAddressStateResponse,
     PackAddressResponse,
@@ -20,7 +19,7 @@ from .http import (
     DeprecatedTonResponseJsonRPC,
     OkResponse,
     SendBocReturnHashResponse,
-    EstimateFeeResponse
+    EstimateFeeResponse,
 )
 from .ton import (
     BlockId,
@@ -40,6 +39,8 @@ from .ton import (
     ConsensusBlock,
     Shards,
     ShortTransactions,
+    ShortTransactions,
+    TransactionWAddressId,
     check_tonlib_type,
-    address_state
+    address_state,
 )

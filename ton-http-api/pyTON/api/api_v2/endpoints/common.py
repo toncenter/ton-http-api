@@ -15,13 +15,14 @@ from fastapi.exceptions import HTTPException
 
 from pyTON.schemas import (
     TonResponse,
+    TonResponse,
+    TonResponseGeneric,
     DeprecatedTonResponseJsonRPC,
     TonRequestJsonRPC,
     get_get_address_information_error_responses,
     GetAddressInformationResponse,
     GetExtendedAddressInformationResponse,
     GetWalletInformationResponse,
-    GetTransactionsResponse,
     GetAddressBalanceResponse,
     GetAddressStateResponse,
     PackAddressResponse,
@@ -44,6 +45,11 @@ from pyTON.schemas import (
     SendBocReturnHashResponse,
     EstimateFeeResponse,
     OkResponse,
+    TonRequestJsonRPC,
+    ShortTransactions,
+    TransactionWAddressId,
+    TransactionId,
+    Transaction,
 )
 from pyTON.core.tonlib.manager import TonlibManager
 from pyTON.api.deps.ton import tonlib_dep, settings_dep
@@ -58,6 +64,8 @@ from pytonlib.utils.address import (
 from pytonlib.utils.wallet import wallets as known_wallets, sha256
 
 from loguru import logger
+
+from pyTON.schemas.ton import RawTransaction
 
 router = APIRouter()
 settings = settings_dep()
@@ -237,8 +245,7 @@ async def get_wallet_information(
 
 @router.get(
     "/getTransactions",
-    response_model=TonResponse200Generic[GetTransactionsResponse],
-    responses=get_get_address_information_error_responses(),
+    response_model=TonResponseGeneric[List[RawTransaction[TransactionWAddressId]]],
     response_model_exclude_none=True,
     tags=["accounts", "transactions"],
 )
@@ -587,7 +594,7 @@ async def get_token_data(
 
 @router.get(
     "/tryLocateTx",
-    response_model=TonResponse,
+    response_model=TonResponseGeneric[RawTransaction[TransactionId]],
     response_model_exclude_none=True,
     tags=["transactions"],
 )
@@ -600,14 +607,14 @@ async def get_try_locate_tx(
     tonlib: TonlibManager = Depends(tonlib_dep),
 ):
     """
-    Locate outcoming transaction of *destination* address by incoming message.
+    Locate transaction for destination address by incoming message.
     """
     return await tonlib.tryLocateTxByIncomingMessage(source, destination, created_lt)
 
 
 @router.get(
     "/tryLocateResultTx",
-    response_model=TonResponse,
+    response_model=TonResponseGeneric[RawTransaction[TransactionId]],
     response_model_exclude_none=True,
     tags=["transactions"],
 )
@@ -620,14 +627,14 @@ async def get_try_locate_result_tx(
     tonlib: TonlibManager = Depends(tonlib_dep),
 ):
     """
-    Same as previous. Locate outcoming transaction of *destination* address by incoming message
+    Same as previous. Locate transaction for destination address by incoming message.
     """
     return await tonlib.tryLocateTxByIncomingMessage(source, destination, created_lt)
 
 
 @router.get(
     "/tryLocateSourceTx",
-    response_model=TonResponse,
+    response_model=TonResponseGeneric[RawTransaction[TransactionId]],
     response_model_exclude_none=True,
     tags=["transactions"],
 )
@@ -640,7 +647,7 @@ async def get_try_locate_source_tx(
     tonlib: TonlibManager = Depends(tonlib_dep),
 ):
     """
-    Locate incoming transaction of *source* address by outcoming message.
+    Locate transaction for source address by outcoming message.
     """
     return await tonlib.tryLocateTxByOutcomingMessage(source, destination, created_lt)
 

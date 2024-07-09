@@ -13,6 +13,7 @@ from .ton import (
     AddressShort,
     JettonContent,
     Transaction,
+    RawTransaction,
 )
 
 ResultT = TypeVar("ResultT")
@@ -111,9 +112,6 @@ class GetWalletInformationResponse(BaseModel):
     seqno: int
     last_transaction_id: TransactionId
     wallet_id: int
-
-
-GetTransactionsResponse = List[Transaction]
 
 
 class GetAddressBalanceResponse(BaseModel):

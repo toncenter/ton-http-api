@@ -1,6 +1,10 @@
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, TypeVar
 from pydantic import BaseModel, Field
+from pydantic.generics import GenericModel, Generic
+
 from pytonlib.utils.wallet import wallets as known_wallets, sha256
+
+ResultT = TypeVar("ResultT")
 
 
 def check_tonlib_type(tl_obj: dict, expected_type: str):
@@ -19,7 +23,6 @@ def address_state(account_info):
 
 
 class BlockId(BaseModel):
-    type: Literal["ton.blockIdExt"] = Field(alias="@type")
     workchain: int
     shard: str
     seqno: int
@@ -297,6 +300,15 @@ class TransactionId(BaseModel):
         return TransactionId(lt=int(tl_obj["lt"]), hash=tl_obj["hash"])
 
 
+class TransactionWAddressId(TransactionId):
+    account_address: str
+
+
+class Address(BaseModel):
+    type: Literal["accountAddress"] = Field(alias="@type")
+    account_address: str
+
+
 class Transaction(BaseModel):
     utime: int
     data: str
@@ -324,6 +336,35 @@ class Transaction(BaseModel):
             ),
             out_msgs=[Message.build(m) for m in tl_obj["out_msgs"]],
         )
+
+
+class RawTransaction(GenericModel, Generic[ResultT]):
+    type: Literal["raw.transaction"] = Field(alias="@type")
+    address: Address
+    utime: int
+    data: str
+    transaction_id: ResultT
+    fee: int
+    storage_fee: int
+    other_fee: int
+    in_msg: Optional[Message]
+    out_msgs: List[Message]
+
+
+class ShortTransaction(BaseModel):
+    type: Literal["blocks.shortTxId"] = Field(alias="@type")
+    mode: int
+    account: str
+    lt: str
+    hash: str
+
+
+class ShortTransactions(BaseModel):
+    type: Literal["blocks.transactions"] = Field(alias="@type")
+    id: BlockId
+    req_count: int
+    incomplete: bool
+    transactions: List[ShortTransaction]
 
 
 class TVMCell(BaseModel):
