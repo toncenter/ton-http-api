@@ -14,6 +14,7 @@ from .ton import (
     BlockId,
     AddressShort,
     JettonMasterData,
+    JettonWalletData,
     NftCollectionData,
     NftItemData
 )
@@ -102,7 +103,7 @@ class GetExtendedAddressInformationResponse(BaseModel):
     last_transaction_id: TransactionId
     block_id: BlockId
     sync_utime: int
-    account_state: Union[AccountStateWallet, AccountStateRow, AccountStateUninited]
+    account_state: Union[AccountStateWallet, AccountStateRow, AccountStateUninited, Any]
     revision: int
     extra: str = Field(alias="@extra")
 
@@ -150,7 +151,7 @@ class UnpackAddressResponse(BaseModel):
 
 class TonGetTokenDataResponse(BaseModel):
     ok: bool = Field(True)
-    result: Union[JettonMasterData, NftCollectionData, NftItemData, Any]
+    result: Union[JettonMasterData, NftCollectionData, NftItemData, JettonWalletData, Any]
 
 
 class TonResponseJsonRPC(BaseModel):

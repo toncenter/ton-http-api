@@ -452,6 +452,14 @@ class JettonMasterData(BaseModel):
     contract_type: str = Field('jetton_master')
 
 
+class JettonWalletData(BaseModel):
+    balance: int
+    owner: str
+    jetton: str
+    jetton_wallet_code: str
+    contract_type: str = Field('jetton_wallet')
+
+
 class NftContent(BaseModel):
     type: str = Field(alias="@type")
     data: str
