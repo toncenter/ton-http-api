@@ -1,4 +1,4 @@
-from typing import List, Optional, Literal, TypeVar
+from typing import List, Optional, Literal, TypeVar, Union
 from pydantic import BaseModel, Field
 from pydantic.generics import GenericModel, Generic
 
@@ -200,7 +200,7 @@ class Proof(BaseModel):
 
 
 class ShardBlockProof(BaseModel):
-    type: Literal["blocks.blockSignatures"] = Field(alias="@type")
+    type: Literal["blocks.shardBlockProof"] = Field(alias="@type")
     from_id: BlockId = Field(alias="from")
     mc_id: BlockId
     links: List[str]
@@ -261,6 +261,11 @@ class MsgDataRaw(BaseModel):
         return MsgDataRaw(body=tl_obj["body"], init_state=tl_obj["init_state"])
 
 
+class MsgDataText(BaseModel):
+    type: Literal["msg.dataText"] = Field(alias="@type")
+    text: str
+
+
 class Message(BaseModel):
     source: str
     destination: str
@@ -269,7 +274,7 @@ class Message(BaseModel):
     ihr_fee: int
     created_lt: int
     body_hash: str
-    msg_data: MsgDataRaw
+    msg_data: Union[MsgDataRaw, MsgDataText]
     comment: Optional[str]
     op: Optional[int]
 
@@ -338,12 +343,15 @@ class Transaction(BaseModel):
         )
 
 
-class RawTransaction(GenericModel, Generic[ResultT]):
+RawResultT = TypeVar("RawResultT")
+
+
+class RawTransaction(GenericModel, Generic[RawResultT]):
     type: Literal["raw.transaction"] = Field(alias="@type")
     address: Address
     utime: int
     data: str
-    transaction_id: ResultT
+    transaction_id: RawResultT
     fee: int
     storage_fee: int
     other_fee: int

@@ -12,11 +12,10 @@ from .ton import (
     AccountState,
     AddressShort,
     JettonContent,
-    Transaction,
-    RawTransaction,
 )
 
 ResultT = TypeVar("ResultT")
+ResultT2 = TypeVar("ResultT2")
 
 
 class TonResponseGeneric(GenericModel, Generic[ResultT]):
@@ -26,9 +25,9 @@ class TonResponseGeneric(GenericModel, Generic[ResultT]):
     code: Optional[int] = None
 
 
-class TonResponse200Generic(GenericModel, Generic[ResultT]):
+class TonResponse200Generic(GenericModel, Generic[ResultT2]):
     ok: bool = Field(True)
-    result: Optional[ResultT]
+    result: Optional[ResultT2]
 
 
 ResultTypeT = TypeVar("ResultTypeT")
@@ -99,6 +98,7 @@ class GetExtendedAddressInformationResponse(BaseModel):
     last_transaction_id: TransactionId
     block_id: BlockId
     sync_utime: int
+    # TODO: ACCOOUNT STATE INVALID (can be raw.accountState {code, data, frozenHash} (for different account differnt state)
     account_state: AccountState
     revision: int
     extra: str = Field(alias="@extra")
@@ -109,9 +109,9 @@ class GetWalletInformationResponse(BaseModel):
     balance: str
     account_state: str
     wallet_type: str
-    seqno: int
+    seqno: Optional[int]
     last_transaction_id: TransactionId
-    wallet_id: int
+    wallet_id: Optional[int]
 
 
 class GetAddressBalanceResponse(BaseModel):
@@ -145,6 +145,9 @@ class UnpackAddressResponse(BaseModel):
     )
 
 
+
+
+# TODO nft also can be
 class GetTokenDataResponse(BaseModel):
     total_supply: int
     mintable: bool
