@@ -408,20 +408,20 @@ TVMStackEntryType = Literal["cell", "slice", "num", "tuple", "list"]
 
 
 class AccountStateWallet(BaseModel):
-    type: str = Field('wallet.version.accountState', alias="@type")
+    type: str = Field("wallet.version.accountState", alias="@type")
     wallet_id: str
     seqno: int
 
 
 class AccountStateRow(BaseModel):
-    type: str = Field('raw.accountState', alias="@type")
+    type: str = Field("raw.accountState", alias="@type")
     code: str
     data: str
     frozen_hash: str
 
 
 class AccountStateUninited(BaseModel):
-    type: str = Field('uninited.accountState', alias="@type")
+    type: str = Field("uninited.accountState", alias="@type")
     frozen_hash: str
 
 
@@ -434,7 +434,7 @@ class JettonMasterData(BaseModel):
     total_supply: int
     mintable: bool
     admin_address: str
-    
+
     class JettonContent(BaseModel):
         type: str = Field(alias="@type")
 
@@ -446,10 +446,10 @@ class JettonMasterData(BaseModel):
             decimals: str
 
         data: Data
-    
+
     jetton_content: JettonContent
     jetton_wallet_code: str
-    contract_type: str = Field('jetton_master')
+    contract_type: str = Field("jetton_master")
 
 
 class JettonWalletData(BaseModel):
@@ -457,7 +457,7 @@ class JettonWalletData(BaseModel):
     owner: str
     jetton: str
     jetton_wallet_code: str
-    contract_type: str = Field('jetton_wallet')
+    contract_type: str = Field("jetton_wallet")
 
 
 class NftContent(BaseModel):
@@ -469,7 +469,7 @@ class NftCollectionData(BaseModel):
     next_item_index: int
     collection_content: NftContent
     owner_address: str
-    contract_type: str = Field('nft_collection')
+    contract_type: str = Field("nft_collection")
 
 
 class NftItemData(BaseModel):
@@ -478,4 +478,4 @@ class NftItemData(BaseModel):
     owner_address: str
     collection_address: str
     content: NftContent
-    contract_type: str = Field('nft_item')
+    contract_type: str = Field("nft_item")

@@ -16,7 +16,7 @@ from .ton import (
     JettonMasterData,
     JettonWalletData,
     NftCollectionData,
-    NftItemData
+    NftItemData,
 )
 
 ResultT = TypeVar("ResultT")
@@ -151,7 +151,9 @@ class UnpackAddressResponse(BaseModel):
 
 class TonGetTokenDataResponse(BaseModel):
     ok: bool = Field(True)
-    result: Union[JettonMasterData, NftCollectionData, NftItemData, JettonWalletData, Any]
+    result: Union[
+        JettonMasterData, NftCollectionData, NftItemData, JettonWalletData, Any
+    ]
 
 
 class TonResponseJsonRPC(BaseModel):
