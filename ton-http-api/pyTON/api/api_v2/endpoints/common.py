@@ -24,7 +24,7 @@ from pyTON.schemas import (
     GetAddressStateResponse,
     PackAddressResponse,
     UnpackAddressResponse,
-    GetTokenDataResponse,
+    TonGetTokenDataResponse,
     TonResponse200Generic,
     GetConfigParamResponse,
     TonResponseGeneric,
@@ -564,7 +564,7 @@ async def get_config_param(
 
 @router.get(
     "/getTokenData",
-    response_model=TonResponse200Generic[GetTokenDataResponse],
+    response_model=TonGetTokenDataResponse,
     responses=get_get_address_information_error_responses(),
     response_model_exclude_none=True,
     tags=["accounts"],

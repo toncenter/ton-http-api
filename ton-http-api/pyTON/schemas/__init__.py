@@ -12,7 +12,7 @@ from .http import (
     GetAddressStateResponse,
     PackAddressResponse,
     UnpackAddressResponse,
-    GetTokenDataResponse,
+    TonGetTokenDataResponse,
     TonResponse200Generic,
     GetConfigParamResponse,
     RunGetMethodResponse,

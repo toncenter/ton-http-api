@@ -3,15 +3,19 @@ from pydantic.generics import GenericModel, Generic
 from pydantic import BaseModel, Field
 
 from .ton import (
+    AccountStateRow,
+    AccountStateUninited,
+    AccountStateWallet,
     ConfigInfo,
     TVMStackEntryType,
     TvmTuple,
     BlockIdExt,
     TransactionId,
     BlockId,
-    AccountState,
     AddressShort,
-    JettonContent,
+    JettonMasterData,
+    NftCollectionData,
+    NftItemData
 )
 
 ResultT = TypeVar("ResultT")
@@ -98,8 +102,7 @@ class GetExtendedAddressInformationResponse(BaseModel):
     last_transaction_id: TransactionId
     block_id: BlockId
     sync_utime: int
-    # TODO: ACCOOUNT STATE INVALID (can be raw.accountState {code, data, frozenHash} (for different account differnt state)
-    account_state: AccountState
+    account_state: Union[AccountStateWallet, AccountStateRow, AccountStateUninited]
     revision: int
     extra: str = Field(alias="@extra")
 
@@ -145,16 +148,9 @@ class UnpackAddressResponse(BaseModel):
     )
 
 
-
-
-# TODO nft also can be
-class GetTokenDataResponse(BaseModel):
-    total_supply: int
-    mintable: bool
-    admin_address: str
-    jetton_content: JettonContent
-    jetton_wallet_code: str
-    contract_type: str
+class TonGetTokenDataResponse(BaseModel):
+    ok: bool = Field(True)
+    result: Union[JettonMasterData, NftCollectionData, NftItemData]
 
 
 class TonResponseJsonRPC(BaseModel):
