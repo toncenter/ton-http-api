@@ -80,7 +80,7 @@ tags_metadata = [
         "name": "transactions",
         "description": "Fetching and locating transactions.",
     },
-    {   
+    {
         "name": "get config",
         "description": "Get blockchain config"
     },
@@ -114,7 +114,7 @@ app = FastAPI(
 )
 
 
-tonlib = None
+tonlib: TonlibManager = None
 
 @app.on_event("startup")
 async def startup():
@@ -207,7 +207,7 @@ def json_rpc(method):
                 # Add function's default value parameters to kwargs.
                 if k not in kwargs and v.default is not inspect._empty:
                     default_val = v.default
-                    
+
                     if isinstance(default_val, Param) or isinstance(default_val, Body):
                         if default_val.default == ...:
                             raise TypeError("Non-optional argument expected")
@@ -298,11 +298,11 @@ async def get_wallet_information(
 @json_rpc('getTransactions')
 @wrap_result
 async def get_transactions(
-    address: str = Query(..., description="Identifier of target TON account in any form."), 
-    limit: Optional[int] = Query(default=10, description="Maximum number of transactions in response.", gt=0, le=100), 
-    lt: Optional[int] = Query(default=None, description="Logical time of transaction to start with, must be sent with *hash*."), 
-    hash: Optional[str] = Query(default=None, description="Hash of transaction to start with, in *base64* or *hex* encoding , must be sent with *lt*."), 
-    to_lt: Optional[int] = Query(default=0, description="Logical time of transaction to finish with (to get tx from *lt* to *to_lt*)."), 
+    address: str = Query(..., description="Identifier of target TON account in any form."),
+    limit: Optional[int] = Query(default=10, description="Maximum number of transactions in response.", gt=0, le=100),
+    lt: Optional[int] = Query(default=None, description="Logical time of transaction to start with, must be sent with *hash*."),
+    hash: Optional[str] = Query(default=None, description="Hash of transaction to start with, in *base64* or *hex* encoding , must be sent with *lt*."),
+    to_lt: Optional[int] = Query(default=0, description="Logical time of transaction to finish with (to get tx from *lt* to *to_lt*)."),
     archival: bool = Query(default=False, description="By default getTransaction request is processed by any available liteserver. If *archival=true* only liteservers with full history are used.")
     ):
     """
@@ -386,7 +386,7 @@ async def get_masterchain_block_signatures(
 @wrap_result
 async def get_shard_block_proof(
     workchain: int = Query(..., description="Block workchain id"),
-    shard: int = Query(..., description="Block shard id"), 
+    shard: int = Query(..., description="Block shard id"),
     seqno: int = Query(..., description="Block seqno"),
     from_seqno: Optional[int] = Query(None, description="Seqno of masterchain block starting from which proof is required. If not specified latest masterchain block is used."),
     ):
@@ -408,10 +408,10 @@ async def get_consensus_block():
 @json_rpc('lookupBlock')
 @wrap_result
 async def lookup_block(
-    workchain: int = Query(..., description="Workchain id to look up block in"), 
+    workchain: int = Query(..., description="Workchain id to look up block in"),
     shard: int = Query(..., description="Shard id to look up block in"),
     seqno: Optional[int] = Query(None, description="Block's height"),
-    lt: Optional[int] = Query(None, description="Block's logical time"), 
+    lt: Optional[int] = Query(None, description="Block's logical time"),
     unixtime: Optional[int] = Query(None, description="Block's unixtime")
     ):
     """
@@ -434,13 +434,13 @@ async def shards(
 @json_rpc('getBlockTransactions')
 @wrap_result
 async def get_block_transactions(
-    workchain: int, 
-    shard: int, 
-    seqno: int, 
-    root_hash: Optional[str] = None, 
-    file_hash: Optional[str] = None, 
-    after_lt: Optional[int] = None, 
-    after_hash: Optional[str] = None, 
+    workchain: int,
+    shard: int,
+    seqno: int,
+    root_hash: Optional[str] = None,
+    file_hash: Optional[str] = None,
+    after_lt: Optional[int] = None,
+    after_hash: Optional[str] = None,
     count: int = 40
     ):
     """
@@ -452,10 +452,10 @@ async def get_block_transactions(
 @json_rpc('getBlockHeader')
 @wrap_result
 async def get_block_header(
-    workchain: int, 
-    shard: int, 
-    seqno: int, 
-    root_hash: Optional[str] = None, 
+    workchain: int,
+    shard: int,
+    seqno: int,
+    root_hash: Optional[str] = None,
     file_hash: Optional[str] = None
     ):
     """
@@ -487,12 +487,23 @@ async def get_token_data(
     address = prepare_address(address)
     return await tonlib.get_token_data(address)
 
+@app.get('/getLibraries', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
+@json_rpc('getLibraries')
+@wrap_result
+async def get_libraries(
+    libraries: list = Query(..., description="List of base64 encoded libraries hashes")
+    ):
+    """
+    Get libraries codes.
+    """
+    return await tonlib.getLibraries(libraries)
+
 @app.get('/tryLocateTx', response_model=TonResponse, response_model_exclude_none=True, tags=['transactions'])
 @json_rpc('tryLocateTx')
 @wrap_result
 async def get_try_locate_tx(
-    source: str, 
-    destination: str, 
+    source: str,
+    destination: str,
     created_lt: int
     ):
     """
@@ -504,8 +515,8 @@ async def get_try_locate_tx(
 @json_rpc('tryLocateResultTx')
 @wrap_result
 async def get_try_locate_result_tx(
-    source: str, 
-    destination: str, 
+    source: str,
+    destination: str,
     created_lt: int
     ):
     """
@@ -517,8 +528,8 @@ async def get_try_locate_result_tx(
 @json_rpc('tryLocateSourceTx')
 @wrap_result
 async def get_try_locate_source_tx(
-    source: str, 
-    destination: str, 
+    source: str,
+    destination: str,
     created_lt: int
     ):
     """
@@ -606,9 +617,9 @@ async def send_cell(
 @json_rpc('sendQuery')
 @wrap_result
 async def send_query(
-    address: str = Body(..., description="Address in any format"), 
-    body: str = Body(..., description="b64-encoded boc-serialized cell with message body"), 
-    init_code: str = Body(default='', description="b64-encoded boc-serialized cell with init-code"), 
+    address: str = Body(..., description="Address in any format"),
+    body: str = Body(..., description="b64-encoded boc-serialized cell with message body"),
+    init_code: str = Body(default='', description="b64-encoded boc-serialized cell with init-code"),
     init_data: str = Body(default='', description="b64-encoded boc-serialized cell with init-data")
     ):
     """
@@ -624,9 +635,9 @@ async def send_query(
 @json_rpc('sendQuerySimple')
 @wrap_result
 async def send_query_cell(
-    address: str = Body(..., description="Address in any format"), 
-    body: str = Body(..., description='Body cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'), 
-    init_code: Optional[Dict[str, Any]] = Body(default=None, description='init-code cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'), 
+    address: str = Body(..., description="Address in any format"),
+    body: str = Body(..., description='Body cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'),
+    init_code: Optional[Dict[str, Any]] = Body(default=None, description='init-code cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'),
     init_data: Optional[Dict[str, Any]] = Body(default=None, description='init-data cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`')
     ):
     """
@@ -648,10 +659,10 @@ async def send_query_cell(
 @json_rpc('estimateFee')
 @wrap_result
 async def estimate_fee(
-    address: str = Body(..., description='Address in any format'), 
-    body: str = Body(..., description='b64-encoded cell with message body'), 
-    init_code: str = Body(default='', description='b64-encoded cell with init-code'), 
-    init_data: str = Body(default='', description='b64-encoded cell with init-data'), 
+    address: str = Body(..., description='Address in any format'),
+    body: str = Body(..., description='b64-encoded cell with message body'),
+    init_code: str = Body(default='', description='b64-encoded cell with init-code'),
+    init_data: str = Body(default='', description='b64-encoded cell with init-data'),
     ignore_chksig: bool = Body(default=True, description='If true during test query processing assume that all chksig operations return True')
     ):
     """
@@ -667,10 +678,10 @@ async def estimate_fee(
 @json_rpc('estimateFeeSimple')
 @wrap_result
 async def estimate_fee_cell(
-    address: str = Body(..., description='Address in any format'), 
-    body: Dict[str, Any] = Body(..., description='Body cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'), 
-    init_code: Optional[Dict[str, Any]] = Body(default=None, description='init-code cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'), 
-    init_data: Optional[Dict[str, Any]] = Body(default=None, description='init-data cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'), 
+    address: str = Body(..., description='Address in any format'),
+    body: Dict[str, Any] = Body(..., description='Body cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'),
+    init_code: Optional[Dict[str, Any]] = Body(default=None, description='init-code cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'),
+    init_data: Optional[Dict[str, Any]] = Body(default=None, description='init-data cell as object: `{"data": {"b64": "...", "len": int }, "refs": [...subcells...]}`'),
     ignore_chksig: bool = Body(default=True, description='If true during test query processing assume that all chksig operations return True')
     ):
     """
@@ -694,8 +705,8 @@ if settings.webserver.get_methods:
     @json_rpc('runGetMethod')
     @wrap_result
     async def run_get_method(
-        address: str = Body(..., description='Contract address'), 
-        method: Union[str, int] = Body(..., description='Method name or method id'), 
+        address: str = Body(..., description='Contract address'),
+        method: Union[str, int] = Body(..., description='Method name or method id'),
         stack: List[List[Any]] = Body(..., description="Array of stack elements: `[['num',3], ['cell', cell_object], ['slice', slice_object]]`")
         ):
         """
@@ -709,7 +720,7 @@ if settings.webserver.json_rpc:
     @app.post('/jsonRPC', response_model=TonResponseJsonRPC, response_model_exclude_none=True, tags=['json rpc'])
     async def jsonrpc_handler(json_rpc: TonRequestJsonRPC, request: Request, response: Response, background_tasks: BackgroundTasks):
         """
-        All methods in the API are available through JSON-RPC protocol ([spec](https://www.jsonrpc.org/specification)). 
+        All methods in the API are available through JSON-RPC protocol ([spec](https://www.jsonrpc.org/specification)).
         """
         params = json_rpc.params
         method = json_rpc.method
@@ -730,5 +741,5 @@ if settings.webserver.json_rpc:
         except TypeError as e:
             response.status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
             return TonResponseJsonRPC(ok=False, error=f'TypeError: {e}', id=_id)
-        
+
         return TonResponseJsonRPC(ok=result.ok, result=result.result, error=result.error, code=result.code, id=_id)
