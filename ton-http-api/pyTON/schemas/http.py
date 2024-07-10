@@ -1,4 +1,4 @@
-from typing import Optional, TypeVar, Union, List, Literal, Tuple
+from typing import Optional, TypeVar, Union, List, Literal, Tuple, Any
 from pydantic.generics import GenericModel, Generic
 from pydantic import BaseModel, Field
 
@@ -24,14 +24,14 @@ ResultT2 = TypeVar("ResultT2")
 
 class TonResponseGeneric(GenericModel, Generic[ResultT]):
     ok: bool
-    result: Optional[ResultT]
+    result: Optional[Union[ResultT, Any]]
     error: Optional[str] = None
     code: Optional[int] = None
 
 
 class TonResponse200Generic(GenericModel, Generic[ResultT2]):
     ok: bool = Field(True)
-    result: Optional[ResultT2]
+    result: Optional[Union[ResultT2, Any]]
 
 
 ResultTypeT = TypeVar("ResultTypeT")
@@ -150,20 +150,20 @@ class UnpackAddressResponse(BaseModel):
 
 class TonGetTokenDataResponse(BaseModel):
     ok: bool = Field(True)
-    result: Union[JettonMasterData, NftCollectionData, NftItemData]
+    result: Union[JettonMasterData, NftCollectionData, NftItemData, Any]
 
 
 class TonResponseJsonRPC(BaseModel):
     id: str
     jsonrpc: str = "2.0"
-    result: Optional[ResultT]
+    result: Optional[Union[ResultT, Any]]
     error: Optional[str] = None
     code: Optional[int] = None
 
 
 class DeprecatedTonResponseJsonRPC(BaseModel):
     ok: bool
-    result: Optional[ResultT]
+    result: Optional[Union[ResultT, Any]]
     error: Optional[str] = None
     code: Optional[int] = None
     id: str

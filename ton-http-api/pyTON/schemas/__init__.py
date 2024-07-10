@@ -1,7 +1,6 @@
 from .http import (
     TonRequestJsonRPC,
     TonResponse,
-    TonResponseGeneric,
     TonResponseJsonRPC,
     DeprecatedTonResponseJsonRPC,
     get_get_address_information_error_responses,

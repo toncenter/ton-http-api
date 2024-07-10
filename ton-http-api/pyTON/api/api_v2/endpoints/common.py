@@ -27,7 +27,6 @@ from pyTON.schemas import (
     TonGetTokenDataResponse,
     TonResponse200Generic,
     GetConfigParamResponse,
-    TonResponseGeneric,
     MasterchainInfo,
     MasterchainSignatures,
     ShardBlockProof,
@@ -238,7 +237,7 @@ async def get_wallet_information(
 
 @router.get(
     "/getTransactions",
-    response_model=TonResponseGeneric[List[RawTransaction[TransactionId]]],
+    response_model=TonResponse200Generic[List[RawTransaction[TransactionId]]],
     response_model_exclude_none=True,
     tags=["accounts", "transactions"],
 )
@@ -381,7 +380,7 @@ async def unpack_address(
 
 @router.get(
     "/getMasterchainInfo",
-    response_model=TonResponseGeneric[MasterchainInfo],
+    response_model=TonResponse200Generic[MasterchainInfo],
     response_model_exclude_none=True,
     tags=["blocks"],
 )
@@ -396,7 +395,7 @@ async def get_masterchain_info(tonlib: TonlibManager = Depends(tonlib_dep)):
 
 @router.get(
     "/getMasterchainBlockSignatures",
-    response_model=TonResponseGeneric[MasterchainSignatures],
+    response_model=TonResponse200Generic[MasterchainSignatures],
     response_model_exclude_none=True,
     tags=["blocks"],
 )
@@ -413,7 +412,7 @@ async def get_masterchain_block_signatures(
 
 @router.get(
     "/getShardBlockProof",
-    response_model=TonResponseGeneric[ShardBlockProof],
+    response_model=TonResponse200Generic[ShardBlockProof],
     response_model_exclude_none=True,
     tags=["blocks"],
 )
@@ -437,7 +436,7 @@ async def get_shard_block_proof(
 
 @router.get(
     "/getConsensusBlock",
-    response_model=TonResponseGeneric[ConsensusBlock],
+    response_model=TonResponse200Generic[ConsensusBlock],
     response_model_exclude_none=True,
     tags=["blocks"],
 )
@@ -452,7 +451,7 @@ async def get_consensus_block(tonlib: TonlibManager = Depends(tonlib_dep)):
 
 @router.get(
     "/lookupBlock",
-    response_model=TonResponseGeneric[BlockId],
+    response_model=TonResponse200Generic[BlockId],
     response_model_exclude_none=True,
     tags=["blocks"],
 )
@@ -474,7 +473,7 @@ async def lookup_block(
 
 @router.get(
     "/shards",
-    response_model=TonResponseGeneric[Shards],
+    response_model=TonResponse200Generic[Shards],
     response_model_exclude_none=True,
     tags=["blocks"],
 )
@@ -492,7 +491,7 @@ async def get_shards(
 
 @router.get(
     "/getBlockTransactions",
-    response_model=TonResponseGeneric[ShortTransactions],
+    response_model=TonResponse200Generic[ShortTransactions],
     response_model_exclude_none=True,
     tags=["blocks", "transactions"],
 )
@@ -519,7 +518,7 @@ async def get_block_transactions(
 
 @router.get(
     "/getBlockHeader",
-    response_model=TonResponseGeneric[BlockHeader],
+    response_model=TonResponse200Generic[BlockHeader],
     response_model_exclude_none=True,
     tags=["blocks"],
 )
@@ -587,7 +586,7 @@ async def get_token_data(
 
 @router.get(
     "/tryLocateTx",
-    response_model=TonResponseGeneric[RawTransaction[TransactionId]],
+    response_model=TonResponse200Generic[RawTransaction[TransactionId]],
     response_model_exclude_none=True,
     tags=["transactions"],
 )
@@ -607,7 +606,7 @@ async def get_try_locate_tx(
 
 @router.get(
     "/tryLocateResultTx",
-    response_model=TonResponseGeneric[RawTransaction[TransactionId]],
+    response_model=TonResponse200Generic[RawTransaction[TransactionId]],
     response_model_exclude_none=True,
     tags=["transactions"],
 )
@@ -627,7 +626,7 @@ async def get_try_locate_result_tx(
 
 @router.get(
     "/tryLocateSourceTx",
-    response_model=TonResponseGeneric[RawTransaction[TransactionId]],
+    response_model=TonResponse200Generic[RawTransaction[TransactionId]],
     response_model_exclude_none=True,
     tags=["transactions"],
 )
