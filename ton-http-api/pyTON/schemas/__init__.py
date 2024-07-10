@@ -1,9 +1,24 @@
 from .http import (
     TonRequestJsonRPC,
     TonResponse,
-    TonResponseGeneric,
     TonResponseJsonRPC,
-    DeprecatedTonResponseJsonRPC
+    DeprecatedTonResponseJsonRPC,
+    get_get_address_information_error_responses,
+    GetAddressInformationResponse,
+    GetExtendedAddressInformationResponse,
+    GetWalletInformationResponse,
+    GetAddressBalanceResponse,
+    GetAddressStateResponse,
+    PackAddressResponse,
+    UnpackAddressResponse,
+    TonGetTokenDataResponse,
+    TonResponse200Generic,
+    GetConfigParamResponse,
+    RunGetMethodResponse,
+    DeprecatedTonResponseJsonRPC,
+    OkResponse,
+    SendBocReturnHashResponse,
+    EstimateFeeResponse,
 )
 from .ton import (
     BlockId,
@@ -18,6 +33,13 @@ from .ton import (
     Message,
     TransactionId,
     Transaction,
+    MasterchainSignatures,
+    ShardBlockProof,
+    ConsensusBlock,
+    Shards,
+    ShortTransactions,
+    ShortTransactions,
+    TransactionWAddressId,
     check_tonlib_type,
-    address_state
+    address_state,
 )
