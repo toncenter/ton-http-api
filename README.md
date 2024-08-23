@@ -159,3 +159,8 @@ To point the HTTP API to your own lite server you should set `TON_API_TONLIB_LIT
 Binary file `libtonlibjson` now moved to [pytonlib](https://github.com/toncenter/pytonlib). 
 - Docker Compose: `docker-compose build --no-cache`.
 - Local run: `pip install -U ton-http-api`.
+
+### No working liteservers error.
+
+Usually, liteservers from the config has already deleted the block, which specified in `init_block` section.
+To update init block, please **backup your config file** and run script `./scripts/update_init_block.sh private/mainnet.json`. For testnet add flag `--testnet`.

@@ -408,6 +408,9 @@ class TonlibManager:
     async def getBlockTransactions(self, workchain, shard, seqno, count, root_hash=None, file_hash=None, after_lt=None, after_hash=None):
         return await self.dispatch_archival_request('get_block_transactions', workchain, shard, seqno, count, root_hash, file_hash, after_lt, after_hash)
 
+    async def getBlockTransactionsExt(self, workchain, shard, seqno, count, root_hash=None, file_hash=None, after_lt=None, after_hash=None):
+        return await self.dispatch_archival_request('get_block_transactions_ext', workchain, shard, seqno, count, root_hash, file_hash, after_lt, after_hash)
+
     async def getBlockHeader(self, workchain, shard, seqno, root_hash=None, file_hash=None):
         method = 'get_block_header'
         if workchain == -1 and seqno and self.consensus_block.seqno - seqno < 2000:

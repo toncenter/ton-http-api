@@ -448,6 +448,24 @@ async def get_block_transactions(
     """
     return await tonlib.getBlockTransactions(workchain, shard, seqno, count, root_hash, file_hash, after_lt, after_hash)
 
+@app.get('/getBlockTransactionsExt', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks','transactions'])
+@json_rpc('getBlockTransactionsExt')
+@wrap_result
+async def get_block_transactions_ext(
+    workchain: int, 
+    shard: int, 
+    seqno: int, 
+    root_hash: Optional[str] = None, 
+    file_hash: Optional[str] = None, 
+    after_lt: Optional[int] = None, 
+    after_hash: Optional[str] = None, 
+    count: int = 40
+    ):
+    """
+    Get transactions of the given block.
+    """
+    return await tonlib.getBlockTransactionsExt(workchain, shard, seqno, count, root_hash, file_hash, after_lt, after_hash)
+
 @app.get('/getBlockHeader', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('getBlockHeader')
 @wrap_result
