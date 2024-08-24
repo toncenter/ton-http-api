@@ -11,7 +11,6 @@ function usage() {
     exit
 }
 
-
 while [[ $# -gt 0 ]]; do
     case $1 in
         -h|--help)
@@ -52,6 +51,8 @@ FILEHASH=$(echo "$RES" | jq '.file_hash')
 ROOTHASH=$(echo "$RES" | jq '.root_hash')
 
 FILENAME=$1
+
+cp $FILENAME $FILENAME.bk || echo "Failed to backup the config"
 python3 <<EOF
 import json
 with open("$FILENAME", 'r') as f:
