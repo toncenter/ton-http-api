@@ -25,6 +25,7 @@ services:
       - TON_API_GET_METHODS_ENABLED
       - TON_API_JSON_RPC_ENABLED
       - TON_API_WEBSERVERS_WORKERS
+      - TON_API_WEBSERVERS_THREADS
       - TON_API_V3_ENABLED
       - TON_API_GUNICORN_FLAGS
       - TON_API_ROOT_PATH
@@ -36,11 +37,11 @@ services:
       - liteserver_config
     labels:
       co.elastic.logs/enabled: "true"
-    healthcheck:
-      test: curl -sS http://127.0.0.1:8081${TON_API_ROOT_PATH}/healthcheck || echo 1
-      interval: 15s
-      timeout: 3s
-      retries: 12
+    # healthcheck:
+    #   test: curl -sS http://127.0.0.1:8081${TON_API_ROOT_PATH}/healthcheck || echo 1
+    #   interval: 15s
+    #   timeout: 3s
+    #   retries: 12
 secrets:
   liteserver_config:
     file: ${TON_API_TONLIB_LITESERVER_CONFIG}

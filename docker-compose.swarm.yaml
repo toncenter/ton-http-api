@@ -34,6 +34,7 @@ services:
       TON_API_GET_METHODS_ENABLED:
       TON_API_JSON_RPC_ENABLED:
       TON_API_WEBSERVERS_WORKERS:
+      TON_API_WEBSERVERS_THREADS:
       TON_API_V3_ENABLED:
       TON_API_GUNICORN_FLAGS:
       TON_API_ROOT_PATH:
@@ -51,16 +52,16 @@ services:
     labels:
       co.elastic.logs/enabled: "true"
       ton_network: ${TONCENTER_ENV}
-    healthcheck:
-      test: curl --fail http://127.0.0.1:8081/api/v2/getMasterchainInfo
-      interval: 15s
-      timeout: 3s
-      retries: 12
+    # healthcheck:
+    #   test: curl --fail http://127.0.0.1:8081/api/v2/getMasterchainInfo
+    #   interval: 15s
+    #   timeout: 3s
+    #   retries: 12
     deploy:
       mode: replicated
       replicas: ${SWARM_REPLICAS:-1}
       update_config:
-        parallelism: 6
+        parallelism: ${SWARM_UPDATE_PARALLELISM:-1}
         delay: 30s
         monitor: 60s
         failure_action: pause

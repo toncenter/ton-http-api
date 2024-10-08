@@ -328,8 +328,8 @@ class TonlibManager:
     async def get_token_data(self, address: str):
         return await self.dispatch_request('get_token_data', address)
 
-    async def raw_run_method(self, address, method, stack_data, output_layout=None):
-        return await self.dispatch_request('raw_run_method', address, method, stack_data, output_layout)
+    async def raw_run_method(self, address, method, stack_data, seqno=None):
+        return await self.dispatch_request('raw_run_method', address, method, stack_data, seqno)
 
     async def _send_message(self, serialized_boc, method):
         ls_index_list = self.select_worker(count=4)
@@ -407,6 +407,9 @@ class TonlibManager:
 
     async def getBlockTransactions(self, workchain, shard, seqno, count, root_hash=None, file_hash=None, after_lt=None, after_hash=None):
         return await self.dispatch_archival_request('get_block_transactions', workchain, shard, seqno, count, root_hash, file_hash, after_lt, after_hash)
+    
+    async def getBlockTransactionsExt(self, workchain, shard, seqno, count, root_hash=None, file_hash=None, after_lt=None, after_hash=None):
+        return await self.dispatch_archival_request('get_block_transactions_ext', workchain, shard, seqno, count, root_hash, file_hash, after_lt, after_hash)
 
     async def getBlockHeader(self, workchain, shard, seqno, root_hash=None, file_hash=None):
         method = 'get_block_header'
@@ -416,12 +419,27 @@ class TonlibManager:
             return await self.dispatch_archival_request(method, workchain, shard, seqno, root_hash, file_hash)
 
     async def get_config_param(self, config_id: int, seqno: Optional[int]):
-        seqno = seqno or self.consensus_block.seqno
         method = 'get_config_param'
-        if self.consensus_block.seqno - seqno < 2000:
-            return await self.dispatch_request(method, config_id, seqno)
+        if seqno is not None:
+            if self.consensus_block.seqno - seqno < 2000:
+                return await self.dispatch_request(method, config_id, seqno)
+            else:
+                return await self.dispatch_archival_request(method, config_id, seqno)
         else:
-            return await self.dispatch_archival_request(method, config_id, seqno)
+            return await self.dispatch_request(method, config_id)
+        
+    async def get_config_all(self, seqno: Optional[int]):
+        method = 'get_config_all'
+        if seqno is not None:
+            if self.consensus_block.seqno - seqno < 2000:
+                return await self.dispatch_request(method, seqno)
+            else:
+                return await self.dispatch_archival_request(method, seqno)
+        else:
+            return await self.dispatch_request(method)
+        
+    async def get_out_msg_queue_sizes(self):
+        return await self.dispatch_request('get_out_msg_queue_sizes')
 
     async def tryLocateTxByOutcomingMessage(self, source, destination, creation_lt):
         return await self.dispatch_archival_request('try_locate_tx_by_outcoming_message',  source, destination, creation_lt)

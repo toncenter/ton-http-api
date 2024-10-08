@@ -322,6 +322,25 @@ async def get_block_transactions(
     """
     return await tonlib.getBlockTransactions(workchain, shard, seqno, count, root_hash, file_hash, after_lt, after_hash)
 
+@router.get('/getBlockTransactionsExt', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks','transactions'])
+@json_rpc('getBlockTransactionsExt')
+@wrap_result
+async def get_block_transactions_ext(
+    workchain: int, 
+    shard: int, 
+    seqno: int, 
+    root_hash: Optional[str] = None, 
+    file_hash: Optional[str] = None, 
+    after_lt: Optional[int] = None, 
+    after_hash: Optional[str] = None, 
+    count: int = 40,
+    tonlib: TonlibManager = Depends(tonlib_dep)
+    ):
+    """
+    Get transactions of the given block.
+    """
+    return await tonlib.getBlockTransactionsExt(workchain, shard, seqno, count, root_hash, file_hash, after_lt, after_hash)
+
 @router.get('/getBlockHeader', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('getBlockHeader')
 @wrap_result
@@ -350,6 +369,29 @@ async def get_config_param(
     Get config by id.
     """
     return await tonlib.get_config_param(config_id, seqno)
+
+@router.get('/getConfigAll', response_model=TonResponse, response_model_exclude_none=True, tags=['get config'])
+@json_rpc('getConfigAll')
+@wrap_result
+async def get_config_all(
+    seqno: Optional[int] = Query(None, description="Masterchain seqno. If not specified, latest blockchain state will be used."),
+    tonlib: TonlibManager = Depends(tonlib_dep)
+    ):
+    """
+    Get cell with full config.
+    """
+    return await tonlib.get_config_all(seqno)
+
+@router.get('/getOutMsgQueueSizes', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
+@json_rpc('getOutMsgQueueSizes')
+@wrap_result
+async def get_out_msg_queue_sizes(
+    tonlib: TonlibManager = Depends(tonlib_dep)
+    ):
+    """
+    Get info with current sizes of messages queues by shards.
+    """
+    return await tonlib.get_out_msg_queue_sizes()
 
 @router.get('/getTokenData', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
 @json_rpc('getTokenData')
@@ -422,7 +464,7 @@ def send_boc_to_external_endpoint(boc):
     try:
         endpoint = settings.webserver.boc_endpoint
         logger.info(f'BOC is: "{boc}"')
-        res = requests.post(endpoint, json={'boc': boc})
+        res = requests.post(endpoint, json={'boc': boc}, timeout=0.5)
         logger.info(f"Boc sent to external endpoint: {res}")
         return res.get('ok', False)
     except Exception as ee:
@@ -464,6 +506,30 @@ async def send_boc_return_hash(
     """
     boc = base64.b64decode(boc)
     res = await tonlib.raw_send_message_return_hash(boc)
+    if res.get('@type') == 'raw.extMessageInfo':
+        logger.info("External message accepted: {hash}", hash=res.get('hash'))
+        if settings.webserver.boc_endpoint is not None:
+            background_tasks.add_task(send_boc_to_external_endpoint, base64.b64encode(boc).decode('utf8'))
+    return res
+
+# Chrome extensions have antiddos protection, that blocks consequent requests with 500+ response codes.
+# To handle it we create this method that returns status code 400 in case of errors
+@router.post('/sendBocReturnHashNoError', response_model=TonResponse, response_model_exclude_none=True, include_in_schema=False, tags=['send'])
+@json_rpc('sendBocReturnHashNoError')
+@wrap_result
+async def send_boc_return_hash_no_error(
+    background_tasks: BackgroundTasks,
+    boc: str = Body(..., embed=True, description="b64 encoded bag of cells"),
+    tonlib: TonlibManager = Depends(tonlib_dep)
+    ):
+    """
+    Send serialized boc file: fully packed and serialized external message to blockchain. The method returns message hash.
+    """
+    boc = base64.b64decode(boc)
+    try:
+        res = await tonlib.raw_send_message_return_hash(boc)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error: {e}")
     if res.get('@type') == 'raw.extMessageInfo':
         logger.info("External message accepted: {hash}", hash=res.get('hash'))
         if settings.webserver.boc_endpoint is not None:
@@ -616,13 +682,14 @@ if settings.webserver.get_methods:
         address: str = Body(..., description='Contract address'), 
         method: Union[str, int] = Body(..., description='Method name or method id'), 
         stack: List[List[Any]] = Body(..., description="Array of stack elements: `[['num',3], ['cell', cell_object], ['slice', slice_object]]`"),
+        seqno: Optional[int] = Body(None, description="Seqno of masterchain block at which moment the Get Method is to be executed"),
         tonlib: TonlibManager = Depends(tonlib_dep)
         ):
         """
         Run get method on smart contract.
         """
         address = prepare_address(address)
-        return await tonlib.raw_run_method(address, method, stack)
+        return await tonlib.raw_run_method(address, method, stack, seqno)
 
 
 if settings.webserver.json_rpc:
