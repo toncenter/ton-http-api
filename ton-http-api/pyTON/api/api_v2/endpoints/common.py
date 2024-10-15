@@ -5,7 +5,7 @@ import codecs
 import random
 import requests
 
-from functools import wraps
+from functools import wraps, partial
 from datetime import datetime
 from typing import Optional, List, Any, Union, Dict
 
@@ -460,11 +460,13 @@ async def detect_address(
     return _detect_address(address)
 
 
-def send_boc_to_external_endpoint(boc):
+async def send_boc_to_external_endpoint(boc):
     try:
         endpoint = settings.webserver.boc_endpoint
         logger.info(f'BOC is: "{boc}"')
-        res = requests.post(endpoint, json={'boc': boc}, timeout=0.5)
+        req = partial(requests.post, endpoint, json={'boc': boc}, timeout=0.5)
+        loop = asyncio.get_event_loop()
+        res = await loop.run_in_executor(None, req)
         logger.info(f"Boc sent to external endpoint: {res}")
         return res.get('ok', False)
     except Exception as ee:
