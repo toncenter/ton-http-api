@@ -109,18 +109,32 @@ class WebServerSettings:
 
 
 @dataclass
+class APISettings:
+    api_key_1: str
+    api_key_2: str
+
+    @classmethod
+    def from_environment(cls):
+        return APISettings(api_key_1=os.environ.get('API_KEY_1', ''),
+                           api_key_2=os.environ.get('API_KEY_1', ''))
+
+
+@dataclass
 class Settings:
     tonlib: TonlibSettings
     webserver: WebServerSettings
     cache: CacheSettings
     logging: LoggingSettings
+    api: APISettings
 
     @classmethod
     def from_environment(cls):
         cache_enabled = strtobool(os.environ.get('TON_API_CACHE_ENABLED', '0'))
         logging = LoggingSettings.from_environment()
         cache = (RedisCacheSettings if cache_enabled else CacheSettings).from_environment()
+
         return Settings(tonlib=TonlibSettings.from_environment(),
                         webserver=WebServerSettings.from_environment(),
                         logging=logging,
-                        cache=cache)
+                        cache=cache,
+                        api=APISettings.from_environment())
