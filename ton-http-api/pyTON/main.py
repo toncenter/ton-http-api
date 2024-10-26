@@ -435,7 +435,7 @@ async def shards(
 @wrap_result
 async def get_block_transactions(
     workchain: int, 
-    shard: int, 
+    shard: str, 
     seqno: int, 
     root_hash: Optional[str] = None, 
     file_hash: Optional[str] = None, 
