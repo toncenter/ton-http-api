@@ -55,10 +55,10 @@ class TonlibManager:
     async def shutdown(self):
         for i in self.futures:
             self.futures[i].cancel()
-        
+
         self.tasks['check_working'].cancel()
         await self.tasks['check_working']
-        
+
         self.tasks['check_children_alive'].cancel()
         await self.tasks['check_children_alive']
 
@@ -80,6 +80,7 @@ class TonlibManager:
         self.getShards = self.cache_manager.cached(expire=600)(self.getShards)
         self.raw_getBlockTransactions = self.cache_manager.cached(expire=600)(self.raw_getBlockTransactions)
         self.getBlockTransactions = self.cache_manager.cached(expire=600)(self.getBlockTransactions)
+        self.getLibraries = self.cache_manager.cached(expire=600)(self.getLibraries)
         self.getBlockHeader = self.cache_manager.cached(expire=600)(self.getBlockHeader)
         self.get_config_param = self.cache_manager.cached(expire=5)(self.get_config_param)
         self.get_token_data = self.cache_manager.cached(expire=15)(self.get_token_data)
@@ -93,7 +94,7 @@ class TonlibManager:
                 logger.warning('Worker for liteserver #{ls_index} already exists', ls_index=ls_index)
                 return
             try:
-                worker_info['reader'].cancel()  
+                worker_info['reader'].cancel()
                 worker_info['worker'].exit_event.set()
                 worker_info['worker'].output_queue.cancel_join_thread()
                 worker_info['worker'].input_queue.cancel_join_thread()
@@ -110,7 +111,7 @@ class TonlibManager:
                 'restart_count': -1,
                 'tasks_count': 0
             }
-        
+
         tonlib_settings = deepcopy(self.tonlib_settings)
         tonlib_settings.keystore += f'worker_{ls_index}'
         self.workers[ls_index]['worker'] = TonlibWorker(ls_index, tonlib_settings)
@@ -129,7 +130,7 @@ class TonlibManager:
             self.workers[ls_index]['worker'].input_queue.close()
 
             self.workers[ls_index]['worker'].join()
-            
+
             await self.workers[ls_index]['reader']
 
         self.workers[ls_index]['is_enabled'] = enabled
@@ -141,7 +142,7 @@ class TonlibManager:
         else:
             result_type = type(task_result.result).__name__
         details = {}
-        
+
         rec = {
             'timestamp': datetime.utcnow(),
             'elapsed': task_result.elapsed_time,
@@ -149,7 +150,7 @@ class TonlibManager:
             'method': task_result.method,
             'liteserver_info': task_result.liteserver_info,
             'result_type': result_type,
-            'exception': task_result.exception 
+            'exception': task_result.exception
         }
 
         logger.info("Received result of type: {result_type}, method: {method}, task_id: {task_id}", **rec)
@@ -168,7 +169,7 @@ class TonlibManager:
                     if task_id in self.futures and not self.futures[task_id].done():
                         if msg_content.exception is not None:
                             self.futures[task_id].set_exception(msg_content.exception)
-                        if msg_content.result is not None:    
+                        if msg_content.result is not None:
                             self.futures[task_id].set_result(msg_content.result)
                     else:
                         logger.warning("TonlibManager received result from TonlibWorker #{ls_index:03d} whose task '{task_id}' doesn't exist or is done.", ls_index=ls_index, task_id=task_id)
@@ -185,7 +186,7 @@ class TonlibManager:
                 return
             except:
                 logger.error("read_results exception {format_exc}", format_exc=traceback.format_exc())
-        
+
     async def check_working(self):
         while True:
             try:
@@ -255,9 +256,9 @@ class TonlibManager:
 
     def select_worker(self, ls_index=None, archival=None, count=1):
         if count == 1 and ls_index is not None and self.workers[ls_index]['is_working']:
-            return ls_index 
+            return ls_index
 
-        suitable = [ls_index for ls_index, worker_info in self.workers.items() if worker_info['is_working'] and 
+        suitable = [ls_index for ls_index, worker_info in self.workers.items() if worker_info['is_working'] and
                     (archival is None or worker_info['worker'].is_archival == archival)]
         random.shuffle(suitable)
         if len(suitable) < count:
@@ -271,7 +272,7 @@ class TonlibManager:
         timeout = time.time() + self.tonlib_settings.request_timeout
         self.workers[ls_index]['tasks_count'] += 1
 
-        logger.info("Sending request method: {method}, task_id: {task_id}, ls_index: {ls_index}", 
+        logger.info("Sending request method: {method}, task_id: {task_id}, ls_index: {ls_index}",
             method=method, task_id=task_id, ls_index=ls_index)
         await self.loop.run_in_executor(self.threadpool_executor, self.workers[ls_index]['worker'].input_queue.put, (task_id, timeout, method, args, kwargs))
 
@@ -376,9 +377,12 @@ class TonlibManager:
     async def getMasterchainInfo(self):
         return await self.dispatch_request('get_masterchain_info')
 
+    async def getLibraries(self, lib_hashes: list):
+        return await self.dispatch_request('get_libraries', lib_hashes)
+
     async def getMasterchainBlockSignatures(self, seqno):
         return await self.dispatch_request('get_masterchain_block_signatures', seqno)
-    
+
     async def getShardBlockProof(self, workchain, shard, seqno, from_seqno):
         return await self.dispatch_request('get_shard_block_proof', workchain, shard, seqno, from_seqno)
 
