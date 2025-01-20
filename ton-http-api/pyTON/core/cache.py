@@ -29,7 +29,10 @@ class DisabledCacheManager:
 class RedisCacheManager:
     def __init__(self, cache_settings: RedisCacheSettings):
         self.cache_settings = cache_settings
-        self.cache_redis = redis.asyncio.from_url(f"redis://{cache_settings.redis.endpoint}:{cache_settings.redis.port}")
+        redis_url = f"redis://{cache_settings.redis.endpoint}:{cache_settings.redis.port}"
+        # if self.cache_settings.redis.timeout is not None:
+        #     redis_url += '?timeout={self.cache_settings.redis.timeout}'
+        self.cache_redis = redis.asyncio.from_url(redis_url)
 
     def cached(self, expire=0, check_error=True):
         storage_class = TonlibResultRedisStorage if check_error else Aioredis2Storage

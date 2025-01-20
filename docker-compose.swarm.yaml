@@ -2,6 +2,7 @@ version: '3.9'
 services:
   http-api-cache:
     image: redis:latest
+    command: redis-server --maxclients 100000
     networks:
       - internal
     deploy:

@@ -509,7 +509,7 @@ async def send_boc_return_hash(
     boc = base64.b64decode(boc)
     res = await tonlib.raw_send_message_return_hash(boc)
     if res.get('@type') == 'raw.extMessageInfo':
-        logger.info("External message accepted: {hash}", hash=res.get('hash'))
+        logger.info("External message accepted, hash: {hash}, boc: {boc}", hash=res.get('hash'), boc=base64.b64encode(boc).decode('utf8'))
         if settings.webserver.boc_endpoint is not None:
             background_tasks.add_task(send_boc_to_external_endpoint, base64.b64encode(boc).decode('utf8'))
     return res
@@ -534,6 +534,7 @@ async def send_boc_return_hash_no_error(
         raise HTTPException(status_code=400, detail=f"Error: {e}")
     if res.get('@type') == 'raw.extMessageInfo':
         logger.info("External message accepted: {hash}", hash=res.get('hash'))
+        logger.info("ExtBoc: {boc}", boc=base64.b64encode(boc).decode('utf8'))
         if settings.webserver.boc_endpoint is not None:
             background_tasks.add_task(send_boc_to_external_endpoint, base64.b64encode(boc).decode('utf8'))
     return res
