@@ -334,7 +334,10 @@ class TonlibManager:
         return await self.dispatch_request('get_token_data', address)
 
     async def raw_run_method(self, address, method, stack_data, seqno):
-        return await self.dispatch_request('raw_run_method', address, method, stack_data, seqno)
+        try:
+            return await self.dispatch_request('raw_run_method', address, method, stack_data, seqno)
+        except TonlibError:
+            return await self.dispatch_archival_request('raw_run_method', address, method, stack_data, seqno)
 
     async def _send_message(self, serialized_boc, method):
         ls_index_list = self.select_worker(count=4)
