@@ -15,7 +15,7 @@ jobs:
         id: branch_name
         run: |
           GIT_BRANCH=`git symbolic-ref --short HEAD | sed "s/[^[:alnum:].]//g"`
-          echo "::set-output name=GIT_BRANCH::${GIT_BRANCH}"
+          echo "::save-state name=GIT_BRANCH::${GIT_BRANCH}"
       - name: Get semantic version
         uses: paulhatch/semantic-version@v4.0.2
         id: versioning
@@ -28,11 +28,11 @@ jobs:
     outputs:
       version: ${{ github.ref == 'refs/heads/master' && steps.versioning.outputs.version_tag || steps.versioning.outputs.version}}
   buildx:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [ set_version ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Set up QEMU
@@ -56,15 +56,15 @@ jobs:
           then
             DOCKER_PLATFORMS=linux/amd64,linux/arm64
           else
-            DOCKER_PLATFORMS=linux/amd64
+            DOCKER_PLATFORMS=linux/amd64,linux/arm64
           fi
           VERSION=${{ needs.set_version.outputs.version }}
 
           TAGS="-t ${DOCKER_IMAGE}:${VERSION} -t ${DOCKER_IMAGE}:latest"
 
-          echo ::set-output name=docker_image::${DOCKER_IMAGE}
-          echo ::set-output name=version::${VERSION}
-          echo ::set-output name=buildx_args::--platform ${DOCKER_PLATFORMS} \
+          echo ::save-state name=docker_image::${DOCKER_IMAGE}
+          echo ::save-state name=version::${VERSION}
+          echo ::save-state name=buildx_args::--platform ${DOCKER_PLATFORMS} \
             ${TAGS} --file ton-http-api/.docker/Dockerfile ton-http-api
 
           echo "Pulling latest image for cache"
