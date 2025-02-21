@@ -5,7 +5,7 @@ on:
 
 jobs:
   set_version:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -28,15 +28,15 @@ jobs:
     outputs:
       version: ${{ github.ref == 'refs/heads/master' && steps.versioning.outputs.version_tag || steps.versioning.outputs.version}}
   build_wheel:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: [ set_version ]
     steps:
       - name: Checkout source
-        uses: actions/checkout@v2
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v1
+        uses: actions/checkout@v3
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v2
         with:
-          python-version: 3.8
+          python-version: 3.12
       - name: Install build dependencies
         shell: bash -l {0}
         working-directory: ./ton-http-api/
@@ -54,7 +54,7 @@ jobs:
           echo $(pwd)
           ls $(pwd)/
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ton-http-api-package
           path: |
@@ -65,7 +65,7 @@ jobs:
     needs: [ set_version, build_wheel ]
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ton-http-api-package
           path: dist
@@ -74,7 +74,7 @@ jobs:
         run: ls -la dist/
       - name: Create release tag
         if: ${{ github.repository == 'toncenter/ton-http-api' && github.event_name == 'push' && github.ref == 'refs/heads/master' }}
-        uses: actions/github-script@v3
+        uses: actions/github-script@v4
         with:
           github-token: ${{ github.token }}
           script: |
