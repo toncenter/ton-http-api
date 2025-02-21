@@ -323,7 +323,12 @@ class TonlibManager:
         return addr
 
     async def generic_get_account_state(self, address: str, seqno: int = None):
-        return await self.dispatch_request('generic_get_account_state', address, seqno)
+        method = 'generic_get_account_state'
+        try:
+            addr = await self.dispatch_request(method, address, seqno)
+        except TonlibError:
+            addr = await self.dispatch_archival_request(method, address, seqno)
+        return addr
 
     async def get_token_data(self, address: str):
         return await self.dispatch_request('get_token_data', address)
