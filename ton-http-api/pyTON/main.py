@@ -281,9 +281,10 @@ async def get_wallet_information(
     """
     address = prepare_address(address)
     result = await tonlib.raw_get_account_state(address)
-    res = {'wallet': False, 'balance': 0, 'account_state': None, 'wallet_type': None, 'seqno': None}
+    res = {'wallet': False, 'balance': 0, 'extra_currencies': [], 'account_state': None, 'wallet_type': None, 'seqno': None}
     res["account_state"] = address_state(result)
     res["balance"] = result["balance"] if (result["balance"] and int(result["balance"]) > 0) else 0
+    res["extra_currencies"] = result["extra_currencies"]
     if "last_transaction_id" in result:
         res["last_transaction_id"] = result["last_transaction_id"]
     ci = sha256(result["code"])

@@ -24,18 +24,19 @@ setup(
         'ring==0.10.1',
         'uvicorn==0.17.6',
         'gunicorn==20.1.0',
-        'pytonlib==0.0.58',
+        'pytonlib==0.0.64',
         'inject==4.3.1'
     ],
     package_data={},
     zip_safe=True,
-    python_requires='>=3.7',
+    python_requires='>=3.9',
     classifiers=[
          "Development Status :: 3 - Alpha",
          "Intended Audience :: Developers",
-         "Programming Language :: Python :: 3.7",
-         "Programming Language :: Python :: 3.8",
          "Programming Language :: Python :: 3.9",
+         "Programming Language :: Python :: 3.10",
+         "Programming Language :: Python :: 3.11",
+         "Programming Language :: Python :: 3.12",
          "License :: Other/Proprietary License",
          "Topic :: Software Development :: Libraries"
     ],
