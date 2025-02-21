@@ -246,7 +246,7 @@ async def get_worker_state():
 @wrap_result
 async def get_address_information(
     address: str = Query(..., description="Identifier of target TON account in any form."),
-    seqno: Optional[int] = Body(None, description="Seqno of masterchain block at which moment the address information should be loaded")
+    seqno: Optional[int] = Query(None, description="Seqno of masterchain block at which moment the address information should be loaded")
     ):
     """
     Get basic information about the address: balance, code, data, last_transaction_id.
@@ -263,7 +263,7 @@ async def get_address_information(
 @wrap_result
 async def get_extended_address_information(
     address: str = Query(..., description="Identifier of target TON account in any form."),
-    seqno: Optional[int] = Body(None, description="Seqno of masterchain block at which moment the address information should be loaded")
+    seqno: Optional[int] = Query(None, description="Seqno of masterchain block at which moment the address information should be loaded")
     ):
     """
     Similar to previous one but tries to parse additional information for known contract types. This method is based on tonlib's function *getAccountState*. For detecting wallets we recommend to use *getWalletInformation*.
@@ -277,7 +277,7 @@ async def get_extended_address_information(
 @wrap_result
 async def get_wallet_information(
     address: str = Query(..., description="Identifier of target TON account in any form."),
-    seqno: Optional[int] = Body(None, description="Seqno of masterchain block at which moment the address information should be loaded")
+    seqno: Optional[int] = Query(None, description="Seqno of masterchain block at which moment the address information should be loaded")
     ):
     """
     Retrieve wallet information. This method parses contract state and currently supports more wallet types than getExtendedAddressInformation: simple wallet, standart wallet, v3 wallet, v4 wallet.
@@ -320,7 +320,7 @@ async def get_transactions(
 @wrap_result
 async def get_address_balance(
     address: str = Query(..., description="Identifier of target TON account in any form."),
-    seqno: Optional[int] = Body(None, description="Seqno of masterchain block at which moment the address information should be loaded")
+    seqno: Optional[int] = Query(None, description="Seqno of masterchain block at which moment the address information should be loaded")
     ):
     """
     Get balance (in nanotons) of a given address.
@@ -336,7 +336,7 @@ async def get_address_balance(
 @wrap_result
 async def get_address(
     address: str = Query(..., description="Identifier of target TON account in any form."),
-    seqno: Optional[int] = Body(None, description="Seqno of masterchain block at which moment the address information should be loaded")
+    seqno: Optional[int] = Query(None, description="Seqno of masterchain block at which moment the address information should be loaded")
     ):
     """
     Get state of a given address. State can be either *unitialized*, *active* or *frozen*.
