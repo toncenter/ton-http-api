@@ -314,22 +314,30 @@ class TonlibManager:
         else:
             return await self.dispatch_request(method, account_address, from_transaction_lt, from_transaction_hash, to_transaction_lt, limit, decode_messages)
 
-    async def raw_get_account_state(self, address: str):
+    async def raw_get_account_state(self, address: str, seqno: int = None):
         method = 'raw_get_account_state'
         try:
-            addr = await self.dispatch_request(method, address)
+            addr = await self.dispatch_request(method, address, seqno)
         except TonlibError:
-            addr = await self.dispatch_archival_request(method, address)
+            addr = await self.dispatch_archival_request(method, address, seqno)
         return addr
 
-    async def generic_get_account_state(self, address: str):
-        return await self.dispatch_request('generic_get_account_state', address)
+    async def generic_get_account_state(self, address: str, seqno: int = None):
+        method = 'generic_get_account_state'
+        try:
+            addr = await self.dispatch_request(method, address, seqno)
+        except TonlibError:
+            addr = await self.dispatch_archival_request(method, address, seqno)
+        return addr
 
     async def get_token_data(self, address: str):
         return await self.dispatch_request('get_token_data', address)
 
-    async def raw_run_method(self, address, method, stack_data, output_layout=None):
-        return await self.dispatch_request('raw_run_method', address, method, stack_data, output_layout)
+    async def raw_run_method(self, address, method, stack_data, seqno):
+        try:
+            return await self.dispatch_request('raw_run_method', address, method, stack_data, seqno)
+        except TonlibError:
+            return await self.dispatch_archival_request('raw_run_method', address, method, stack_data, seqno)
 
     async def _send_message(self, serialized_boc, method):
         ls_index_list = self.select_worker(count=4)
