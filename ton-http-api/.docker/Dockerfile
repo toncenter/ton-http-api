@@ -1,7 +1,7 @@
 FROM ubuntu:22.04
 
 RUN DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get update && apt-get -y install tzdata
-RUN apt-get update && apt-get install -y git cmake wget python3 python3-pip
+RUN apt-get update && apt-get install -y wget python3 python3-pip
 
 # python requirements
 ADD ./requirements.txt /tmp/requirements.txt
