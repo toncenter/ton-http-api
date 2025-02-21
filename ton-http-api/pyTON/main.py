@@ -245,13 +245,14 @@ async def get_worker_state():
 @json_rpc('getAddressInformation')
 @wrap_result
 async def get_address_information(
-    address: str = Query(..., description="Identifier of target TON account in any form.")
+    address: str = Query(..., description="Identifier of target TON account in any form."),
+    seqno: Optional[int] = Body(None, description="Seqno of masterchain block at which moment the address information should be loaded")
     ):
     """
     Get basic information about the address: balance, code, data, last_transaction_id.
     """
     address = prepare_address(address)
-    result = await tonlib.raw_get_account_state(address)
+    result = await tonlib.raw_get_account_state(address, seqno)
     result["state"] = address_state(result)
     if "balance" in result and int(result["balance"]) < 0:
         result["balance"] = 0
@@ -261,26 +262,28 @@ async def get_address_information(
 @json_rpc('getExtendedAddressInformation')
 @wrap_result
 async def get_extended_address_information(
-    address: str = Query(..., description="Identifier of target TON account in any form.")
+    address: str = Query(..., description="Identifier of target TON account in any form."),
+    seqno: Optional[int] = Body(None, description="Seqno of masterchain block at which moment the address information should be loaded")
     ):
     """
     Similar to previous one but tries to parse additional information for known contract types. This method is based on tonlib's function *getAccountState*. For detecting wallets we recommend to use *getWalletInformation*.
     """
     address = prepare_address(address)
-    result = await tonlib.generic_get_account_state(address)
+    result = await tonlib.generic_get_account_state(address, seqno)
     return result
 
 @app.get('/getWalletInformation', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
 @json_rpc('getWalletInformation')
 @wrap_result
 async def get_wallet_information(
-    address: str = Query(..., description="Identifier of target TON account in any form.")
+    address: str = Query(..., description="Identifier of target TON account in any form."),
+    seqno: Optional[int] = Body(None, description="Seqno of masterchain block at which moment the address information should be loaded")
     ):
     """
     Retrieve wallet information. This method parses contract state and currently supports more wallet types than getExtendedAddressInformation: simple wallet, standart wallet, v3 wallet, v4 wallet.
     """
     address = prepare_address(address)
-    result = await tonlib.raw_get_account_state(address)
+    result = await tonlib.raw_get_account_state(address, seqno)
     res = {'wallet': False, 'balance': 0, 'extra_currencies': [], 'account_state': None, 'wallet_type': None, 'seqno': None}
     res["account_state"] = address_state(result)
     res["balance"] = result["balance"] if (result["balance"] and int(result["balance"]) > 0) else 0
@@ -316,13 +319,14 @@ async def get_transactions(
 @json_rpc('getAddressBalance')
 @wrap_result
 async def get_address_balance(
-    address: str = Query(..., description="Identifier of target TON account in any form.")
+    address: str = Query(..., description="Identifier of target TON account in any form."),
+    seqno: Optional[int] = Body(None, description="Seqno of masterchain block at which moment the address information should be loaded")
     ):
     """
     Get balance (in nanotons) of a given address.
     """
     address = prepare_address(address)
-    result = await tonlib.raw_get_account_state(address)
+    result = await tonlib.raw_get_account_state(address, seqno)
     if "balance" in result and int(result["balance"]) < 0:
         result["balance"] = 0
     return result["balance"]
@@ -331,13 +335,14 @@ async def get_address_balance(
 @json_rpc('getAddressState')
 @wrap_result
 async def get_address(
-    address: str = Query(..., description="Identifier of target TON account in any form.")
+    address: str = Query(..., description="Identifier of target TON account in any form."),
+    seqno: Optional[int] = Body(None, description="Seqno of masterchain block at which moment the address information should be loaded")
     ):
     """
     Get state of a given address. State can be either *unitialized*, *active* or *frozen*.
     """
     address = prepare_address(address)
-    result = await tonlib.raw_get_account_state(address)
+    result = await tonlib.raw_get_account_state(address, seqno)
     return address_state(result)
 
 @app.get('/packAddress', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
@@ -715,13 +720,14 @@ if settings.webserver.get_methods:
     async def run_get_method(
         address: str = Body(..., description='Contract address'), 
         method: Union[str, int] = Body(..., description='Method name or method id'), 
-        stack: List[List[Any]] = Body(..., description="Array of stack elements: `[['num',3], ['cell', cell_object], ['slice', slice_object]]`")
+        stack: List[List[Any]] = Body(..., description="Array of stack elements: `[['num',3], ['cell', cell_object], ['slice', slice_object]]`"),
+        seqno: Optional[int] = Body(None, description="Seqno of masterchain block at which moment the Get Method is to be executed")
         ):
         """
         Run get method on smart contract.
         """
         address = prepare_address(address)
-        return await tonlib.raw_run_method(address, method, stack)
+        return await tonlib.raw_run_method(address, method, stack, seqno)
 
 
 if settings.webserver.json_rpc:
