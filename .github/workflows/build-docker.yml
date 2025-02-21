@@ -15,7 +15,7 @@ jobs:
         id: branch_name
         run: |
           GIT_BRANCH=`git symbolic-ref --short HEAD | sed "s/[^[:alnum:].]//g"`
-          echo "::save-state name=GIT_BRANCH::${GIT_BRANCH}"
+          echo "GIT_BRANCH=${GIT_BRANCH}" >> $GITHUB_OUTPUT
       - name: Get semantic version
         uses: paulhatch/semantic-version@v4.0.2
         id: versioning
@@ -62,10 +62,9 @@ jobs:
 
           TAGS="-t ${DOCKER_IMAGE}:${VERSION} -t ${DOCKER_IMAGE}:latest"
 
-          echo ::save-state name=docker_image::${DOCKER_IMAGE}
-          echo ::save-state name=version::${VERSION}
-          echo ::save-state name=buildx_args::--platform ${DOCKER_PLATFORMS} \
-            ${TAGS} --file ton-http-api/.docker/Dockerfile ton-http-api
+          echo "docker_image=${DOCKER_IMAGE}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "buildx_args='--platform ${DOCKER_PLATFORMS} ${TAGS} --file ton-http-api/.docker/Dockerfile ton-http-api'" >> $GITHUB_OUTPUT
 
           echo "Pulling latest image for cache"
           IFS=', ' read -r -a PLATFORMS <<< "${DOCKER_PLATFORMS}"
