@@ -64,15 +64,7 @@ jobs:
 
           echo "docker_image=${DOCKER_IMAGE}" >> $GITHUB_OUTPUT
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "buildx_args=--platform ${DOCKER_PLATFORMS} ${TAGS} --file ton-http-api/.docker/Dockerfile ton-http-api" >> $GITHUB_OUTPUT
-
-          echo "Pulling latest image for cache"
-          IFS=', ' read -r -a PLATFORMS <<< "${DOCKER_PLATFORMS}"
-          for platform in "${PLATFORMS[@]}"
-          do
-            echo "Pulling image for platform ${platform}"
-            docker pull --platform ${platform} ${{ steps.prepare.outputs.docker_image }}:latest || true
-          done
+          echo "buildx_args=--platform ${DOCKER_PLATFORMS} --no-cache ${TAGS} --file ton-http-api/.docker/Dockerfile ton-http-api" >> $GITHUB_OUTPUT
       - name: Docker Buildx (build)
         run: |
           docker buildx build --output "type=image,push=false" ${{ steps.prepare.outputs.buildx_args }}
