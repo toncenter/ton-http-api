@@ -61,7 +61,7 @@ jobs:
             ton-http-api/dist/*.whl
             ton-http-api/dist/*.tar.gz
   upload-pypi:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: [ set_version, build_wheel ]
     steps:
       - name: Download artifacts
