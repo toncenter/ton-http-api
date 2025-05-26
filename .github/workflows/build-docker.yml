@@ -74,4 +74,4 @@ jobs:
       - name: Inspect image
         if: always() && github.repository == 'toncenter/ton-http-api' && github.event_name == 'push' && github.ref == 'refs/heads/master'
         run: |
-          docker buildx imagetools inspect toncenter/ton-http-api:${{ steps.prepare.outputs.version }}
+          docker buildx imagetools inspect toncenter/ton-http-api:${{ needs.set_version.outputs.version }}
