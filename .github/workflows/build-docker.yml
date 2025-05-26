@@ -51,36 +51,38 @@ jobs:
         id: prepare
         run: |
           DOCKER_IMAGE=toncenter/ton-http-api
-
-          if ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
-          then
-            DOCKER_PLATFORMS=linux/amd64,linux/arm64
-          else
-            DOCKER_PLATFORMS=linux/amd64,linux/arm64
-          fi
+          DOCKER_PLATFORMS=linux/amd64,linux/arm64
           VERSION=${{ needs.set_version.outputs.version }}
-
           TAGS="-t ${DOCKER_IMAGE}:${VERSION} -t ${DOCKER_IMAGE}:latest"
 
           echo "docker_image=${DOCKER_IMAGE}" >> $GITHUB_OUTPUT
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "buildx_args=--platform ${DOCKER_PLATFORMS} --no-cache ${TAGS} --file ton-http-api/.docker/Dockerfile ton-http-api" >> $GITHUB_OUTPUT
       - name: Login to DockerHub
-        if: success() && github.repository == 'toncenter/ton-http-api' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: success()
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: Docker Buildx (build)
-        if: success() && !(github.repository == 'toncenter/ton-http-api' && github.event_name == 'push' && github.ref == 'refs/heads/master')
-        run: |
-          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes -c yes
-          docker buildx build --output "type=image,push=false" ${{ steps.prepare.outputs.buildx_args }}
-      - name: Docker Buildx (push)
-        if: success() && github.repository == 'toncenter/ton-http-api' && github.event_name == 'push' && github.ref == 'refs/heads/master'
-        run: |
-          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes -c yes
-          docker buildx build --output "type=image,push=true" ${{ steps.prepare.outputs.buildx_args }}
+      - name: Docker Buildx
+        if: success()
+        uses: docker/build-push-action@v6
+        with:
+          platforms: linux/amd64,linux/arm64
+          push: github.repository == 'toncenter/ton-http-api' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+          context: ./ton-http-api
+          file: ./ton-http-api/.docker/Dockerfile
+          tags: toncenter/ton-http-api:${{ needs.set_version.outputs.version }},toncenter/ton-http-api:latest
+#      - name: Docker Buildx (build)
+#        if: success() && !(github.repository == 'toncenter/ton-http-api' && github.event_name == 'push' && github.ref == 'refs/heads/master')
+#        run: |
+#          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes -c yes
+#          docker buildx build --output "type=image,push=false" ${{ steps.prepare.outputs.buildx_args }}
+#      - name: Docker Buildx (push)
+#        if: success() && github.repository == 'toncenter/ton-http-api' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+#        run: |
+#          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes -c yes
+#          docker buildx build --output "type=image,push=true" ${{ steps.prepare.outputs.buildx_args }}
       - name: Inspect image
         if: always() && github.repository == 'toncenter/ton-http-api' && github.event_name == 'push' && github.ref == 'refs/heads/master'
         run: |
