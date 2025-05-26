@@ -69,7 +69,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           platforms: linux/amd64,linux/arm64
-          push: github.repository == 'toncenter/ton-http-api' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+          push: ${{ github.repository == 'toncenter/ton-http-api' && github.event_name == 'push' && github.ref == 'refs/heads/master' }}
           context: ./ton-http-api
           file: ./ton-http-api/.docker/Dockerfile
           tags: toncenter/ton-http-api:${{ needs.set_version.outputs.version }},toncenter/ton-http-api:latest
