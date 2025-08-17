@@ -82,6 +82,7 @@ class TonlibManager:
         self.getBlockTransactions = self.cache_manager.cached(expire=600)(self.getBlockTransactions)
         self.getBlockHeader = self.cache_manager.cached(expire=600)(self.getBlockHeader)
         self.get_config_param = self.cache_manager.cached(expire=5)(self.get_config_param)
+        self.getLibraries = self.cache_manager.cached(expire=600)(self.getLibraries)
         self.get_token_data = self.cache_manager.cached(expire=15)(self.get_token_data)
         self.tryLocateTxByOutcomingMessage = self.cache_manager.cached(expire=600, check_error=False)(self.tryLocateTxByOutcomingMessage)
         self.tryLocateTxByIncomingMessage = self.cache_manager.cached(expire=600, check_error=False)(self.tryLocateTxByIncomingMessage)
@@ -433,6 +434,12 @@ class TonlibManager:
             return await self.dispatch_request(method, config_id, seqno)
         else:
             return await self.dispatch_archival_request(method, config_id, seqno)
+
+    async def getLibraries(self, lib_hashes: list):
+        try:
+            return await self.dispatch_request('get_libraries', lib_hashes)
+        except TonlibError:
+            return await self.dispatch_archival_request('get_libraries', lib_hashes)
 
     async def tryLocateTxByOutcomingMessage(self, source, destination, creation_lt):
         return await self.dispatch_archival_request('try_locate_tx_by_outcoming_message',  source, destination, creation_lt)
