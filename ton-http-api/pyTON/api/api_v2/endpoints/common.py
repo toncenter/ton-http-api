@@ -26,6 +26,7 @@ from tvm_valuetypes.cell import deserialize_cell_from_object
 
 from pytonlib.utils.address import detect_address as __detect_address, prepare_address as _prepare_address
 from pytonlib.utils.wallet import wallets as known_wallets, sha256
+from pytonlib.utils.common import hash_to_hex, hex_to_b64str
 
 from loguru import logger
 
@@ -381,6 +382,19 @@ async def get_config_all(
     Get cell with full config.
     """
     return await tonlib.get_config_all(seqno)
+
+@router.get('/getLibraries', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
+@json_rpc('getLibraries')
+@wrap_result
+async def get_libraries(
+    libraries: list = Query(..., description="List of base64 encoded libraries hashes"),
+    tonlib: TonlibManager = Depends(tonlib_dep)
+    ):
+    """
+    Get libraries codes.
+    """
+    lib_hashes = [hex_to_b64str(hash_to_hex(l)) for l in libraries]
+    return await tonlib.getLibraries(lib_hashes)
 
 @router.get('/getOutMsgQueueSizes', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
 @json_rpc('getOutMsgQueueSizes')
