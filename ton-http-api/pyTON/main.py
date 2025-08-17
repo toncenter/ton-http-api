@@ -29,6 +29,7 @@ from pyTON.settings import Settings, RedisCacheSettings
 
 from pytonlib.utils.address import detect_address as __detect_address, prepare_address as _prepare_address
 from pytonlib.utils.wallet import wallets as known_wallets, sha256
+from pytonlib.utils.common import hash_to_hex, hex_to_b64str
 from pytonlib import TonlibException
 
 from loguru import logger
@@ -498,6 +499,19 @@ async def get_config_param(
     Get config by id.
     """
     return await tonlib.get_config_param(config_id, seqno)
+
+
+@app.get('/getLibraries', response_model=TonResponse, response_model_exclude_none=True, tags=['get config'])
+@json_rpc('getLibraries')
+@wrap_result
+async def get_libraries(
+    libraries: List[str] = Query(..., description="List of base64 encoded libraries hashes")
+    ):
+    """
+    Get libraries codes.
+    """
+    lib_hashes = [hex_to_b64str(hash_to_hex(l)) for l in libraries]
+    return await tonlib.getLibraries(lib_hashes)
 
 @app.get('/getTokenData', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
 @json_rpc('getTokenData')
