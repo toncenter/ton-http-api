@@ -142,13 +142,14 @@ async def get_extended_address_information(
 @wrap_result
 async def get_wallet_information(
     address: str = Query(..., description="Identifier of target TON account in any form."),
+    seqno: Optional[int] = Query(None, description="Seqno of masterchain block at which moment the address information should be loaded"),
     tonlib: TonlibManager = Depends(tonlib_dep)
     ):
     """
     Retrieve wallet information. This method parses contract state and currently supports more wallet types than getExtendedAddressInformation: simple wallet, standart wallet, v3 wallet, v4 wallet.
     """
     address = prepare_address(address)
-    result = await tonlib.raw_get_account_state(address)
+    result = await tonlib.raw_get_account_state(address, seqno)
     res = {'wallet': False, 'balance': 0, 'account_state': None, 'wallet_type': None, 'seqno': None}
     res["account_state"] = address_state(result)
     res["balance"] = result["balance"] if (result["balance"] and int(result["balance"]) > 0) else 0
