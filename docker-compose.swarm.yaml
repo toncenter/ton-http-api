@@ -46,7 +46,9 @@ services:
         aliases:
           - ${TONCENTER_ENV:?}-http-api
     ports:
-      - ${TON_API_PUBLISH_PORT:-8081}:8081
+      - target: 8081
+        published: "${TON_API_PUBLISH_PORT:-8081}"
+        mode: "${TON_API_PUBLISH_PORT_MODE:-ingress}"
     secrets:
       - source: http-api-liteserver-config
         target: /run/secrets/http-api-liteserver-config

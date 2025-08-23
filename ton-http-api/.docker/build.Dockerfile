@@ -4,7 +4,8 @@ RUN DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get -y install tzdata
 
 RUN apt install -y build-essential cmake clang openssl libssl-dev zlib1g-dev gperf wget \
     git curl libreadline-dev ccache libmicrohttpd-dev pkg-config \
-    liblz4-dev libsodium-dev libsecp256k1-dev ninja-build autoconf libtool
+    liblz4-dev libsodium-dev ninja-build autoconf libtool \
+    automake libjemalloc-dev lsb-release software-properties-common gnupg
 
 # build tonlib
 WORKDIR /
@@ -20,16 +21,15 @@ RUN mkdir /ton/build
 WORKDIR /ton/build
 ENV CC clang
 ENV CXX clang++
-RUN cmake -DPORTABLE=1 -DCMAKE_BUILD_TYPE=Release .. -GNinja
+RUN cmake -DPORTABLE=1 -DCMAKE_BUILD_TYPE=Release -DTON_ARCH= -DTON_USE_JEMALLOC=ON -GNinja ..
 RUN ninja -j$(nproc) tonlibjson
-
-# RUN ls -la /ton/build/ && exit 1
 
 FROM ubuntu:24.04
 
 RUN apt-get update
 RUN DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get -y install tzdata
-RUN apt-get install -y git cmake wget python3 python3-pip curl libsodium-dev libsecp256k1-dev
+RUN apt-get install -y git cmake wget python3 python3-pip curl \
+    libsodium-dev libatomic1 openssl libmicrohttpd-dev liblz4-dev libjemalloc-dev
 
 # python requirements
 ADD ./requirements.txt /tmp/requirements.txt

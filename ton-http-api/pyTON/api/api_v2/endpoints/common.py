@@ -4,6 +4,7 @@ import base64
 import codecs
 import random
 import requests
+import json
 
 from functools import wraps, partial
 from datetime import datetime
@@ -106,13 +107,14 @@ def json_rpc(method):
 @wrap_result
 async def get_address_information(
     address: str = Query(..., description="Identifier of target TON account in any form."),
+    seqno: Optional[int] = Query(None, description="Seqno of masterchain block at which moment the address information should be loaded"),
     tonlib: TonlibManager = Depends(tonlib_dep)
     ):
     """
     Get basic information about the address: balance, code, data, last_transaction_id.
     """
     address = prepare_address(address)
-    result = await tonlib.raw_get_account_state(address)
+    result = await tonlib.raw_get_account_state(address, seqno)
     result["state"] = address_state(result)
     if "balance" in result and int(result["balance"]) < 0:
         result["balance"] = 0
@@ -125,13 +127,14 @@ async def get_address_information(
 @wrap_result
 async def get_extended_address_information(
     address: str = Query(..., description="Identifier of target TON account in any form."),
+    seqno: Optional[int] = Query(None, description="Seqno of masterchain block at which moment the address information should be loaded"),
     tonlib: TonlibManager = Depends(tonlib_dep)
     ):
     """
     Similar to previous one but tries to parse additional information for known contract types. This method is based on tonlib's function *getAccountState*. For detecting wallets we recommend to use *getWalletInformation*.
     """
     address = prepare_address(address)
-    result = await tonlib.generic_get_account_state(address)
+    result = await tonlib.generic_get_account_state(address, seqno)
     return result
 
 @router.get('/getWalletInformation', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
@@ -182,13 +185,14 @@ async def get_transactions(
 @wrap_result
 async def get_address_balance(
     address: str = Query(..., description="Identifier of target TON account in any form."),
+    seqno: Optional[int] = Query(None, description="Seqno of masterchain block at which moment the address information should be loaded"),
     tonlib: TonlibManager = Depends(tonlib_dep)
     ):
     """
     Get balance (in nanotons) of a given address.
     """
     address = prepare_address(address)
-    result = await tonlib.raw_get_account_state(address)
+    result = await tonlib.raw_get_account_state(address, seqno)
     if "balance" in result and int(result["balance"]) < 0:
         result["balance"] = 0
     return result["balance"]
@@ -198,13 +202,14 @@ async def get_address_balance(
 @wrap_result
 async def get_address(
     address: str = Query(..., description="Identifier of target TON account in any form."),
+    seqno: Optional[int] = Query(None, description="Seqno of masterchain block at which moment the address information should be loaded"),
     tonlib: TonlibManager = Depends(tonlib_dep)
     ):
     """
     Get state of a given address. State can be either *unitialized*, *active* or *frozen*.
     """
     address = prepare_address(address)
-    result = await tonlib.raw_get_account_state(address)
+    result = await tonlib.raw_get_account_state(address, seqno)
     return address_state(result)
 
 @router.get('/packAddress', response_model=TonResponse, response_model_exclude_none=True, tags=['accounts'])
@@ -412,6 +417,7 @@ async def get_out_msg_queue_sizes(
 @wrap_result
 async def get_token_data(
     address: str = Query(..., description="Address of NFT collection/item or Jetton master/wallet smart contract"),
+    seqno: Optional[int] = Query(None, description="Seqno of masterchain block at which moment the address information should be loaded"),
     tonlib: TonlibManager = Depends(tonlib_dep)
     ):
     """
@@ -474,9 +480,8 @@ async def detect_address(
     return _detect_address(address)
 
 
-async def send_boc_to_external_endpoint(boc):
+async def send_boc_to_external_endpoint(endpoint, boc):
     try:
-        endpoint = settings.webserver.boc_endpoint
         logger.info(f'BOC is: "{boc}"')
         req = partial(requests.post, endpoint, json={'boc': boc}, timeout=0.5)
         loop = asyncio.get_event_loop()
@@ -505,8 +510,8 @@ async def send_boc(
     res = await tonlib.raw_send_message(boc)
     if res.get('@type') == 'ok':
         logger.debug("External message accepted in sendBoc")
-        if settings.webserver.boc_endpoint is not None:
-            background_tasks.add_task(send_boc_to_external_endpoint, base64.b64encode(boc).decode('utf8'))
+        for boc_endpoint in settings.webserver.boc_endpoint:
+            background_tasks.add_task(send_boc_to_external_endpoint, boc_endpoint, base64.b64encode(boc).decode('utf8'))
     return res
 
 @router.post('/sendBocReturnHash', response_model=TonResponse, response_model_exclude_none=True, tags=['send'])
@@ -524,8 +529,8 @@ async def send_boc_return_hash(
     res = await tonlib.raw_send_message_return_hash(boc)
     if res.get('@type') == 'raw.extMessageInfo':
         logger.info("External message accepted, hash: {hash}, boc: {boc}", hash=res.get('hash'), boc=base64.b64encode(boc).decode('utf8'))
-        if settings.webserver.boc_endpoint is not None:
-            background_tasks.add_task(send_boc_to_external_endpoint, base64.b64encode(boc).decode('utf8'))
+        for boc_endpoint in settings.webserver.boc_endpoint:
+            background_tasks.add_task(send_boc_to_external_endpoint, boc_endpoint, base64.b64encode(boc).decode('utf8'))
     return res
 
 # Chrome extensions have antiddos protection, that blocks consequent requests with 500+ response codes.
@@ -549,8 +554,8 @@ async def send_boc_return_hash_no_error(
     if res.get('@type') == 'raw.extMessageInfo':
         logger.info("External message accepted: {hash}", hash=res.get('hash'))
         logger.info("ExtBoc: {boc}", boc=base64.b64encode(boc).decode('utf8'))
-        if settings.webserver.boc_endpoint is not None:
-            background_tasks.add_task(send_boc_to_external_endpoint, base64.b64encode(boc).decode('utf8'))
+        for boc_endpoint in settings.webserver.boc_endpoint:
+            background_tasks.add_task(send_boc_to_external_endpoint, boc_endpoint, base64.b64encode(boc).decode('utf8'))
     return res
 
 async def send_boc_unsafe_task(boc_bytes: bytes, tonlib: TonlibManager):
@@ -561,8 +566,8 @@ async def send_boc_unsafe_task(boc_bytes: bytes, tonlib: TonlibManager):
             res = await tonlib.raw_send_message(boc_bytes)
             if res.get('@type') == 'ok':
                 logger.debug('External message accepted in sendBocUnsafe')
-                if settings.webserver.boc_endpoint is not None:
-                    send_boc_to_external_endpoint(base64.b64encode(boc_bytes).decode('utf8'))
+                for boc_endpoint in settings.webserver.boc_endpoint:
+                    send_boc_to_external_endpoint(boc_endpoint, base64.b64encode(boc_bytes).decode('utf8'))
         except:
             pass
         await asyncio.sleep(send_interval)
@@ -706,7 +711,10 @@ if settings.webserver.get_methods:
         Run get method on smart contract.
         """
         address = prepare_address(address)
-        return await tonlib.raw_run_method(address, method, stack, seqno)
+        res = await tonlib.raw_run_method(address, method, stack, seqno)
+        args = base64.b64encode(json.dumps(stack).encode('utf8')).decode('utf8')
+        logger.critical(f"__get method__ address: {address} method: {method} stack: {args} seqno: {seqno}")
+        return res
 
 
 if settings.webserver.json_rpc:
