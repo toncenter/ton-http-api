@@ -182,7 +182,7 @@ def prepare_address(address):
     except:
         raise HTTPException(status_code=416, detail="Incorrect address")
 
-def _prepare_hash(value):
+def prepare_hash(value):
     if value is None:
         return None
     if len(value) == 44:
@@ -195,12 +195,6 @@ def _prepare_hash(value):
         b64 = codecs.encode(data, 'base64').decode('utf-8')
         return b64.strip()
     raise ValueError('Invalid hash')
-
-def prepare_address(address):
-    try:
-        return _prepare_address(address)
-    except:
-        raise HTTPException(status_code=416, detail="Incorrect hash")
 
 def address_state(account_info):
     if isinstance(account_info.get("code", ""), int) or len(account_info.get("code", "")) == 0:
@@ -473,9 +467,9 @@ async def get_block_transactions(
     """
     Get transactions of the given block.
     """
-    root_hash = prepare_address(root_hash)
-    file_hash = prepare_address(file_hash)
-    after_hash = prepare_address(after_hash)
+    root_hash = prepare_hash(root_hash)
+    file_hash = prepare_hash(file_hash)
+    after_hash = prepare_hash(after_hash)
     return await tonlib.getBlockTransactions(workchain, shard, seqno, count, root_hash, file_hash, after_lt, after_hash)
 
 @app.get('/getBlockTransactionsExt', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks','transactions'])
@@ -494,9 +488,9 @@ async def get_block_transactions_ext(
     """
     Get transactions of the given block.
     """
-    root_hash = prepare_address(root_hash)
-    file_hash = prepare_address(file_hash)
-    after_hash = prepare_address(after_hash)
+    root_hash = prepare_hash(root_hash)
+    file_hash = prepare_hash(file_hash)
+    after_hash = prepare_hash(after_hash)
     return await tonlib.getBlockTransactionsExt(workchain, shard, seqno, count, root_hash, file_hash, after_lt, after_hash)
 
 @app.get('/getBlockHeader', response_model=TonResponse, response_model_exclude_none=True, tags=['blocks'])
@@ -512,8 +506,8 @@ async def get_block_header(
     """
     Get metadata of a given block.
     """
-    root_hash = prepare_address(root_hash)
-    file_hash = prepare_address(file_hash)
+    root_hash = prepare_hash(root_hash)
+    file_hash = prepare_hash(file_hash)
     return await tonlib.getBlockHeader(workchain, shard, seqno, root_hash, file_hash)
 
 @app.get('/getConfigParam', response_model=TonResponse, response_model_exclude_none=True, tags=['get config'])
