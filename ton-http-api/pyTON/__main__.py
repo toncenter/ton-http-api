@@ -20,6 +20,7 @@ def setup_environment(args):
     os.environ['TON_API_TONLIB_PARALLEL_REQUESTS_PER_LITESERVER'] = str(args.parallel_requests_per_liteserver)
     if args.cdll_path is not None:
         os.environ['TON_API_TONLIB_CDLL_PATH'] = args.cdll_path
+    os.environ['TON_API_TONLIB_WAIT_FOR_SEND_SUCCESS'] = ('1' if args.wait_for_send_success else '0')
     return
 
 
@@ -38,6 +39,7 @@ def main():
     tonlib_args.add_argument('--tonlib-keystore', type=str, default='./ton_keystore/', help='Keystore path for tonlibjson')
     tonlib_args.add_argument('--parallel-requests-per-liteserver', type=int, default=50, help='Maximum parallel requests per liteserver')
     tonlib_args.add_argument('--cdll-path', type=str, default=None, help='Path to tonlibjson binary')
+    tonlib_args.add_argument('--wait-for-send-success', default=False, action='store_true', help='Wait for first successful send across liteservers')
     
     cache_args = parser.add_argument_group('cache')
     cache_args.add_argument('--cache', default=False, action='store_true', help='Enable cache')
