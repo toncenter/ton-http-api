@@ -341,7 +341,7 @@ class TonlibManager:
             return await self.dispatch_request('raw_run_method', address, method, stack_data, seqno)
 
     async def _send_message(self, serialized_boc, method):
-        ls_index_list = self.select_worker(count=4)
+        ls_index_list = self.select_worker(count=2)
         result = None
         try:
             task_ids = []
