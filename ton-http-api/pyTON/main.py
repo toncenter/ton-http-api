@@ -101,10 +101,12 @@ tags_metadata = [
 
 settings = inject.instance(Settings)
 
+pkg_version = '2.0.0'
+
 app = FastAPI(
     title="TON HTTP API",
     description=description,
-    version='2.0.0',
+    version=pkg_version,
     docs_url='/',
     responses={
         422: {'description': 'Validation Error'},
@@ -137,6 +139,14 @@ async def startup():
 @app.on_event("shutdown")
 async def shutdown_event():
     await tonlib.shutdown()
+
+
+@app.middleware("http")
+async def add_process_time_header(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-API-Version"] = pkg_version
+    return response
+
 
 # Exception handlers
 @app.exception_handler(StarletteHTTPException)
