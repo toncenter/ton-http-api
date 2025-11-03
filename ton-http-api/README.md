@@ -106,6 +106,10 @@ The service supports the following environment variables:
 
   Timeout for liteserver requests.
 
+- `TON_API_TONLIB_WAIT_FOR_SEND_SUCCESS` *(default: 0)*
+
+  Send behavior toggle (sendBoc, sendBocReturnHash): when enabled (1), returns the first successful response, ignoring early errors until success or timeout. When disabled (0), it returns the first completed response (success or error).
+
 #### Cache configuration
 - `TON_API_CACHE_ENABLED` *(default: 0)*
 

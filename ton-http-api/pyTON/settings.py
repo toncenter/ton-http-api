@@ -23,6 +23,7 @@ class TonlibSettings:
     cdll_path: Optional[str] 
     request_timeout: int
     verbosity_level: int
+    wait_for_send_success: bool
     
     @property
     def liteserver_config(self):
@@ -44,7 +45,8 @@ class TonlibSettings:
                               liteserver_config_path=os.environ.get('TON_API_TONLIB_LITESERVER_CONFIG', 'https://ton.org/global-config.json'),
                               cdll_path=os.environ.get('TON_API_TONLIB_CDLL_PATH', None),
                               request_timeout=int(os.environ.get('TON_API_TONLIB_REQUEST_TIMEOUT', '10')),
-                              verbosity_level=verbosity_level)
+                              verbosity_level=verbosity_level,
+                              wait_for_send_success=strtobool(os.environ.get('TON_API_TONLIB_WAIT_FOR_SEND_SUCCESS', '0')))
 
 
 @dataclass
