@@ -7,7 +7,7 @@ from os.path import dirname, join, pardir
 with open(join(dirname(__file__), "README.md"), "r") as f:
     long_description = f.read()
 
-version = os.environ.get('TON_HTTP_API_VERSION', '0.0.0')
+version = os.environ.get('TON_HTTP_API_VERSION', '2.0.0')
 
 setup(
     author='K-Dimentional Tree',
@@ -24,7 +24,7 @@ setup(
         'ring==0.10.1',
         'uvicorn==0.17.6',
         'gunicorn==20.1.0',
-        'pytonlib==0.0.68',
+        'pytonlib==0.0.69',
         'inject==4.3.1'
     ],
     package_data={},
