@@ -16,6 +16,7 @@ from typing import Optional, Union, Dict, Any, List
 from fastapi import FastAPI, Depends, Response, Request, BackgroundTasks
 from fastapi.params import Body, Query, Param
 from fastapi.exceptions import HTTPException, RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.responses import JSONResponse
 from fastapi import status
@@ -114,6 +115,14 @@ app = FastAPI(
     },
     root_path=settings.webserver.api_root_path,
     openapi_tags=tags_metadata
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
