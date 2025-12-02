@@ -353,8 +353,23 @@ class TonlibManager:
                 self.futures[task_id] = self.loop.create_future()
                 task_ids.append(task_id)
 
-            done, _ = await asyncio.wait([self.futures[task_id] for task_id in task_ids], return_when=asyncio.FIRST_COMPLETED)
-            result = list(done)[0].result()
+            if self.tonlib_settings.wait_for_send_success:
+                active_futures = [self.futures[task_id] for task_id in task_ids]
+                first_error = None
+                while active_futures:
+                    completed_futures, pending_futures = await asyncio.wait(active_futures, return_when=asyncio.FIRST_COMPLETED)
+                    for future in completed_futures:
+                        try:
+                            return future.result()
+                        except Exception as err:
+                            if first_error is None:
+                                first_error = err
+                    active_futures = list(pending_futures)
+                if first_error is not None:
+                    raise first_error
+            else:
+                done, _ = await asyncio.wait([self.futures[task_id] for task_id in task_ids], return_when=asyncio.FIRST_COMPLETED)
+                result = list(done)[0].result()
         finally:
             for task_id in task_ids:
                 self.futures.pop(task_id)
