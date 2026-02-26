@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 RUN DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get update && apt-get -y install tzdata
 RUN apt-get update -y && apt-get install -y wget python3 python3-pip zlib1g-dev libsecp256k1-dev \
@@ -6,7 +6,7 @@ RUN apt-get update -y && apt-get install -y wget python3 python3-pip zlib1g-dev 
 
 # python requirements
 ADD ./requirements.txt /tmp/requirements.txt
-RUN python3 -m pip install --no-cache-dir -r /tmp/requirements.txt
+RUN python3 -m pip install --no-cache-dir --break-system-packages -r /tmp/requirements.txt
 
 # app
 COPY . /app

@@ -30,7 +30,7 @@ from pyTON.settings import Settings, RedisCacheSettings
 from pytonlib.utils.address import detect_address as __detect_address, prepare_address as _prepare_address
 from pytonlib.utils.wallet import wallets as known_wallets, sha256
 from pytonlib.utils.common import hash_to_hex, hex_to_b64str
-from pytonlib import TonlibException
+from pytonlib import TonlibException, TonlibError
 
 from loguru import logger
 
@@ -168,10 +168,12 @@ async def timeout_exception_handler(request, exc):
 
 
 @app.exception_handler(TonlibException)
-async def tonlib_error_result_exception_handler(request, exc):
-    res = TonResponse(ok=False, error=str(exc), code=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    return JSONResponse(res.dict(exclude_none=True), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+async def tonlib_exception_result_exception_handler(request, exc):
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    if str(exc) == 'Smart contract is not Jetton or NFT':
+        status_code = 409
+    res = TonResponse(ok=False, error=str(exc), code=status_code)
+    return JSONResponse(res.dict(exclude_none=True), status_code=status_code)
 
 @app.exception_handler(Exception)
 async def fastapi_generic_exception_handler(request, exc):
@@ -555,7 +557,10 @@ async def get_token_data(
     Get NFT or Jetton information.
     """
     address = prepare_address(address)
-    return await tonlib.get_token_data(address)
+    try:
+        return await tonlib.get_token_data(address)
+    except Exception as exc:
+        raise TonlibException(exc)
 
 @app.get('/tryLocateTx', response_model=TonResponse, response_model_exclude_none=True, tags=['transactions'])
 @json_rpc('tryLocateTx')
