@@ -1,8 +1,8 @@
-version: '3.7'
+version: "3.7"
 services:
   main:
-    image: toncenter/ton-http-api
-    build: 
+    image: toncenter/ton-http-api:v2.0.65
+    build:
       context: ton-http-api
       dockerfile: .docker/Dockerfile
     ports:
