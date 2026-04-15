@@ -129,6 +129,11 @@ The service supports the following environment variables:
 
   Redis cache timeout.
 
+#### Docker image
+- `IMAGE_TAG` *(default: latest)*
+
+  Docker image tag for `toncenter/ton-http-api`. Leave as `latest` to always pull the most recent image, or pin to a specific version (e.g. `v2.0.65`) for reproducible deployments.
+
 
 ## FAQ
 #### How to point the service to my own lite server?
